@@ -143,6 +143,7 @@ RSpec.describe "Recipes", type: :request do
       ratings: 4.59,
       category: "Pasta",
       ingredients: [ "2 tomatoes", "200g pasta" ],
+      ingredients_vector: vector(1.0),
       ingredient_parse_data: [
         {
           "input" => "2 tomatoes",
@@ -162,8 +163,13 @@ RSpec.describe "Recipes", type: :request do
       ],
       image: "https://imagesvc.meredithcorp.io/v3/mm/image?url=https%3A%2F%2Fimages.media-allrecipes.com%2Fuserphotos%2F8263243.jpg"
     )
-    similar_titles = 3.times.map { |index| create(:recipe, title: "Similar Pasta #{index}", category: "Pasta").title }
-    create(:recipe, title: "Other Dinner", category: "Dinner")
+    similar_titles = [
+      create(:recipe, title: "Tomato Soup", category: "Soup", ingredients_vector: vector(0.98, 0.02)).title,
+      create(:recipe, title: "Tomato Salad", category: "Salad", ingredients_vector: vector(0.9, 0.1)).title,
+      create(:recipe, title: "Tomato Bruschetta", category: "Appetizers", ingredients_vector: vector(0.8, 0.2)).title
+    ]
+    create(:recipe, title: "Same Category Without Vector", category: "Pasta", ingredients_vector: nil)
+    create(:recipe, title: "Distant Pasta", category: "Pasta", ingredients_vector: vector(-1.0))
 
     get recipe_path(recipe.slug)
 
@@ -188,7 +194,8 @@ RSpec.describe "Recipes", type: :request do
     expect(document.css(".recipe-ingredient-link[data-ingredient-name]").map { |node| node["data-ingredient-name"] }).to include("tomatoes", "pasta")
     expect(response.body).to include("Similar recipes")
     similar_titles.each { |title| expect(response.body).to include(title) }
-    expect(response.body).not_to include("Other Dinner")
+    expect(response.body).not_to include("Same Category Without Vector")
+    expect(response.body).not_to include("Distant Pasta")
     expect(response.body).not_to include("aria-label=\"Breadcrumb\"")
     expect(response.body).to include("role=\"switch\"")
     expect(response.body).to include("role=\"combobox\"")
@@ -197,7 +204,7 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body.index("<h1")).to be < response.body.index("<img")
   end
 
-  def vector(first_value)
-    [ first_value ] + Array.new(383, 0.0)
+  def vector(first_value, second_value = 0.0)
+    [ first_value, second_value ] + Array.new(382, 0.0)
   end
 end

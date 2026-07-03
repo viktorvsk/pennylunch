@@ -80,6 +80,15 @@ class Recipe < ApplicationRecord
     (names + names.flat_map { |name| ingredient_filter_terms_for(name) }).uniq.sort
   end
 
+  def self.similar_by_ingredients(recipe, limit: 3)
+    return none if recipe.ingredients_vector.blank?
+
+    where.not(id: recipe.id)
+      .where.not(ingredients_vector: nil)
+      .nearest_neighbors(:ingredients_vector, recipe.ingredients_vector, distance: "cosine")
+      .limit(limit)
+  end
+
   def self.category_slug_for(category)
     normalize_category(category).parameterize
   end

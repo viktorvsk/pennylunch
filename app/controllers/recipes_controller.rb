@@ -14,12 +14,7 @@ class RecipesController < ApplicationController
     end
 
     recipe = Recipe.find_by!(slug: params[:slug])
-    similar_recipes =
-      if recipe.category_normalized.present?
-        Recipe.in_category(recipe.category_normalized).where.not(id: recipe.id).order(Arel.sql("RANDOM()")).limit(3)
-      else
-        Recipe.none
-      end
+    similar_recipes = Recipe.similar_by_ingredients(recipe)
     @recipe_fab_filters = {}
     @recipe_ingredient_options = Recipe.ingredient_filter_options
     render locals: { recipe:, similar_recipes: }
