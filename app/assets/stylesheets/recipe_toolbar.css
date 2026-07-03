@@ -1,0 +1,52 @@
+.recipe-toolbar {
+  background-color: var(--background);
+  --recipe-toolbar-active-background: #fde047;
+  --recipe-toolbar-active-border: #eab308;
+  --recipe-toolbar-active-foreground: #422006;
+  --recipe-toolbar-active-hover: #facc15;
+}
+
+.recipe-toolbar {
+  box-shadow: 0 1px 8px oklch(0.145 0 0 / 0.08);
+}
+
+.recipe-toolbar-toggle[data-state="active"] {
+  background-color: var(--recipe-toolbar-active-background);
+  border-color: var(--recipe-toolbar-active-border);
+  color: var(--recipe-toolbar-active-foreground);
+}
+
+.recipe-toolbar-toggle[data-state="active"]:hover {
+  background-color: var(--recipe-toolbar-active-hover);
+  border-color: var(--recipe-toolbar-active-border);
+  color: var(--recipe-toolbar-active-foreground);
+}
+
+.recipe-toolbar-category[data-state="active"] {
+  background-color: var(--recipe-toolbar-active-background);
+  border-color: var(--recipe-toolbar-active-border);
+  color: var(--recipe-toolbar-active-foreground);
+}
+
+.recipe-toolbar-category[data-state="active"]:hover {
+  background-color: var(--recipe-toolbar-active-hover);
+  border-color: var(--recipe-toolbar-active-border);
+  color: var(--recipe-toolbar-active-foreground);
+}
+
+.recipe-toolbar-loading {
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+html[data-turbo-loading] .recipe-toolbar-loading {
+  opacity: 1;
+}
+
+@media (max-width: 520px) {
+  .recipe-toolbar-brand {
+    max-width: 2rem;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+}

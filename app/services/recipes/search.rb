@@ -1,6 +1,6 @@
 module Recipes
   class Search
-    Result = Data.define(:recipes, :page, :previous_page, :next_page, :total_count, :category_options)
+    Result = Data.define(:recipes, :page, :next_page, :category_options)
     PER_PAGE = 24
 
     def initialize(params:, embedder: LocalEmbedding, ingredient_parser: IngredientParser, ingredients_candidate_count: Rails.application.config.penny_lunch.ingredients_candidate_count, ingredients_max_distance: Rails.application.config.penny_lunch.ingredients_max_cosine_distance)
@@ -26,17 +26,14 @@ module Recipes
       ).call
       relation = Recipe.sort_relation(relation, param(:sort))
 
-      total_count = relation.count
       current_page = page
-      recipes = relation.offset((current_page - 1) * PER_PAGE).limit(PER_PAGE).to_a
+      page_records = relation.offset((current_page - 1) * PER_PAGE).limit(PER_PAGE + 1).to_a
 
       Result.new(
-        recipes:,
+        recipes: page_records.first(PER_PAGE),
         page: current_page,
-        previous_page: current_page > 1 ? current_page - 1 : nil,
-        next_page: current_page * PER_PAGE < total_count ? current_page + 1 : nil,
-        total_count:,
-        category_options: Recipe.category_options,
+        next_page: page_records.size > PER_PAGE ? current_page + 1 : nil,
+        category_options: Recipe.category_options
       )
     end
 

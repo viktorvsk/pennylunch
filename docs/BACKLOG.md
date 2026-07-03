@@ -18,6 +18,7 @@
 - Filter by author.
 - Author page with recipe list, rating distribution, and summary stats.
 - Ingredient match explanations and missing-ingredient display.
+- Ingredient entry UX outside the compact top bar.
 - Ingredient parser confidence review and synonym handling.
 - Explicit relevance sort option.
 - Image caching or proxying for external recipe images.

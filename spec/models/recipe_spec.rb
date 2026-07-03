@@ -28,6 +28,29 @@ RSpec.describe Recipe do
     end
   end
 
+  describe ".category_from_slug" do
+    it "resolves normalized categories from parameterized slugs" do
+      create(:recipe, category: "Air Fryer Main Dish Recipes", category_normalized: "air fryer main dish recipes")
+
+      expect(described_class.category_slug_for("air fryer main dish recipes")).to eq("air-fryer-main-dish-recipes")
+      expect(described_class.category_from_slug("air-fryer-main-dish-recipes")).to eq("air fryer main dish recipes")
+    end
+  end
+
+  describe ".ingredient_filter_options" do
+    it "includes known ingredient names and derived exact ingredient terms" do
+      create(:recipe, ingredient_names: [ "boneless chicken breasts", "fresh tomatoes", "all-purpose flour" ])
+
+      expect(described_class.ingredient_filter_options).to include(
+        "boneless chicken breasts",
+        "chicken",
+        "tomato",
+        "flour"
+      )
+      expect(described_class.ingredient_filter_options).not_to include("boneless", "fresh", "purpose")
+    end
+  end
+
   describe "#ingredients_embedding_text" do
     it "uses normalized ingredient names instead of source ingredient sentences" do
       recipe = build(:recipe, ingredients: [ "1 cup Flour", "2 eggs" ], ingredient_names: [ " Flour ", "EGGS", "flour" ])
@@ -75,6 +98,17 @@ RSpec.describe Recipe do
       create(:recipe, category: "", category_normalized: "")
 
       expect(described_class.category_options).to eq([ "dinner" ])
+    end
+  end
+
+  describe ".category_labels" do
+    it "maps normalized categories to original display names" do
+      create(:recipe, category: "Air Fryer Main Dish Recipes", category_normalized: "air fryer main dish recipes")
+      create(:recipe, category: "air fryer main dish recipes", category_normalized: "air fryer main dish recipes")
+
+      expect(described_class.category_labels).to eq(
+        "air fryer main dish recipes" => "Air Fryer Main Dish Recipes"
+      )
     end
   end
 end

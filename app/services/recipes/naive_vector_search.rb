@@ -15,7 +15,7 @@ module Recipes
         .limit(candidate_count)
         .pluck(:id)
 
-      ids.any? ? relation.where(id: ids).reorder(Arel.sql(relevance_order(ids))) : relation.none
+      ids.any? ? relation.where(id: ids) : relation.none
     end
 
     private
@@ -38,11 +38,6 @@ module Recipes
 
     def max_distance
       request.max_distance.positive? ? request.max_distance : nil
-    end
-
-    def relevance_order(ids)
-      cases = ids.each_with_index.map { |id, index| "WHEN #{Integer(id)} THEN #{index}" }.join(" ")
-      "CASE recipes.id #{cases} END ASC"
     end
   end
 end

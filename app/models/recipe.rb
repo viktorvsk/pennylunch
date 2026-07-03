@@ -4,6 +4,11 @@ require "uri"
 class Recipe < ApplicationRecord
   SOURCE_FIELDS = %w[title cook_time prep_time ingredients ratings cuisine category author image].freeze
   SORTS = %w[time_asc time_desc rating_asc rating_desc].freeze
+  INGREDIENT_TERM_STOP_WORDS = %w[
+    all and boneless canned chopped cooked condensed crushed diced dried extra fat free fresh frozen grated ground halves
+    large lean less low medium minced of or peeled pieces purpose reduced shredded skin skinless sliced small sodium taste
+    teaspoon tablespoon teaspoons tablespoons to unsalted with without
+  ].freeze
 
   has_neighbors :ingredients_vector
 
@@ -55,6 +60,38 @@ class Recipe < ApplicationRecord
     where.not(category_normalized: "").distinct.order(:category_normalized).pluck(:category_normalized)
   end
 
+  def self.category_labels
+    labels = category_options.to_h { |category| [ category, category ] }
+    categories = where.not(category_normalized: "").pluck(:category_normalized, :category).group_by(&:first)
+
+    categories.each do |normalized, rows|
+      label = rows.map { |(_, category)| category.to_s.squish.presence }.compact.min_by do |category|
+        [ category == normalize_category(category) ? 1 : 0, category.downcase ]
+      end
+      labels[normalized] = label if label
+    end
+
+    labels
+  end
+
+  def self.ingredient_filter_options
+    names = pluck(:ingredient_names).flatten.compact_blank.map { |name| name.to_s.squish.downcase }.uniq
+
+    (names + names.flat_map { |name| ingredient_filter_terms_for(name) }).uniq.sort
+  end
+
+  def self.category_slug_for(category)
+    normalize_category(category).parameterize
+  end
+
+  def self.category_slug_map
+    category_options.to_h { |category| [ category, category_slug_for(category) ] }
+  end
+
+  def self.category_from_slug(slug)
+    category_options.find { |category| category_slug_for(category) == slug.to_s }
+  end
+
   def self.normalize_category(category)
     category.to_s.strip.downcase
   end
@@ -75,6 +112,16 @@ class Recipe < ApplicationRecord
   rescue URI::InvalidURIError
     url
   end
+
+  def self.ingredient_filter_terms_for(name)
+    name.scan(/[[:alpha:]][[:alpha:]'-]*/).filter_map do |word|
+      term = word.delete("'").downcase.singularize
+      next if term.length < 3 || INGREDIENT_TERM_STOP_WORDS.include?(term)
+
+      term
+    end.uniq
+  end
+  private_class_method :ingredient_filter_terms_for
 
   def self.slug_for(attributes)
     [ attributes.fetch(:title), attributes.fetch(:category), attributes.fetch(:author), "#{attributes.fetch(:total_time)}-minutes" ].filter_map do |part|

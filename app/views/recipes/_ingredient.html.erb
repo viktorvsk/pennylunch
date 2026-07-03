@@ -1,0 +1,10 @@
+<div class="recipe-ingredient-row">
+  <span class="recipe-ingredient-leading">
+    <code><%= ingredient[:size] %></code>
+    <% if ingredient[:unit].present? %>
+      <b><%= ingredient[:unit].humanize.downcase %></b> of
+    <% end %>
+    <i><%= ingredient[:state] %></i>
+  </span>
+  <%= link_to ingredient[:name], ingredient_reference_url(ingredient[:name]), class: "recipe-ingredient-link", data: { ingredient_name: ingredient[:name] }, target: "_blank", rel: "noopener" %>
+</div>

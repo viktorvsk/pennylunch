@@ -73,6 +73,22 @@ bin/check
 
 `bin/check` runs RuboCop, Flay, Flog, Reek, Brakeman, Bundler Audit, ENV access, production boot, coverage, and RSpec. Checks that share the test database run serially. It does not accept task-selection flags. For focused work, run a specific script under `bin/linters/`.
 
+## Browser Smoke
+
+Install the browser-test dependency once:
+
+```bash
+npm install
+```
+
+With the app already running on the default development port, run:
+
+```bash
+npm run browser:smoke
+```
+
+The smoke check reuses `http://127.0.0.1:3000` by default and does not start Rails. It covers index-to-show navigation, show-page layout, shared basket FAB rendering, and exact basket-ingredient highlighting on index and show pages. If the active app is on a different port, set `PENNYLUNCH_BASE_URL`. If system Chrome is unavailable, run `npm run browser:install` once to install Playwright's Chromium browser.
+
 ## Environment Variables
 
 Every environment variable directly read by app, config, or bin code must be listed in `env.example`. `bin/linters/env_access` enforces this and also blocks direct ENV reads outside boot, config, bin scripts, and the central configuration loader.

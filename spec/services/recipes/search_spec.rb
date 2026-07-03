@@ -1,7 +1,17 @@
 require "rails_helper"
 
 RSpec.describe Recipes::Search do
-  it "keeps ingredient relevance ahead of the selected sort" do
+  it "returns one page and infers the next page without a total count" do
+    create_list(:recipe, described_class::PER_PAGE + 1)
+
+    result = described_class.new(params: {}).call
+
+    expect(result.recipes.size).to eq(described_class::PER_PAGE)
+    expect(result.next_page).to eq(2)
+    expect(result).not_to respond_to(:total_count)
+  end
+
+  it "sorts the ingredient candidate set with the selected sort" do
     tomato_fast = create(:recipe, title: "Fast Tomato Pasta", ratings: 4.4, prep_time: 5, cook_time: 10, ingredients_vector: vector(1.0))
     tomato_best = create(:recipe, title: "Best Tomato Soup", ratings: 4.9, prep_time: 20, cook_time: 30, ingredients_vector: vector(0.8, 0.6))
     chicken = create(:recipe, title: "Chicken Dinner", ratings: 5.0, prep_time: 10, cook_time: 15, ingredients_vector: vector(-1.0))
@@ -13,7 +23,7 @@ RSpec.describe Recipes::Search do
       ingredients_candidate_count: 2,
     ).call
 
-    expect(result.recipes).to eq([ tomato_fast, tomato_best ])
+    expect(result.recipes).to eq([ tomato_best, tomato_fast ])
     expect(result.recipes).not_to include(chicken)
   end
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Browser Smoke Testing"
+  short_description: "Repeatable local Playwright smoke checks"
+  default_prompt: "Use $browser-smoke-testing to verify the current PennyLunch UI in a browser."

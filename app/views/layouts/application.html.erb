@@ -20,11 +20,21 @@
 
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "basecoat/basecoat-vega-1.0.1.min", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "recipe_cards", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "recipe_toolbar", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "recipe_ingredients_fab", "data-turbo-track": "reload" %>
+    <%= javascript_include_tag "turbo.min", type: "module", "data-turbo-track": "reload" %>
     <%= javascript_include_tag "basecoat/basecoat-1.0.1.min", defer: true, "data-turbo-track": "reload" %>
     <%= javascript_include_tag "basecoat/combobox-1.0.1.min", defer: true, "data-turbo-track": "reload" %>
+    <%= javascript_include_tag "basecoat/dropdown-menu-1.0.1.min", defer: true, "data-turbo-track": "reload" %>
+    <%= javascript_include_tag "infinite_scroll", defer: true, "data-turbo-track": "reload" %>
+    <%= javascript_include_tag "recipe_filters", defer: true, "data-turbo-track": "reload" %>
   </head>
 
   <body class="min-h-[100dvh] bg-background text-foreground">
     <%= yield %>
+    <% if defined?(@recipe_ingredient_options) && !@recipe_ingredient_options.nil? %>
+      <%= render "recipes/ingredients_fab", filters: @recipe_fab_filters || {}, ingredient_options: @recipe_ingredient_options %>
+    <% end %>
   </body>
 </html>

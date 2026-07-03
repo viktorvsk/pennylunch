@@ -1,0 +1,38 @@
+<%= turbo_frame_tag "recipe-results-frame", data: { turbo_action: "advance" } do %>
+  <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+    <% if selected_category.present? %>
+      <section class="space-y-1">
+        <p class="text-sm text-muted-foreground">Category</p>
+        <h1 class="text-2xl font-semibold tracking-normal"><%= category_heading(selected_category) %></h1>
+      </section>
+    <% end %>
+
+    <% if recipes.any? %>
+      <section id="recipe-results" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <%= render partial: "recipes/recipe", collection: recipes, as: :recipe %>
+      </section>
+      <% if next_page_url %>
+        <div class="flex justify-center py-6 text-sm text-muted-foreground" data-infinite-scroll-sentinel data-next-url="<%= next_page_url %>" aria-live="polite">
+          <span class="inline-flex items-center gap-2" data-infinite-scroll-status>
+            <span class="infinite-scroll-spinner" aria-hidden="true"></span>
+            <span>Loading more recipes...</span>
+          </span>
+        </div>
+      <% end %>
+    <% else %>
+      <section class="rounded-lg border bg-card p-8 text-center">
+        <div class="mx-auto flex size-14 items-center justify-center rounded-full border bg-muted text-muted-foreground">
+          <%= icon_svg(:sad_face, class_name: "size-8") %>
+        </div>
+        <h2 class="mt-4 text-xl font-semibold">Nothing found</h2>
+        <% if random_category.present? %>
+          <p class="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
+            Try another search or browse <%= link_to category_heading(random_category), recipe_filter_path("category" => random_category), class: "font-medium text-foreground underline-offset-4 hover:underline" %>.
+          </p>
+        <% else %>
+          <p class="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Try another search.</p>
+        <% end %>
+      </section>
+    <% end %>
+  </main>
+<% end %>
