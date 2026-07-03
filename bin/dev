@@ -1,2 +1,8 @@
-#!/usr/bin/env ruby
-exec "./bin/rails", "server", *ARGV
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PORT="${PORT:-3000}"
+export RUBY_DEBUG_OPEN="${RUBY_DEBUG_OPEN:-true}"
+export RUBY_DEBUG_LAZY="${RUBY_DEBUG_LAZY:-true}"
+
+exec bundle exec foreman start -f Procfile.dev "$@"

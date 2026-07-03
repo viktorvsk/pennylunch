@@ -1,0 +1,28 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../../lib/penny_lunch/quality/env_access_scanner"
+
+result = PennyLunch::Quality::EnvAccessScanner.new.call
+
+if result.success?
+  puts "ENV access check passed."
+  exit 0
+end
+
+if result.direct_access_findings.any?
+  warn "Direct ENV access is only allowed in boot/config/bin and central configuration code."
+  result.direct_access_findings.each { |finding| warn "  #{finding}" }
+end
+
+if result.credentials_access_findings.any?
+  warn "Direct Rails credentials access is only allowed in central configuration code."
+  result.credentials_access_findings.each { |finding| warn "  #{finding}" }
+end
+
+if result.undocumented_names.any?
+  warn "ENV variables must be documented in env.example."
+  result.undocumented_names.each { |name| warn "  #{name}" }
+end
+
+exit 1

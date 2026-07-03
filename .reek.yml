@@ -1,0 +1,25 @@
+detectors:
+  DuplicateMethodCall:
+    enabled: false
+  FeatureEnvy:
+    enabled: false
+  IrresponsibleModule:
+    enabled: false
+  NestedIterators:
+    enabled: false
+  NilCheck:
+    enabled: false
+  TooManyStatements:
+    enabled: false
+  UtilityFunction:
+    enabled: false
+
+exclude_paths:
+  - bin
+  - config
+  - db
+  - lib/tasks
+  - spec
+  - test
+  - tmp
+  - vendor

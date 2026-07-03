@@ -1,0 +1,42 @@
+<% content_for :title, recipe.title %>
+
+<main class="mx-auto grid w-full max-w-6xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:px-8">
+  <section class="flex flex-col gap-5">
+    <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+      <%= link_to "Recipes", root_path, class: "hover:text-foreground hover:underline" %>
+      <% if recipe.category_normalized.present? %>
+        <span>/</span>
+        <%= link_to category_label(recipe), recipes_path(category: recipe.category_normalized), class: "hover:text-foreground hover:underline" %>
+      <% end %>
+      <span>/</span>
+      <span class="text-foreground"><%= recipe.title %></span>
+    </nav>
+    <div class="overflow-hidden rounded-lg border bg-card shadow-sm">
+      <div class="aspect-[16/9] bg-muted">
+        <%= image_tag recipe.display_image_url, alt: "", class: "h-full w-full object-cover" %>
+      </div>
+      <div class="space-y-5 p-5">
+        <div class="space-y-2">
+          <h1 class="text-3xl font-semibold tracking-normal"><%= recipe.title %></h1>
+          <p class="text-sm text-muted-foreground"><%= recipe.author.presence || "Unknown author" %></p>
+        </div>
+        <div class="flex flex-wrap gap-2 text-sm">
+          <span class="badge" data-variant="secondary"><%= category_label(recipe) %></span>
+          <%= rating_stars(recipe.ratings, class_name: "badge text-amber-500") %>
+          <% if recipe.total_time_known? %>
+            <span class="badge" data-variant="outline" title="Prep: <%= recipe.prep_time %> min, cook: <%= recipe.cook_time %> min"><%= recipe.total_time %> min</span>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="rounded-lg border bg-card p-5 shadow-sm">
+    <h2 class="text-xl font-semibold">Ingredients</h2>
+    <ul class="mt-4 space-y-3 text-sm leading-6">
+      <% recipe.ingredients.each do |ingredient| %>
+        <li class="rounded-md bg-muted px-3 py-2"><%= ingredient %></li>
+      <% end %>
+    </ul>
+  </aside>
+</main>

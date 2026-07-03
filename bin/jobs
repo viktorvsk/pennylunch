@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+
+require_relative "../config/environment"
+require "solid_queue/cli"
+
+if Rails.env.development? && ARGV.none? { |argument| argument == "--mode" || argument.start_with?("--mode=") }
+  ARGV.concat(["--mode", "async"])
+end
+
+SolidQueue::Cli.start(ARGV)

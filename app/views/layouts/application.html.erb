@@ -18,11 +18,13 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "basecoat/basecoat-vega-1.0.1.min", "data-turbo-track": "reload" %>
+    <%= javascript_include_tag "basecoat/basecoat-1.0.1.min", defer: true, "data-turbo-track": "reload" %>
+    <%= javascript_include_tag "basecoat/combobox-1.0.1.min", defer: true, "data-turbo-track": "reload" %>
   </head>
 
-  <body>
+  <body class="min-h-[100dvh] bg-background text-foreground">
     <%= yield %>
   </body>
 </html>

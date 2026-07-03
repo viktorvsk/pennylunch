@@ -16,7 +16,7 @@ WORKDIR /rails
 
 # Install base packages
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libvips postgresql-client && \
+    apt-get install --no-install-recommends -y curl libjemalloc2 libvips postgresql-client python3 python3-venv && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
@@ -25,7 +25,8 @@ ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
     BUNDLE_WITHOUT="development" \
-    LD_PRELOAD="/usr/local/lib/libjemalloc.so"
+    LD_PRELOAD="/usr/local/lib/libjemalloc.so" \
+    NLTK_DATA="/rails/.venv/nltk_data"
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
@@ -38,6 +39,12 @@ RUN apt-get update -qq && \
 # Install application gems
 COPY vendor/* ./vendor/
 COPY Gemfile Gemfile.lock ./
+COPY requirements.txt ./
+
+RUN python3 -m venv /rails/.venv && \
+    /rails/.venv/bin/python -m pip install --upgrade pip && \
+    /rails/.venv/bin/python -m pip install --no-cache-dir -r requirements.txt && \
+    /rails/.venv/bin/python -c "import nltk, os; nltk.download('averaged_perceptron_tagger_eng', download_dir=os.environ['NLTK_DATA'], quiet=True); from ingredient_parser import parse_ingredient; parse_ingredient('1 cup flour')"
 
 RUN bundle install && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \

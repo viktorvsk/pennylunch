@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+flog_score="${FLOG_SCORE:-75}"
+flog_args=()
+paths=()
+
+for arg in "$@"; do
+  if [[ "$arg" == -* ]]; then
+    flog_args+=("$arg")
+  else
+    paths+=("$arg")
+  fi
+done
+
+if [ "${#paths[@]}" -eq 0 ]; then
+  paths=(app lib)
+fi
+
+if [ "${#flog_args[@]}" -gt 0 ]; then
+  output=$(bundle exec flog "${flog_args[@]}" "${paths[@]}")
+else
+  output=$(bundle exec flog "${paths[@]}")
+fi
+exit_code=$?
+
+if [ "$exit_code" -ne 0 ]; then
+  printf "%s\n" "$output"
+  exit "$exit_code"
+fi
+
+result=$(printf "%s\n" "$output" | awk -v threshold="$flog_score" '{ score = $1 + 0; if (score > threshold) print $0 }' | grep -v ": flog total" | grep -v "#none" || true)
+
+if [ -n "$result" ]; then
+  printf "%s\n" "$result"
+  exit 1
+fi
+
+exit 0

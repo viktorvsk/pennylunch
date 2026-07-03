@@ -36,6 +36,10 @@ gem "thruster", require: false
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 gem "image_processing", "~> 1.2"
 
+gem "maintenance_tasks", "2.17.0"
+gem "neighbor", "1.2.0"
+gem "pgvector", "0.3.3"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
@@ -48,9 +52,31 @@ group :development, :test do
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
+
+  gem "rubocop-shopify", require: false
+  gem "rubocop-factory_bot", require: false
+  gem "rubocop-rails", require: false
+  gem "rubocop-rspec", require: false
+  gem "rubocop-rspec_rails", require: false
+  gem "flog", require: false
+  gem "flay", require: false
+  gem "reek", "~> 6.5", require: false
 end
 
 group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
+  gem "foreman", "~> 0.90.0"
   gem "web-console"
 end
+
+group :test do
+  gem "rspec-rails", "~> 8.0"
+  gem "simplecov", "~> 0.22.0"
+  gem "simplecov_json_formatter", "~> 0.1.4"
+  gem "shoulda-matchers", "~> 7.0"
+  gem "factory_bot_rails"
+  gem "faker"
+  gem "webmock"
+end
+
+gem "informers", "1.3.0"

@@ -15,14 +15,23 @@
 default: &default
   adapter: postgresql
   encoding: unicode
+  host: <%= ENV.fetch("PENNY_LUNCH_DATABASE_HOST", "127.0.0.1") %>
   # For details on connection pooling, see Rails configuration guide
   # https://guides.rubyonrails.org/configuring.html#database-pooling
-  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  max_connections: <%= ENV.fetch("PENNY_LUNCH_DATABASE_MAX_CONNECTIONS") { ENV.fetch("RAILS_MAX_THREADS") { 5 } } %>
+  password: <%= ENV.fetch("PENNY_LUNCH_DATABASE_PASSWORD", "postgres") %>
+  port: <%= ENV.fetch("PENNY_LUNCH_DATABASE_PORT", 5432) %>
+  username: <%= ENV.fetch("PENNY_LUNCH_DATABASE_USERNAME", "penny_lunch") %>
 
 
 development:
-  <<: *default
-  database: penny_lunch_development
+  primary: &primary_development
+    <<: *default
+    database: penny_lunch_development
+  queue:
+    <<: *primary_development
+    database: penny_lunch_development_queue
+    migrations_paths: db/queue_migrate
 
   # The specified database role being used to connect to PostgreSQL.
   # To create additional roles in PostgreSQL see `$ createuser --help`.
@@ -88,7 +97,7 @@ production:
   primary: &primary_production
     <<: *default
     database: penny_lunch_production
-    username: penny_lunch
+    username: <%= ENV.fetch("PENNY_LUNCH_DATABASE_USERNAME", "penny_lunch") %>
     password: <%= ENV["PENNY_LUNCH_DATABASE_PASSWORD"] %>
   cache:
     <<: *primary_production

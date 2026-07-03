@@ -1,0 +1,95 @@
+<% content_for :title, "Recipes" %>
+
+<main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+  <header class="flex flex-col gap-3 border-b pb-5 md:flex-row md:items-end md:justify-between">
+    <div>
+      <p class="text-sm font-medium text-muted-foreground">PennyLunch</p>
+      <h1 class="text-3xl font-semibold tracking-normal">Recipes</h1>
+    </div>
+    <%= link_to "Maintenance", "/maintenance_tasks", class: "btn", data: { variant: "outline" } %>
+  </header>
+
+  <%= form_with url: recipes_path, method: :get, local: true, class: "grid gap-4 rounded-lg border bg-card p-4 shadow-sm lg:grid-cols-[1fr_1fr_1fr_auto]" do |form| %>
+    <div class="field">
+      <%= form.label :q, "Title" %>
+      <%= form.search_field :q, value: params[:q], class: "input", autocomplete: "off" %>
+    </div>
+
+    <div class="field">
+      <%= form.label :category, "Category" %>
+      <div id="category-combobox" class="combobox w-full" data-auto-highlight="true">
+        <div class="input-group">
+          <input type="text" role="combobox" value="<%= params[:category] %>" autocomplete="off" autocorrect="off" spellcheck="false" aria-autocomplete="list" aria-expanded="false" aria-controls="category-combobox-listbox" />
+          <button type="button" class="btn" data-variant="ghost" data-size="icon-xs" data-align="inline-end" aria-label="Open categories" aria-haspopup="listbox" aria-expanded="false" aria-controls="category-combobox-listbox">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
+        </div>
+        <div id="category-combobox-popover" data-popover aria-hidden="true">
+          <div role="listbox" id="category-combobox-listbox" aria-orientation="vertical" data-empty="No categories found.">
+            <% search.category_options.each do |category| %>
+              <div role="option" data-value="<%= category %>"><%= category %></div>
+            <% end %>
+          </div>
+        </div>
+        <input type="hidden" name="category" value="<%= params[:category] %>" />
+      </div>
+    </div>
+
+    <div class="field">
+      <%= form.label :sort, "Sort" %>
+      <%= form.select :sort, options_for_select([
+        [ "Time ascending", "time_asc" ],
+        [ "Time descending", "time_desc" ],
+        [ "Rating ascending", "rating_asc" ],
+        [ "Rating descending", "rating_desc" ],
+      ], params[:sort].presence || "time_asc"), {}, class: "native-select" %>
+    </div>
+
+    <div class="flex items-end gap-2">
+      <%= form.submit "Show recipes", class: "btn w-full lg:w-auto" %>
+    </div>
+
+    <div class="field lg:col-span-3">
+      <%= form.label :ingredients, "Ingredients at home" %>
+      <%= form.text_area :ingredients, value: params[:ingredients], class: "textarea min-h-24", rows: 4 %>
+    </div>
+
+    <div class="flex flex-col justify-end gap-3 sm:flex-row sm:items-end lg:flex-col lg:items-stretch">
+      <label class="flex min-h-10 items-center gap-2 rounded-md border px-3 text-sm">
+        <%= check_box_tag :quick, "1", params[:quick] == "1", class: "checkbox" %>
+        Quick
+      </label>
+      <label class="flex min-h-10 items-center gap-2 rounded-md border px-3 text-sm">
+        <%= check_box_tag :popular, "1", params[:popular] == "1", class: "checkbox" %>
+        Popular
+      </label>
+      <%= link_to "Clear", recipes_path, class: "btn", data: { variant: "ghost" } %>
+    </div>
+  <% end %>
+
+  <section class="flex items-center justify-between gap-4">
+    <p class="text-sm text-muted-foreground"><%= pluralize(search.total_count, "recipe") %></p>
+    <% if search.previous_page || search.next_page %>
+      <nav class="flex gap-2" aria-label="Pagination">
+        <% if search.previous_page %>
+          <%= link_to "Previous", recipes_path(request.query_parameters.merge(page: search.previous_page)), class: "btn", data: { variant: "outline", size: "sm" } %>
+        <% end %>
+        <% if search.next_page %>
+          <%= link_to "Next", recipes_path(request.query_parameters.merge(page: search.next_page)), class: "btn", data: { variant: "outline", size: "sm" } %>
+        <% end %>
+      </nav>
+    <% end %>
+  </section>
+
+  <% if recipes.any? %>
+    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <%= render partial: "recipes/recipe", collection: recipes, as: :recipe %>
+    </section>
+  <% else %>
+    <section class="rounded-lg border bg-card p-8 text-center">
+      <h2 class="text-xl font-semibold">Import recipes</h2>
+      <p class="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Open maintenance tasks, run the import, then return here to search dinner options.</p>
+      <%= link_to "Import recipes", "/maintenance_tasks", class: "btn mt-5" %>
+    </section>
+  <% end %>
+</main>

@@ -1,0 +1,70 @@
+services:
+  web:
+    image: penny_lunch:production
+    build:
+      context: .
+      dockerfile: Dockerfile
+      pull: true
+    init: true
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      EMBEDDING_MODEL_PRELOAD: ${EMBEDDING_MODEL_PRELOAD:-true}
+      INFORMERS_CACHE_DIR: /rails/storage/informers
+      INGREDIENTS_CANDIDATE_COUNT: ${INGREDIENTS_CANDIDATE_COUNT:-250}
+      INGREDIENTS_FILTER_STRATEGY: ${INGREDIENTS_FILTER_STRATEGY:-naive_vector_search}
+      INGREDIENTS_MAX_COSINE_DISTANCE: ${INGREDIENTS_MAX_COSINE_DISTANCE:-0.7}
+      INGREDIENT_PARSER_PYTHON: /rails/.venv/bin/python
+      INGREDIENT_PARSER_SCRIPT: /rails/libexec/parse_ingredients.py
+      INGREDIENT_PARSER_TIMEOUT_SECONDS: ${INGREDIENT_PARSER_TIMEOUT_SECONDS:-120}
+      JOB_CONCURRENCY: ${JOB_CONCURRENCY:-1}
+      MAINTENANCE_TASKS_PASSWORD: ${MAINTENANCE_TASKS_PASSWORD:-pennylunch}
+      MAINTENANCE_TASKS_USERNAME: ${MAINTENANCE_TASKS_USERNAME:-pennylunch}
+      NLTK_DATA: /rails/.venv/nltk_data
+      PENNY_LUNCH_DATABASE_HOST: db
+      PENNY_LUNCH_DATABASE_MAX_CONNECTIONS: ${PENNY_LUNCH_DATABASE_MAX_CONNECTIONS:-5}
+      PENNY_LUNCH_DATABASE_PASSWORD: ${PENNY_LUNCH_DATABASE_PASSWORD:-postgres}
+      PENNY_LUNCH_DATABASE_PORT: 5432
+      PENNY_LUNCH_DATABASE_USERNAME: ${PENNY_LUNCH_DATABASE_USERNAME:-penny_lunch}
+      PORT: 3000
+      RAILS_ENV: production
+      RAILS_LOG_LEVEL: ${RAILS_LOG_LEVEL:-info}
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY:-}
+      RAILS_MAX_THREADS: ${RAILS_MAX_THREADS:-3}
+      RECIPES_IMPORT_URL: ${RECIPES_IMPORT_URL:-https://pennylane-interviewing-assets-20220328.s3.eu-west-1.amazonaws.com/recipes-en.json.gz}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-penny_lunch_local_compose_secret_key_base_for_development_only_1234567890}
+      SOLID_QUEUE_IN_PUMA: "true"
+    ports:
+      - "${PENNY_LUNCH_HTTP_PORT:-3000}:80"
+    volumes:
+      - rails_storage:/rails/storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/up >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  db:
+    image: pgvector/pgvector:0.8.4-pg18-trixie
+    environment:
+      POSTGRES_DB: penny_lunch_production
+      POSTGRES_PASSWORD: ${PENNY_LUNCH_DATABASE_PASSWORD:-postgres}
+      POSTGRES_USER: ${PENNY_LUNCH_DATABASE_USERNAME:-penny_lunch}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    ports:
+      - "127.0.0.1:${PENNY_LUNCH_DEVELOPMENT_DATABASE_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  rails_storage:

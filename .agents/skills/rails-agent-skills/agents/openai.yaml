@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rails Agent Skills"
+  short_description: "Rails 8 workflow, TDD, and routing"
+  default_prompt: "Use $rails-agent-skills to implement this Rails change with focused tests."

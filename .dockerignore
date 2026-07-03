@@ -6,6 +6,7 @@
 
 # Ignore bundler config.
 /.bundle
+/.venv
 
 # Ignore all environment files.
 /.env*
@@ -37,8 +38,22 @@
 /public/assets
 
 # Ignore development files
+/.agents
 /.devcontainer
+/.reek.yml
+/.rspec
+/.rubocop.yml
+/AGENTS.md
+/coverage
+/docs
+/Procfile.dev
+/README.md
+/skills-lock.json
+/spec
 
 # Ignore Docker-related files
 /.dockerignore
+/docker-compose*.yaml
+/docker-compose*.yml
+/docker/
 /Dockerfile*

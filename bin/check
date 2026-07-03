@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../lib/penny_lunch/quality/check_runner"
+
+if ARGV.any?
+  warn "bin/check does not accept arguments. Run a focused bin/linters/* script directly."
+  exit 1
+end
+
+exit PennyLunch::Quality::CheckRunner.new.run

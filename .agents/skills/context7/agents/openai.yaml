@@ -1,0 +1,4 @@
+interface:
+  display_name: "Context7 Rails"
+  short_description: "Look up current Rails ecosystem docs through Context7."
+  default_prompt: "Use $context7 to verify current Rails documentation for this task."
