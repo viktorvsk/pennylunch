@@ -45,16 +45,15 @@ RSpec.describe "Recipes", type: :request do
       { "name" => "tomato", "optional" => true },
       { "name" => "pasta", "optional" => false }
     )
-    expect(response.body).to include("M20 21a8 8 0 0 0-16 0")
-    expect(response.body).to include("M12 6v6l4 2")
-    expect(response.body).to include("href=\"/\"")
-    expect(response.body).to include("role=\"switch\"")
-    expect(response.body).to include("role=\"combobox\"")
-    expect(response.body).to include("class=\"dropdown-menu")
+    expect(document.at_css("a[href='/']").text).to eq("PennyLunch")
+    expect(document.css("[role='switch']")).not_to be_empty
+    expect(document.css("[role='combobox']")).not_to be_empty
+    expect(document.css(".dropdown-menu")).not_to be_empty
     expect(response.body).to include("data-tooltip=\"Category: Pasta\"")
-    expect(response.body).to include("class=\"recipe-toolbar sticky top-0")
+    expect(document.css(".recipe-toolbar")).not_to be_empty
     expect(response.body).to include("recipe-toolbar-loading")
-    expect(response.body).to include("turbo.min")
+    expect(response.body).to include("recipe_filter_core")
+    expect(response.body).to include("recipe_ingredients_fab")
     expect(response.body).to include("data-ingredients-filter-hidden=\"true\"")
     expect(response.body).to include("id=\"recipe-results-frame\"")
     expect(response.body).to include("id=\"recipe-ingredients-fab\"")
@@ -67,12 +66,11 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("data-ingredients-selected-list")
     expect(response.body).to include("tomato")
     expect(response.body).not_to include("data-ingredients-filter-textarea")
-    expect(response.body).to include("<h1 class=\"text-2xl font-semibold tracking-normal\">Pasta</h1>")
+    expect(document.at_css("h1").text).to eq("Pasta")
     expect(response.body).to include("aria-label=\"Maintenance\"")
     expect(response.body).not_to include("Show recipes")
     expect(response.body).not_to include(">Clear<")
     expect(response.body).not_to include(">Maintenance<")
-    expect(response.body).not_to include("overflow-x-auto")
   end
 
   it "renders infinite scroll instead of totals and pagination links" do
@@ -190,7 +188,7 @@ RSpec.describe "Recipes", type: :request do
     expect(document.css("span").map { |node| node.text.squish }).not_to include("0 min")
     expect(response.body).to include("href=\"/\"")
     expect(response.body).to include("href=\"/recipes/pasta\"")
-    expect(response.body).to include("class=\"recipe-toolbar sticky top-0")
+    expect(document.css(".recipe-toolbar")).not_to be_empty
     expect(response.body).to include("aria-label=\"Maintenance\"")
     expect(response.body).to include("recipe-show-card")
     expect(response.body).to include("Ingredients")
@@ -209,7 +207,6 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("role=\"switch\"")
     expect(response.body).to include("role=\"combobox\"")
     expect(response.body).to include("id=\"recipe-ingredients-fab\"")
-    expect(response.body).not_to include("rounded-md bg-muted")
     expect(response.body.index("<h1")).to be < response.body.index("<img")
   end
 

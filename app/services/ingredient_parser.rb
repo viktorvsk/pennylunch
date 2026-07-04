@@ -9,6 +9,7 @@ class IngredientParser
   Result = Data.define(:ingredient_names, :ingredient_parse_data)
 
   DEFAULT_TIMEOUT_SECONDS = 120
+  STDERR_PREVIEW_LENGTH = 500
 
   def self.call(ingredient_lists, **options)
     new(**default_options.merge(options)).call(ingredient_lists)
@@ -63,7 +64,7 @@ class IngredientParser
   end
 
   def parser_failure_message(status, stderr)
-    details = stderr.to_s.strip[0, 500]
+    details = stderr.to_s.strip[0, STDERR_PREVIEW_LENGTH]
     message = "ingredient parser failed with status #{status.exitstatus}"
     details.present? ? "#{message}: #{details}" : message
   end

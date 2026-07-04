@@ -1,14 +1,4 @@
 class Ingredient < ApplicationRecord
-  LOOKUP_WORD_INFLECTIONS = {
-    "berries" => "berry",
-    "blueberries" => "blueberry",
-    "cherries" => "cherry",
-    "cranberries" => "cranberry",
-    "raspberries" => "raspberry",
-    "strawberries" => "strawberry",
-    "zucchinis" => "zucchini"
-  }.freeze
-
   before_validation :normalize_name
   before_validation :normalize_aliases
 
@@ -20,26 +10,16 @@ class Ingredient < ApplicationRecord
   validate :name_must_be_canonical
 
   def self.normalize_lookup_key(value)
-    value.to_s.squish.downcase.split.filter_map { |word| normalize_lookup_word(word).presence }.join(" ").presence
+    Ingredients::LookupKey.normalize(value)
   end
 
   def self.lookup_map
-    lookup_map_for(all)
+    Ingredients::LookupMapQuery.new(scope: all).call
   end
 
   def self.filterable_lookup_map
-    lookup_map_for(where(optional: false))
+    Ingredients::LookupMapQuery.new(scope: where(optional: false)).call
   end
-
-  def self.lookup_map_for(scope)
-    scope.pluck(:name, :aliases).each_with_object({}) do |(name, aliases), mapping|
-      ([ name ] + Array(aliases)).each do |value|
-        key = normalize_lookup_key(value)
-        mapping[key] = name if key.present?
-      end
-    end
-  end
-  private_class_method :lookup_map_for
 
   def self.canonical_names_for(names)
     canonical_names_for_lookup(names, lookup_map)
@@ -57,20 +37,6 @@ class Ingredient < ApplicationRecord
   def self.filter_options
     order(:name).pluck(:name, :optional).map { |name, optional| { name:, optional: } }
   end
-
-  def self.normalize_lookup_word(word)
-    return LOOKUP_WORD_INFLECTIONS.fetch(word) if LOOKUP_WORD_INFLECTIONS.key?(word)
-
-    case word
-    when /oes\z/
-      word.delete_suffix("es")
-    when /s\z/
-      word.match?(/(?:ss|us)\z/) ? word : word.delete_suffix("s")
-    else
-      word
-    end
-  end
-  private_class_method :normalize_lookup_word
 
   private
 

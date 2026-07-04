@@ -1,4 +1,3 @@
-require "csv"
 require "open-uri"
 require "stringio"
 require "zlib"
@@ -37,7 +36,7 @@ module Recipes
       raise Error, "ingredient parser returned #{parser_results.size} lists for #{records.size} source records" unless parser_results.size == records.size
 
       Recipe.transaction do
-        Recipe.connection.execute("LOCK TABLE recipes IN EXCLUSIVE MODE")
+        import_copy_query.lock_table
         raise NonEmptyDestinationError, "recipes table must be empty before MVP import" if Recipe.exists?
 
         copy_records(records, parser_results)
@@ -97,21 +96,16 @@ module Recipes
 
     def copy_records(records, parser_results)
       now = Time.current.utc.iso8601(6)
-      raw_connection = Recipe.connection.raw_connection
-      raw_connection.copy_data(copy_sql) do
+      rows = Enumerator.new do |yielder|
         records.each_with_index do |record, index|
-          raw_connection.put_copy_data(CSV.generate_line(copy_row(CopyRow.new(record, parser_results.fetch(index), index, now))))
+          yielder << copy_row(CopyRow.new(record, parser_results.fetch(index), index, now))
         end
       end
+      import_copy_query.copy(rows)
     end
 
-    def copy_sql
-      <<~SQL.squish
-        COPY recipes (
-          title, cook_time, prep_time, ingredients, ingredient_names, ingredients_vector_names, ingredient_parse_data, ratings, cuisine, category, category_normalized,
-          author, image, total_time, source_key, source_position, slug, created_at, updated_at
-        ) FROM STDIN WITH (FORMAT csv)
-      SQL
+    def import_copy_query
+      @import_copy_query ||= Recipes::ImportCopyQuery.new
     end
 
     def copy_row(row)
@@ -128,7 +122,7 @@ module Recipes
         record.fetch("ratings"),
         record.fetch("cuisine"),
         record.fetch("category"),
-        Recipe.normalize_category(record.fetch("category")),
+        Recipes::Category.normalize(record.fetch("category")),
         record.fetch("author"),
         record.fetch("image"),
         total_time,

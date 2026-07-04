@@ -1,31 +1,9 @@
-import { existsSync } from "node:fs"
-import { chromium } from "playwright"
-
-const baseUrl = (process.env.PENNYLUNCH_BASE_URL || "http://127.0.0.1:3000").replace(/\/$/, "")
-const chromePath = process.env.PLAYWRIGHT_CHROME_EXECUTABLE || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-
-async function assertServerReady() {
-  for (const path of ["/up", "/recipes"]) {
-    try {
-      const response = await fetch(`${baseUrl}${path}`)
-      if (response.ok) return
-    } catch {
-    }
-  }
-
-  throw new Error(`No PennyLunch server is reachable at ${baseUrl}. Start bin/dev or set PENNYLUNCH_BASE_URL to an existing app URL.`)
-}
+import { assertServerReady, baseUrl, launchBrowser } from "./browser_helpers.mjs"
 
 async function main() {
   await assertServerReady()
 
-  const launchOptions = {
-    headless: true,
-    ...(existsSync(chromePath) ? { executablePath: chromePath } : {})
-  }
-  const browser = await chromium.launch(launchOptions)
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
-  await page.emulateMedia({ reducedMotion: "no-preference" })
+  const { browser, page } = await launchBrowser({ width: 1440, height: 1000 })
 
   try {
     await page.goto(`${baseUrl}/recipes`, { waitUntil: "networkidle" })

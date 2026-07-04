@@ -1,4 +1,8 @@
 module ApplicationHelper
+  DEFAULT_ICON_SIZE = "size-4"
+  DEFAULT_INGREDIENT_SUMMARY_LIMIT = 8
+  MAX_RATING_STARS = 5
+  RATING_PRECISION = 2
   SORT_OPTIONS = {
     "time_asc" => "Time ascending",
     "time_desc" => "Time descending",
@@ -7,8 +11,8 @@ module ApplicationHelper
   }.freeze
 
   def filled_stars(rating)
-    filled_count = rating.to_f.round.clamp(0, 5)
-    safe_join(5.times.map do |index|
+    filled_count = rating.to_f.round.clamp(0, MAX_RATING_STARS)
+    safe_join(MAX_RATING_STARS.times.map do |index|
       content_tag(:span, "★", class: index < filled_count ? "text-amber-500" : "text-zinc-300")
     end)
   end
@@ -17,7 +21,7 @@ module ApplicationHelper
     class_name = options.fetch(:class_name, "recipe-rating")
     side = options.fetch(:side, "bottom")
     align = options.fetch(:align, "end")
-    value = number_with_precision(rating, precision: 2)
+    value = number_with_precision(rating, precision: RATING_PRECISION)
     content_tag(
       :span,
       filled_stars(rating),
@@ -35,7 +39,7 @@ module ApplicationHelper
     Array(recipe.ingredient_names).filter_map { |name| name.to_s.squish.presence }
   end
 
-  def ingredient_name_summary(recipe, limit: 8)
+  def ingredient_name_summary(recipe, limit: DEFAULT_INGREDIENT_SUMMARY_LIMIT)
     names = recipe_ingredient_names(recipe)
     return "" if names.empty?
 
@@ -78,21 +82,21 @@ module ApplicationHelper
   end
 
   def recipe_sort_label(sort)
-    SORT_OPTIONS.fetch(sort.presence || "time_asc", SORT_OPTIONS.fetch("time_asc"))
+    SORT_OPTIONS.fetch(sort.presence || Recipes::SortQuery.default_sort, SORT_OPTIONS.fetch(Recipes::SortQuery.default_sort))
   end
 
   def recipe_filter_path(filters = {})
     values = filters.to_h.with_indifferent_access
-    category = Recipe.normalize_category(values.delete(:category))
+    category = Recipes::Category.normalize(values.delete(:category))
     values.delete(:page) if values[:page].blank?
-    values.delete(:sort) if values[:sort].blank? || values[:sort] == "time_asc"
+    values.delete(:sort) if values[:sort].blank? || values[:sort] == Recipes::SortQuery.default_sort
     values.compact_blank!
 
-    path = category.present? ? "/recipes/#{Recipe.category_slug_for(category)}" : recipes_path
+    path = category.present? ? "/recipes/#{Recipes::Category.slug_for(category)}" : recipes_path
     values.present? ? "#{path}?#{values.to_query}" : path
   end
 
-  def icon_svg(name, class_name: "size-4")
+  def icon_svg(name, class_name: DEFAULT_ICON_SIZE)
     paths = {
       category: [
         tag.path(d: "M4 4h6v6H4z"),

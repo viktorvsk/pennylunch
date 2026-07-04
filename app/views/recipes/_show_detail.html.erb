@@ -1,0 +1,22 @@
+<section class="recipe-show-detail">
+  <article class="recipe-card recipe-show-card">
+    <div class="recipe-card-image recipe-card-image--show">
+      <%= image_tag recipe.display_image_url, alt: "" %>
+    </div>
+    <footer class="recipe-show-card-footer">
+      <div class="recipe-meta">
+        <%= render "recipe_meta_items", recipe:, tooltip_side: "top" %>
+      </div>
+      <%= rating_stars(recipe.ratings, class_name: "recipe-rating", side: "top") %>
+    </footer>
+  </article>
+
+  <aside class="recipe-show-ingredients-panel">
+    <header class="recipe-show-ingredients-header">
+      <h2>Ingredients</h2>
+    </header>
+    <div class="recipe-ingredient-list">
+      <%= render partial: "ingredient", collection: recipe_ingredient_rows(recipe) %>
+    </div>
+  </aside>
+</section>

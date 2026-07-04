@@ -1,7 +1,9 @@
 (() => {
+  const NEAR_VIEWPORT_MARGIN_PX = 600;
+
   const nearViewport = (element) => {
     const rect = element.getBoundingClientRect();
-    return rect.top < window.innerHeight + 600;
+    return rect.top < window.innerHeight + NEAR_VIEWPORT_MARGIN_PX;
   };
 
   const appendNextPage = async (sentinel) => {
@@ -70,7 +72,7 @@
         entries.forEach((entry) => {
           if (entry.isIntersecting) appendNextPage(sentinel);
         });
-      }, { rootMargin: "600px 0px" });
+      }, { rootMargin: `${NEAR_VIEWPORT_MARGIN_PX}px 0px` });
 
       observer.observe(sentinel);
     });

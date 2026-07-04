@@ -14,17 +14,13 @@ module Recipes
     end
 
     def call
-      relation = Recipe.all
-      relation = relation.matching_title(param(:q))
-      relation = relation.in_category(param(:category))
-      relation = relation.quick if active?(:quick)
-      relation = relation.popular if active?(:popular)
+      relation = Recipes::RelationQuery.call(params:)
       relation = Recipes::FilterIngredients.new(
         relation:,
         text: param(:ingredients),
         options: ingredients_filter_options,
       ).call
-      relation = Recipe.sort_relation(relation, param(:sort))
+      relation = Recipes::RelationQuery.sort(relation, param(:sort))
 
       current_page = page
       page_records = relation.offset((current_page - 1) * PER_PAGE).limit(PER_PAGE + 1).to_a
@@ -33,7 +29,7 @@ module Recipes
         recipes: page_records.first(PER_PAGE),
         page: current_page,
         next_page: page_records.size > PER_PAGE ? current_page + 1 : nil,
-        category_options: Recipe.category_options
+        category_options: Recipes::CategoryCatalogQuery.options
       )
     end
 
@@ -45,13 +41,9 @@ module Recipes
       params[name] || params[name.to_s]
     end
 
-    def active?(name)
-      param(name).to_s == "1"
-    end
-
     def page
       value = param(:page).to_i
-      value.positive? ? value : 1
+      value.positive? ? value : Recipes::FilterValues::DEFAULT_PAGE
     end
   end
 end

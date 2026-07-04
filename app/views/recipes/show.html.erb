@@ -1,58 +1,9 @@
 <% content_for :title, recipe.title %>
 
-<header class="recipe-toolbar sticky top-0 z-40 w-full min-w-0 border-b bg-background">
-  <div class="flex h-16 w-full min-w-0 items-center justify-between gap-3 px-3 sm:px-4">
-    <%= link_to "PennyLunch", root_path, class: "recipe-toolbar-brand shrink-0 text-base font-semibold tracking-normal" %>
-    <%= link_to icon_svg(:settings), "/maintenance_tasks", class: "btn size-10 shrink-0", data: { variant: "outline", size: "icon", tooltip: "Open maintenance tasks", side: "bottom", align: "end" }, aria: { label: "Maintenance" } %>
-  </div>
-</header>
+<%= render "show_toolbar" %>
 
-<main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-  <section class="space-y-2">
-    <h1 class="text-3xl font-semibold leading-tight tracking-normal sm:text-4xl"><%= recipe.title %></h1>
-    <% if recipe.category_normalized.present? %>
-      <%= link_to category_label(recipe), recipe_filter_path("category" => recipe.category_normalized), class: "recipe-card-category text-sm font-medium text-muted-foreground hover:text-foreground hover:underline" %>
-    <% end %>
-  </section>
-
-  <section class="recipe-show-detail grid overflow-hidden rounded-lg border bg-card shadow-sm lg:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)]">
-    <article class="recipe-card recipe-show-card flex min-h-0 flex-col">
-      <div class="recipe-card-image aspect-[16/9] bg-muted">
-        <%= image_tag recipe.display_image_url, alt: "", class: "h-full w-full object-cover" %>
-      </div>
-      <footer class="flex flex-wrap items-center justify-between gap-4 border-t p-4 text-sm text-muted-foreground">
-        <div class="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
-          <span class="inline-flex min-w-0 items-center gap-1.5">
-            <%= icon_svg(:user, class_name: "size-3.5 shrink-0") %>
-            <span class="truncate"><%= recipe.author.presence || "Unknown author" %></span>
-          </span>
-          <% if recipe.total_time_known? %>
-            <span class="inline-flex items-center gap-1.5" data-tooltip="<%= recipe_time_tooltip(recipe) %>" data-side="top" data-align="center">
-              <%= icon_svg(:clock, class_name: "size-3.5 shrink-0") %>
-              <span><%= recipe.total_time %> min</span>
-            </span>
-          <% end %>
-        </div>
-        <%= rating_stars(recipe.ratings, class_name: "recipe-rating shrink-0", side: "top") %>
-      </footer>
-    </article>
-
-    <aside class="recipe-show-ingredients-panel flex min-h-0 flex-col border-t bg-card lg:border-l lg:border-t-0">
-      <header class="border-b p-4">
-        <h2 class="text-lg font-semibold">Ingredients</h2>
-      </header>
-      <div class="recipe-ingredient-list">
-        <%= render partial: "ingredient", collection: recipe_ingredient_rows(recipe) %>
-      </div>
-    </aside>
-  </section>
-
-  <% if similar_recipes.any? %>
-    <section class="space-y-3">
-      <h2 class="text-lg font-semibold">Similar recipes</h2>
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <%= render partial: "recipes/recipe", collection: similar_recipes, as: :recipe %>
-      </div>
-    </section>
-  <% end %>
+<main class="recipe-page">
+  <%= render "show_title", recipe: %>
+  <%= render "show_detail", recipe: %>
+  <%= render "similar_recipes", similar_recipes: %>
 </main>

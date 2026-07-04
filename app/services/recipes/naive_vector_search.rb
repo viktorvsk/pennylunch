@@ -8,17 +8,14 @@ module Recipes
       query_names = query_ingredient_names
       return relation if query_names.empty?
 
-      candidate_relation = relation.where("ingredients_vector_names && ARRAY[?]::text[]", query_names)
       query_text = query_names.join("\n")
-
-      vector = embedder.call(query_text)
-      ids = candidate_relation
-        .where.not(ingredients_vector: nil)
-        .nearest_neighbors(:ingredients_vector, vector, distance: "cosine", threshold: max_distance)
-        .limit(candidate_count)
-        .pluck(:id)
-
-      ids.any? ? candidate_relation.where(id: ids) : candidate_relation
+      Recipes::IngredientCandidateQuery.new(
+        relation:,
+        names: query_names,
+        vector: embedder.call(query_text),
+        candidate_count:,
+        max_distance:
+      ).call
     end
 
     private
@@ -38,7 +35,7 @@ module Recipes
     end
 
     def candidate_count
-      request.candidate_count.positive? ? request.candidate_count : 250
+      request.candidate_count.positive? ? request.candidate_count : Recipes::IngredientCandidateQuery::DEFAULT_CANDIDATE_COUNT
     end
 
     def max_distance

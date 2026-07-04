@@ -3,7 +3,6 @@ require "uri"
 
 class Recipe < ApplicationRecord
   SOURCE_FIELDS = %w[title cook_time prep_time ingredients ratings cuisine category author image].freeze
-  SORTS = %w[time_asc time_desc rating_asc rating_desc].freeze
   has_neighbors :ingredients_vector
 
   before_validation :derive_fields
@@ -14,88 +13,6 @@ class Recipe < ApplicationRecord
   validates :source_key, :source_position, :slug, uniqueness: true
   validate :ingredient_names_are_unique
   validate :ingredient_parse_data_matches_ingredients
-
-  scope :quick, -> { where("total_time > 0 AND total_time < ?", 30) }
-  scope :popular, -> { where("ratings > ?", 4.8) }
-  scope :in_category, ->(category) {
-    normalized = normalize_category(category)
-    normalized.present? ? where(category_normalized: normalized) : all
-  }
-  scope :matching_title, ->(query) {
-    if query.present?
-      rank_sql = sanitize_sql_array([
-        "ts_rank_cd(title_search_vector, websearch_to_tsquery('english', ?)) DESC",
-        query
-      ])
-      where("title_search_vector @@ websearch_to_tsquery('english', ?)", query).order(Arel.sql(rank_sql))
-    else
-      all
-    end
-  }
-
-  def self.sorted_by(sort)
-    sort_relation(all, sort)
-  end
-
-  def self.sort_relation(relation, sort)
-    case SORTS.include?(sort.to_s) ? sort.to_s : "time_asc"
-    when "time_desc"
-      relation.order(Arel.sql("CASE WHEN total_time = 0 THEN 0 ELSE 1 END ASC"), total_time: :desc, id: :asc)
-    when "rating_asc"
-      relation.order(ratings: :asc, id: :asc)
-    when "rating_desc"
-      relation.order(ratings: :desc, id: :asc)
-    else
-      relation.order(Arel.sql("CASE WHEN total_time = 0 THEN 1 ELSE 0 END ASC"), total_time: :asc, id: :asc)
-    end
-  end
-
-  def self.category_options
-    where.not(category_normalized: "").distinct.order(:category_normalized).pluck(:category_normalized)
-  end
-
-  def self.category_labels
-    labels = category_options.to_h { |category| [ category, category ] }
-    categories = where.not(category_normalized: "").pluck(:category_normalized, :category).group_by(&:first)
-
-    categories.each do |normalized, rows|
-      label = rows.map { |(_, category)| category.to_s.squish.presence }.compact.min_by do |category|
-        [ category == normalize_category(category) ? 1 : 0, category.downcase ]
-      end
-      labels[normalized] = label if label
-    end
-
-    labels
-  end
-
-  def self.ingredient_filter_options
-    Ingredient.filter_options
-  end
-
-  def self.similar_by_ingredients(recipe, limit: 3)
-    return none if recipe.ingredients_vector.blank?
-
-    where.not(id: recipe.id)
-      .where.not(ingredients_vector: nil)
-      .nearest_neighbors(:ingredients_vector, recipe.ingredients_vector, distance: "cosine")
-      .limit(limit)
-  end
-
-  def self.category_slug_for(category)
-    normalize_category(category).parameterize
-  end
-
-  def self.category_slug_map
-    category_options.to_h { |category| [ category, category_slug_for(category) ] }
-  end
-
-  def self.category_from_slug(slug)
-    category_options.find { |category| category_slug_for(category) == slug.to_s }
-  end
-
-  def self.normalize_category(category)
-    category.to_s.strip.downcase
-  end
 
   def self.source_key_for(title:, category:, author:)
     Digest::SHA256.hexdigest(JSON.generate([
@@ -152,7 +69,7 @@ class Recipe < ApplicationRecord
   def derive_fields
     self.ingredient_names = Array(ingredient_names).filter_map { |name| name.to_s.squish.downcase.presence }.uniq
     self.ingredients_vector_names = Array(ingredients_vector_names).filter_map { |name| Ingredient.normalize_lookup_key(name) }.uniq
-    self.category_normalized = self.class.normalize_category(category)
+    self.category_normalized = Recipes::Category.normalize(category)
     self.total_time = prep_time.to_i + cook_time.to_i
     self.source_key = self.class.source_key_for(title:, category:, author:) if title && category && author
     self.slug = self.class.slug_for(title:, category:, author:, total_time:) if title && author && total_time

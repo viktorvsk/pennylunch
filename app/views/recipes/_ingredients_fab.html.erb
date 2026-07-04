@@ -2,14 +2,14 @@
 <% fab_ingredient_options = Array(local_assigns[:ingredient_options]) %>
 
 <section id="recipe-ingredients-fab" class="recipe-ingredients-fab" data-turbo-permanent data-ingredients-fab data-current-ingredients="<%= fab_filters["ingredients"].to_s %>" data-current-enabled="<%= fab_filters["ingredients"].present? ? "true" : "false" %>" data-ingredient-options="<%= fab_ingredient_options.to_json %>">
-  <div id="recipe-ingredients-panel" class="recipe-ingredients-panel card" data-ingredients-filter-panel hidden>
-    <header class="space-y-1 p-4">
-      <div class="flex items-start justify-between gap-3">
-        <div class="space-y-1">
-          <h2 class="text-base font-semibold">Ingredients at home</h2>
-          <p class="text-sm leading-5 text-muted-foreground">Pick matching ingredients. Enable to include them in filters.</p>
+  <div id="recipe-ingredients-panel" class="recipe-ingredients-panel" data-ingredients-filter-panel hidden>
+    <header>
+      <div class="recipe-ingredients-panel-header">
+        <div class="recipe-ingredients-panel-copy">
+          <h2 class="recipe-ingredients-panel-title">Ingredients at home</h2>
+          <p class="recipe-ingredients-panel-description">Pick matching ingredients. Enable to include them in filters.</p>
         </div>
-        <label class="recipe-ingredients-switch shrink-0 cursor-pointer" data-state="disabled">
+        <label class="recipe-ingredients-switch" data-state="disabled">
           <%= tag.input type: "checkbox", class: "sr-only", role: "switch", aria: { label: "Use ingredients in filters" }, data: { ingredients_filter_enabled: true } %>
           <span class="recipe-ingredients-switch-track" aria-hidden="true">
             <span class="recipe-ingredients-switch-thumb"></span>
@@ -19,22 +19,22 @@
       </div>
     </header>
 
-    <section class="recipe-ingredients-picker min-h-0 space-y-3 px-4 pb-4">
-      <div class="space-y-2">
-        <label for="recipe-ingredients-input" class="text-sm font-medium">Add ingredient</label>
-        <input id="recipe-ingredients-input" class="input h-10 w-full" type="text" placeholder="Start typing, then choose a match" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="recipe-ingredients-options" data-ingredients-filter-input>
-        <div id="recipe-ingredients-options" class="recipe-ingredients-options rounded-md border bg-popover shadow-sm" role="listbox" data-ingredients-filter-options hidden></div>
-        <p class="text-xs text-muted-foreground" data-ingredients-filter-help>Only known ingredients can be added. Disabled selections stay saved but are not sent to search.</p>
+    <section class="recipe-ingredients-picker">
+      <div class="recipe-ingredients-field">
+        <label for="recipe-ingredients-input">Add ingredient</label>
+        <input id="recipe-ingredients-input" class="input" type="text" placeholder="Start typing, then choose a match" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="recipe-ingredients-options" data-ingredients-filter-input>
+        <div id="recipe-ingredients-options" class="recipe-ingredients-options" role="listbox" data-ingredients-filter-options hidden></div>
+        <p class="recipe-ingredients-help" data-ingredients-filter-help>Only known ingredients can be added. Disabled selections stay saved but are not sent to search.</p>
       </div>
 
-      <div class="recipe-ingredients-selected min-h-0 rounded-md border bg-muted/40 p-2">
+      <div class="recipe-ingredients-selected">
         <div class="recipe-ingredients-selected-list" data-empty-text="No ingredients selected yet." data-ingredients-selected-list></div>
       </div>
     </section>
   </div>
 
   <button type="button" class="btn recipe-ingredients-fab-button" data-variant="outline" data-ingredients-fab-trigger data-state="disabled" data-tooltip="Ingredients: add what you have" data-side="left" data-align="center" aria-label="Ingredients: add what you have" aria-controls="recipe-ingredients-panel" aria-expanded="false">
-    <%= icon_svg(:ingredients, class_name: "size-5") %>
+    <%= icon_svg(:ingredients, class_name: "recipe-ingredients-fab-icon") %>
     <span class="sr-only" data-ingredients-fab-status>Add what you have</span>
   </button>
 </section>

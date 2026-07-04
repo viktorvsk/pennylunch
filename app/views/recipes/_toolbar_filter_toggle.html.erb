@@ -1,0 +1,4 @@
+<label class="btn recipe-toolbar-toggle recipe-toolbar-control" data-state="<%= active ? "active" : "inactive" %>" data-variant="outline" data-size="icon" data-tooltip="<%= tooltip %>" data-side="bottom" data-align="center">
+  <%= check_box_tag name, Recipes::RelationQuery.active_value, active, class: "sr-only", role: "switch", aria: { label: aria_label }, data: { auto_submit_on_change: true } %>
+  <%= icon_svg(icon) %>
+</label>

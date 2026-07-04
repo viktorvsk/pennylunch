@@ -82,7 +82,17 @@ bin/check
 
 `bin/check` runs RuboCop, Flay, Flog, Reek, Brakeman, Bundler Audit, ENV access, production boot, coverage, and RSpec. Checks that share the test database run serially. It does not accept task-selection flags. For focused work, run a specific script under `bin/linters/`.
 
-## Browser Smoke
+## System Specs
+
+Capybara system specs live under `spec/system` and run with RSpec, including through `bin/check`. They use Selenium headless Chrome for Rails-native end-to-end coverage of critical Turbo flows.
+
+Run them directly with:
+
+```bash
+bin/rspec spec/system
+```
+
+## Browser Checks
 
 Install the browser-test dependency once:
 
@@ -96,7 +106,19 @@ With the app already running on the default development port, run:
 npm run browser:smoke
 ```
 
-The smoke check reuses `http://127.0.0.1:3000` by default and does not start Rails. It covers index-to-show navigation, show-page layout, shared basket FAB rendering, and exact basket-ingredient highlighting on index and show pages. If the active app is on a different port, set `PENNYLUNCH_BASE_URL`. If system Chrome is unavailable, run `npm run browser:install` once to install Playwright's Chromium browser.
+Run the critical Turbo filter flow with:
+
+```bash
+npm run browser:filter
+```
+
+Run both browser checks with:
+
+```bash
+npm run browser:e2e
+```
+
+The browser checks reuse `http://127.0.0.1:3000` by default and do not start Rails. Set `PENNYLUNCH_BASE_URL` when the active app is on a different port, and `PLAYWRIGHT_CHROME_EXECUTABLE` when Chrome is installed outside the default macOS path. `browser:smoke` covers index-to-show navigation, show-page layout, shared basket FAB rendering, and exact basket-ingredient highlighting on index and show pages. `browser:filter` seeds and cleans up deterministic `E2E Turbo Filter` records, drives title, category, quick, and popular filters through the real browser UI, and verifies the Turbo-updated results include the relevant recipe while excluding irrelevant recipes. If system Chrome is unavailable, run `npm run browser:install` once to install Playwright's Chromium browser.
 
 ## Environment Variables
 

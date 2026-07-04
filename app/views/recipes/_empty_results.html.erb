@@ -1,0 +1,13 @@
+<section class="recipe-empty-state">
+  <div class="recipe-empty-state-icon">
+    <%= icon_svg(:sad_face, class_name: "size-8") %>
+  </div>
+  <h2>Nothing found</h2>
+  <% if random_category.present? %>
+    <p>
+      Try another search or browse <%= link_to category_heading(random_category), recipe_filter_path("category" => random_category) %>.
+    </p>
+  <% else %>
+    <p>Try another search.</p>
+  <% end %>
+</section>

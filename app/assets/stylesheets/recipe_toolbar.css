@@ -4,10 +4,62 @@
   --recipe-toolbar-active-border: #eab308;
   --recipe-toolbar-active-foreground: #422006;
   --recipe-toolbar-active-hover: #facc15;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 8px oklch(0.145 0 0 / 0.08);
+  min-width: 0;
+  position: sticky;
+  top: 0;
+  width: 100%;
+  z-index: 40;
 }
 
-.recipe-toolbar {
-  box-shadow: 0 1px 8px oklch(0.145 0 0 / 0.08);
+.recipe-toolbar-inner {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  height: 4rem;
+  min-width: 0;
+  padding-inline: 0.75rem;
+  width: 100%;
+}
+
+.recipe-toolbar-inner--between {
+  justify-content: space-between;
+}
+
+.recipe-toolbar-brand {
+  flex-shrink: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.recipe-toolbar-form {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.recipe-toolbar-search {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.recipe-toolbar-search .input {
+  height: 2.5rem;
+  width: 100%;
+}
+
+.recipe-toolbar-control {
+  flex-shrink: 0;
+  height: 2.5rem;
+  width: 2.5rem;
+}
+
+.recipe-toolbar-toggle {
+  cursor: pointer;
 }
 
 .recipe-toolbar-toggle[data-state="active"] {
@@ -35,12 +87,38 @@
 }
 
 .recipe-toolbar-loading {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  height: 1.25rem;
+  justify-content: center;
   opacity: 0;
   transition: opacity 120ms ease;
+  width: 1.25rem;
 }
 
 html[data-turbo-loading] .recipe-toolbar-loading {
   opacity: 1;
+}
+
+.recipe-toolbar-category-popover {
+  width: 18rem;
+}
+
+.recipe-toolbar-category-listbox {
+  max-height: 20rem;
+  overflow-y: auto;
+}
+
+.recipe-toolbar-sort-popover {
+  width: 14rem;
+}
+
+.recipe-toolbar-sort-option {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
 }
 
 @media (max-width: 520px) {
@@ -48,5 +126,11 @@ html[data-turbo-loading] .recipe-toolbar-loading {
     max-width: 2rem;
     overflow: hidden;
     white-space: nowrap;
+  }
+}
+
+@media (min-width: 640px) {
+  .recipe-toolbar-inner {
+    padding-inline: 1rem;
   }
 }

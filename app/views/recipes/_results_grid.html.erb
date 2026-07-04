@@ -1,0 +1,12 @@
+<section id="recipe-results" class="recipe-results-grid">
+  <%= render partial: "recipes/recipe", collection: recipes, as: :recipe %>
+</section>
+
+<% if next_page_url %>
+  <div class="recipe-results-loading" data-infinite-scroll-sentinel data-next-url="<%= next_page_url %>" aria-live="polite">
+    <span class="recipe-results-loading-status" data-infinite-scroll-status>
+      <span class="infinite-scroll-spinner" aria-hidden="true"></span>
+      <span>Loading more recipes...</span>
+    </span>
+  </div>
+<% end %>
