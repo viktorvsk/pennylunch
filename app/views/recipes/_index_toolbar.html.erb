@@ -1,16 +1,10 @@
-<% current_sort = filters["sort"].presence || RecipeSearch::DEFAULT_SORT %>
-<% quick_active = recipe_filter_active?(filters["quick"]) %>
-<% popular_active = recipe_filter_active?(filters["popular"]) %>
-<% category_labels = recipe_category_labels %>
-<% selected_category_label = selected_category.present? ? category_labels.fetch(selected_category, category_heading(selected_category)) : nil %>
-<% category_tooltip = selected_category_label.present? ? "Category: #{selected_category_label}" : "Category: all categories" %>
-
+<% toolbar = recipe_toolbar_state(filters:, selected_category:) %>
 <header class="recipe-toolbar">
   <div class="recipe-toolbar-inner">
     <%= link_to "PennyLunch", root_path, class: "recipe-toolbar-brand" %>
 
     <%= form_with url: recipes_path, method: :get, local: true, html: { data: { auto_submit_form: true, filter_root: recipes_path } }, class: "recipe-toolbar-form" do |form| %>
-      <%= hidden_field_tag :sort, current_sort %>
+      <%= hidden_field_tag :sort, toolbar.current_sort %>
       <%= hidden_field_tag :ingredients, filters["ingredients"], data: { ingredients_filter_hidden: true } %>
 
       <div class="recipe-toolbar-search">
@@ -22,10 +16,10 @@
         <span class="infinite-scroll-spinner"></span>
       </span>
 
-      <%= render "toolbar_filter_toggle", name: :quick, active: quick_active, aria_label: "Quick recipes", icon: :quick, tooltip: "Quick: #{quick_active ? "on" : "off"}. Shows recipes under 30 minutes." %>
-      <%= render "toolbar_filter_toggle", name: :popular, active: popular_active, aria_label: "Popular recipes", icon: :popular, tooltip: "Popular: #{popular_active ? "on" : "off"}. Shows recipes rated above 4.8." %>
-      <%= render "toolbar_category_combobox", selected_category:, selected_category_label:, tooltip: category_tooltip, categories: category_labels.keys, category_labels: %>
-      <%= render "toolbar_sort_menu", current_sort:, filters: %>
+      <%= render "toolbar_filter_toggle", name: :quick, active: toolbar.quick_active, aria_label: "Quick recipes", icon: :quick, tooltip: "Quick: #{toolbar.quick_active ? "on" : "off"}. Shows recipes under 30 minutes." %>
+      <%= render "toolbar_filter_toggle", name: :popular, active: toolbar.popular_active, aria_label: "Popular recipes", icon: :popular, tooltip: "Popular: #{toolbar.popular_active ? "on" : "off"}. Shows recipes rated above 4.8." %>
+      <%= render "toolbar_category_combobox", selected_category:, selected_category_label: toolbar.selected_category_label, tooltip: toolbar.category_tooltip, categories: toolbar.category_labels.keys, category_labels: toolbar.category_labels %>
+      <%= render "toolbar_sort_menu", current_sort: toolbar.current_sort, filters: %>
     <% end %>
 
     <%= render "toolbar_maintenance_link" %>

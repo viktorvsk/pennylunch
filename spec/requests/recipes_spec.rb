@@ -79,7 +79,7 @@ RSpec.describe "Recipes", type: :request do
   end
 
   it "renders infinite scroll instead of totals and pagination links" do
-    create_list(:recipe, RecipeSearch::PER_PAGE + 1)
+    create_list(:recipe, RecipesController::PER_PAGE + 1)
 
     get recipes_path
 
@@ -88,7 +88,7 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("data-infinite-scroll-sentinel")
     expect(response.body).to include("data-next-url=\"/recipes?page=2\"")
     expect(response.body).to include("infinite-scroll-spinner")
-    expect(response.body).not_to include("#{RecipeSearch::PER_PAGE + 1} recipes")
+    expect(response.body).not_to include("#{RecipesController::PER_PAGE + 1} recipes")
     expect(response.body).not_to include(">Next<")
   end
 
@@ -126,6 +126,19 @@ RSpec.describe "Recipes", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Tomato Pasta")
     expect(response.body).not_to include("Tomato Soup")
+  end
+
+  it "applies quick filtering and selected sorting" do
+    low_rated_quick = create(:recipe, title: "Low Rated Quick Dinner", prep_time: 5, cook_time: 10, ratings: 4.1)
+    high_rated_quick = create(:recipe, title: "High Rated Quick Dinner", prep_time: 7, cook_time: 12, ratings: 4.9)
+    create(:recipe, title: "Slow Weekend Dinner", prep_time: 20, cook_time: 90, ratings: 5.0)
+
+    get recipes_path, params: { quick: "1", sort: "rating_desc" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include(high_rated_quick.title, low_rated_quick.title)
+    expect(response.body).not_to include("Slow Weekend Dinner")
+    expect(response.body.index(high_rated_quick.title)).to be < response.body.index(low_rated_quick.title)
   end
 
   it "filters recipes by available ingredients through vector search" do

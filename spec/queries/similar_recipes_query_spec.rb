@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Recipes::SimilarRecipesQuery do
+RSpec.describe SimilarRecipesQuery do
   it "returns nearest ingredient-vector neighbors without requiring the same category" do
     recipe = create(:recipe, title: "Tomato Pasta", category: "Pasta", ingredients_vector: vector(1.0, 0.0))
     closest = create(:recipe, title: "Tomato Soup", category: "Soup", ingredients_vector: vector(0.98, 0.02))

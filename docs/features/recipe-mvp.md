@@ -71,7 +71,7 @@ The panel gets autocomplete options from canonical `Ingredient.name` values plus
 
 Recipe cards show the image flush to the top edge, title, a clickable category subheader, a short ingredient-name summary, a light rating widget with Basecoat tooltip, and a footer with author and known total time. The time footer item uses a Basecoat tooltip for prep and cook breakdown. Recipe images use a small CSS-only zoom on hover/focus. Exact ingredient-name matches from the saved basket are moved to the front of each card summary before the visible summary cutoff and receive a subtle highlight.
 
-The recipe UI is composed from focused Rails partials for the toolbar, filter controls, result states, cards, show detail panel, shared metadata, and ingredients FAB. RecipeSearch owns the index filter and sort pipeline, relation-returning title search, similar recipes, and ingredient candidate matching live under `app/queries`, category catalog lookup lives on `Recipe`, and import COPY stays inside the import service that owns the workflow.
+The recipe UI is composed from focused Rails partials for the toolbar, filter controls, result states, cards, show detail panel, shared metadata, and ingredients FAB. `RecipesController` owns request filters, sorting, pagination, and next-page URLs; `RecipeSearch` narrows a relation by available ingredients; relation-returning title search and similar recipes live under `app/queries`; category catalog lookup lives on `Recipe`; and import COPY stays inside the import service that owns the workflow.
 
 The index uses infinite scroll. The server still accepts `page` internally, but the UI does not show result totals or pagination links. A spinner sentinel fetches the next page of cards and appends them to the existing grid.
 

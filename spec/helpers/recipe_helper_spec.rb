@@ -21,4 +21,19 @@ RSpec.describe RecipeHelper, type: :helper do
       ).at_least(:once)
     end
   end
+
+  describe "#recipe_toolbar_state" do
+    it "builds toolbar display state from filters and selected category" do
+      create(:recipe, category: "Pasta", category_normalized: "pasta")
+
+      expect(helper.recipe_toolbar_state(filters: { "sort" => "rating_desc", "quick" => "1", "popular" => "0" }, selected_category: "pasta")).to have_attributes(
+        current_sort: "rating_desc",
+        quick_active: true,
+        popular_active: false,
+        category_labels: { "pasta" => "Pasta" },
+        selected_category_label: "Pasta",
+        category_tooltip: "Category: Pasta"
+      )
+    end
+  end
 end
