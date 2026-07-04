@@ -143,11 +143,13 @@
       }
 
       .hero {
+        align-content: center;
         display: grid;
         gap: clamp(2rem, 5vw, 5rem);
         grid-template-columns: minmax(0, 0.88fr) minmax(22rem, 1.12fr);
         margin-inline: auto;
         max-width: 76rem;
+        min-height: calc(100dvh - 4.5rem);
         padding: clamp(2rem, 5vw, 4rem) 1rem clamp(2.5rem, 7vw, 5rem);
       }
 
@@ -271,8 +273,16 @@
         gap: 0.5rem;
         padding: 0.625rem 0.875rem;
         position: absolute;
-        right: 1rem;
+        left: 1rem;
         z-index: 2;
+      }
+
+      #intelligence,
+      #flow {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 100dvh;
       }
 
       .section {
@@ -538,21 +548,15 @@
           <span>PennyLunch</span>
         </a>
         <nav class="nav-links" aria-label="Landing page">
-          <a href="#intelligence">Intelligence</a>
-          <a href="#flow">Kitchen flow</a>
-          <a class="button button-primary" href="<%= recipes_path %>">Find tonight's dinner</a>
+          <a href="#flow">How it works</a>
         </nav>
       </header>
 
       <main>
         <section class="hero" aria-labelledby="landing-title">
           <div class="hero-copy">
-            <div class="hero-badge">
-              <img src="/icon-64x64.png" alt="" width="28" height="28">
-              Pantry-aware recipe AI
-            </div>
-            <h1 id="landing-title">Dinner from your pantry</h1>
-            <p>AI ranks realistic recipes from what you already have, then shows the meal you can cook now.</p>
+            <h1 id="landing-title">Dinner from your fridge</h1>
+            <p>Smart-match recipes that you can cook immeidately</p>
             <div class="hero-actions">
               <a class="button button-primary" href="<%= recipes_path %>">Find tonight's dinner</a>
               <a class="button button-secondary" href="#intelligence">See how it works</a>
@@ -560,13 +564,6 @@
           </div>
 
           <div class="hero-visual" aria-label="PennyLunch app preview">
-            <div class="mascot-orbit">
-              <img src="/icon-512x512.png" alt="PennyLunch mascot" width="64" height="64">
-              <div>
-                <strong>Your pantry gets a point of view.</strong>
-                <span>Ingredients become ranked dinner options, not another search box.</span>
-              </div>
-            </div>
             <div class="preview-frame">
               <iframe src="<%= recipes_path %>" title="Live PennyLunch recipe discovery preview" loading="eager"></iframe>
               <span class="preview-ribbon">Live app preview</span>
@@ -574,52 +571,22 @@
           </div>
         </section>
 
-        <section id="intelligence" class="section" aria-labelledby="intelligence-title">
-          <h2 id="intelligence-title">The kitchen decides the ranking.</h2>
-          <p class="section-intro">PennyLunch treats your pantry as the signal. Matches move forward, pantry staples stay secondary, and the next feasible recipe becomes obvious.</p>
-          <div class="signal-grid">
-            <article class="signal-panel signal-panel-large">
-              <h3>Ingredient intelligence that behaves like a sous-chef.</h3>
-              <p>The basket separates what matters from optional pantry noise, then pushes recipes with real overlap to the front.</p>
-              <div class="ingredient-cloud" aria-label="Example ingredients">
-                <span>tomato</span>
-                <span>eggs</span>
-                <span>parsley</span>
-                <span>garlic</span>
-                <span>pasta</span>
-                <span>lime</span>
-                <span>olive oil</span>
-              </div>
-            </article>
-            <div class="signal-stack">
-              <article class="signal-panel">
-                <h3>Fast by default.</h3>
-                <p>Quick and popular filters are always one tap away, so dinner stays a decision instead of a research project.</p>
-              </article>
-              <article class="signal-panel">
-                <h3>Readable at cooking speed.</h3>
-                <p>Cards lead with images, category, ingredient overlap, rating, and time. You can scan before the pan is hot.</p>
-              </article>
-            </div>
-          </div>
-        </section>
-
         <section id="flow" class="flow">
           <div class="section" aria-labelledby="flow-title">
-            <h2 id="flow-title">From fridge scan to dinner plan.</h2>
-            <p class="section-intro">A tight workflow for the moment when everyone is hungry and the answer has to be practical.</p>
+            <h2 id="flow-title">From fridge scan to dinner plan</h2>
+            <p class="section-intro">Time-tested recipes adjusted by ingredients you already have with smart ranking</p>
             <div class="flow-grid">
               <article class="flow-card">
-                <h3>Add what you have.</h3>
-                <p>Drop ingredients into the Market basket. Optional staples stay saved without distorting the match.</p>
+                <h3>1. Add what you have</h3>
+                <p>Add ingredients you already have: manually, while viewing recipes or by just uploading a photo</p>
               </article>
               <article class="flow-card">
-                <h3>Rank the feasible meals.</h3>
-                <p>The recipe list reorders around your basket, shortcut filters, category, rating, and total time.</p>
+                <h3>2. Find what you want</h3>
+                <p>Most popular or unexplored, quick ones or those that require dedication</p>
               </article>
               <article class="flow-card">
-                <h3>Open the best fit.</h3>
-                <p>The detail view keeps the image and ingredient list side by side, with matched rows marked clearly.</p>
+                <h3>3. Check secret number</h3>
+                <p>Best chefs measured exactly how much salt and oil those cakes need!</p>
               </article>
             </div>
           </div>
