@@ -26,11 +26,16 @@ class RecipeImport
 
     records = records_from_payload(downloader.call(url))
     validate_records(records)
-    parser_results = parse_ingredients(records).map { |parser_result| normalized_parser_result(parser_result) }
+    parser_results = parse_ingredients(records).map do |parser_result|
+      IngredientParser::Result.new(
+        parser_result.ingredient_names.filter_map { |name| name.to_s.squish.downcase.presence }.uniq,
+        parser_result.ingredient_parse_data
+      )
+    end
     raise Error, "ingredient parser returned #{parser_results.size} lists for #{records.size} source records" unless parser_results.size == records.size
 
     Recipe.transaction do
-      import_copy_query.lock_table
+      Recipes::ImportCopyQuery.lock_table
       raise NonEmptyDestinationError, "recipes table must be empty before MVP import" if Recipe.exists?
 
       copy_records(records, parser_results)
@@ -74,13 +79,6 @@ class RecipeImport
     end
   end
 
-  def normalized_parser_result(parser_result)
-    IngredientParser::Result.new(
-      parser_result.ingredient_names.filter_map { |name| name.to_s.squish.downcase.presence }.uniq,
-      parser_result.ingredient_parse_data
-    )
-  end
-
   def copy_records(records, parser_results)
     now = Time.current.utc.iso8601(6)
     rows = Enumerator.new do |yielder|
@@ -109,18 +107,14 @@ class RecipeImport
         ]
       end
     end
-    import_copy_query.copy(rows)
-  end
-
-  def import_copy_query
-    @import_copy_query ||= Recipes::ImportCopyQuery.new
+    Recipes::ImportCopyQuery.copy(rows)
   end
 
   def postgres_text_array(values)
-    "{#{Array(values).map { |value| %("#{postgres_text_array_value(value)}") }.join(",")}}"
-  end
-
-  def postgres_text_array_value(value)
-    value.to_s.gsub(/[\\"]/) { |character| "\\#{character}" }
+    escaped_values = Array(values).map do |value|
+      escaped = value.to_s.gsub(/[\\"]/) { |character| "\\#{character}" }
+      %("#{escaped}")
+    end
+    "{#{escaped_values.join(",")}}"
   end
 end

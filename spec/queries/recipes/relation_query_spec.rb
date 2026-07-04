@@ -11,8 +11,8 @@ RSpec.describe Recipes::RelationQuery do
     expect(described_class.call(params: { category: "pasta" })).to contain_exactly(quick_popular)
     expect(described_class.call(params: { quick: "1" })).to contain_exactly(quick_popular, other)
     expect(described_class.call(params: { popular: "1" })).to contain_exactly(quick_popular, other)
-    expect(described_class.sort(Recipe.all, "time_asc")).to eq([ quick_popular, other, slow, unknown_time ])
-    expect(described_class.sort(Recipe.all, "time_desc")).to eq([ unknown_time, slow, other, quick_popular ])
-    expect(described_class.sort(Recipe.all, "rating_asc")).to eq([ slow, unknown_time, other, quick_popular ])
+    expect(Recipes::SortQuery.call(relation: Recipe.all, sort: "time_asc")).to eq([ quick_popular, other, slow, unknown_time ])
+    expect(Recipes::SortQuery.call(relation: Recipe.all, sort: "time_desc")).to eq([ unknown_time, slow, other, quick_popular ])
+    expect(Recipes::SortQuery.call(relation: Recipe.all, sort: "rating_asc")).to eq([ slow, unknown_time, other, quick_popular ])
   end
 end

@@ -21,21 +21,23 @@ def elapsed(label)
 end
 
 def python_path
-  File.expand_path(ENV.fetch("INGREDIENT_PARSER_PYTHON", ".venv/bin/python"), APP_ROOT)
+  File.join(APP_ROOT, ".venv", "bin", "python")
 end
 
 def python_venv_path
-  File.expand_path("..", File.dirname(python_path))
+  File.join(APP_ROOT, ".venv")
 end
 
 def python_environment
   { "NLTK_DATA" => ENV.fetch("NLTK_DATA", File.join(python_venv_path, "nltk_data")) }
 end
 
+ENV["PATH"] = [ File.join(python_venv_path, "bin"), ENV["PATH"] ].compact.join(File::PATH_SEPARATOR)
+
 def python_dependencies_ready?
   return false unless File.executable?(python_path)
 
-  system(python_environment, python_path, "-c", "import ingredient_parser", out: File::NULL, err: File::NULL)
+  system(python_environment, "python", "-c", "import ingredient_parser", out: File::NULL, err: File::NULL)
 end
 
 FileUtils.chdir APP_ROOT do
@@ -53,9 +55,9 @@ FileUtils.chdir APP_ROOT do
     puts "\n== Installing Python dependencies =="
     elapsed("Python dependencies") do
       system!("python3", "-m", "venv", python_venv_path) unless File.executable?(python_path)
-      system!(python_path, "-m", "pip", "install", "--upgrade", "pip")
-      system!(python_path, "-m", "pip", "install", "-r", "requirements.txt")
-      system!(python_environment, python_path, "-c", "import nltk, os; nltk.download('averaged_perceptron_tagger_eng', download_dir=os.environ['NLTK_DATA'], quiet=True); from ingredient_parser import parse_ingredient; parse_ingredient('1 cup flour')")
+      system!("python", "-m", "pip", "install", "--upgrade", "pip")
+      system!("python", "-m", "pip", "install", "-r", "requirements.txt")
+      system!(python_environment, "python", "-c", "import nltk, os; nltk.download('averaged_perceptron_tagger_eng', download_dir=os.environ['NLTK_DATA'], quiet=True); from ingredient_parser import parse_ingredient; parse_ingredient('1 cup flour')")
     end
   end
 

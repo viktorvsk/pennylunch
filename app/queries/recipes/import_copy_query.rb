@@ -25,26 +25,15 @@ module Recipes
     COPY_SQL = "COPY recipes (#{COPY_COLUMNS.join(', ')}) FROM STDIN WITH (FORMAT csv)"
     LOCK_SQL = "LOCK TABLE recipes IN EXCLUSIVE MODE"
 
-    def initialize(connection: Recipe.connection)
-      @connection = connection
+    def self.lock_table
+      Recipe.connection.execute(LOCK_SQL)
     end
 
-    def lock_table
-      connection.execute(LOCK_SQL)
-    end
-
-    def copy(rows)
+    def self.copy(rows)
+      raw_connection = Recipe.connection.raw_connection
       raw_connection.copy_data(COPY_SQL) do
         rows.each { |row| raw_connection.put_copy_data(CSV.generate_line(row)) }
       end
-    end
-
-    private
-
-    attr_reader :connection
-
-    def raw_connection
-      connection.raw_connection
     end
   end
 end

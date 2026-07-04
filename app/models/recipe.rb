@@ -45,20 +45,6 @@ class Recipe < ApplicationRecord
     end.join("-")
   end
 
-  def source_hash
-    {
-      "title" => title,
-      "cook_time" => cook_time,
-      "prep_time" => prep_time,
-      "ingredients" => ingredients,
-      "ratings" => ratings.to_f,
-      "cuisine" => cuisine,
-      "category" => category,
-      "author" => author,
-      "image" => image
-    }
-  end
-
   def display_image_url
     self.class.display_image_url_for(image)
   end

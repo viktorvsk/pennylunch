@@ -69,7 +69,7 @@ RSpec.describe RecipeImport do
     create(:ingredient, name: "basil")
 
     expect(import).to eq(2)
-    expect(Recipe.order(:source_position).map(&:source_hash)).to eq(source_records)
+    expect(Recipe.order(:source_position).map { |recipe| source_hash(recipe) }).to eq(source_records)
     expect(Recipe.order(:source_position).pluck(:ingredient_names)).to eq([
       [ "flour", "egg", "milk" ],
       [ "tomatoes", "pasta", "basil" ]
@@ -119,5 +119,19 @@ RSpec.describe RecipeImport do
     io = StringIO.new
     Zlib::GzipWriter.wrap(io) { |gzip| gzip.write(JSON.generate(records)) }
     io.string
+  end
+
+  def source_hash(recipe)
+    {
+      "title" => recipe.title,
+      "cook_time" => recipe.cook_time,
+      "prep_time" => recipe.prep_time,
+      "ingredients" => recipe.ingredients,
+      "ratings" => recipe.ratings.to_f,
+      "cuisine" => recipe.cuisine,
+      "category" => recipe.category,
+      "author" => recipe.author,
+      "image" => recipe.image
+    }
   end
 end

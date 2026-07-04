@@ -3,32 +3,40 @@ require "tmpdir"
 
 RSpec.describe IngredientParser do
   it "shells out to the parser command and normalizes names with structured parser data" do
-    with_parser_script(<<~RUBY) do |script|
-      require "json"
+    with_parser_script(<<~PYTHON) do |script|
+      import json
+      import sys
 
-      payload = JSON.parse($stdin.read)
-      parsed_names = payload.fetch("ingredient_lists").map do |lines|
-        lines.flat_map { |line| line == "1 cup flour" ? ["Flour", "flour"] : ["Egg"] }
-      end
-      parsed_data = payload.fetch("ingredient_lists").map do |lines|
-        lines.map do |line|
-          {
-            "input" => line,
-            "parser" => {
-              "sentence" => line,
-              "amount" => [{ "quantity" => "1", "unit" => "cup" }]
-            }
-          }
-        end
-      end
-      puts JSON.generate("ingredient_names" => parsed_names, "ingredient_parse_data" => parsed_data)
-    RUBY
+      payload = json.loads(sys.stdin.read())
+      parsed_names = [
+          [
+              name
+              for line in lines
+              for name in (["Flour", "flour"] if line == "1 cup flour" else ["Egg"])
+          ]
+          for lines in payload["ingredient_lists"]
+      ]
+      parsed_data = [
+          [
+              {
+                  "input": line,
+                  "parser": {
+                      "sentence": line,
+                      "amount": [{"quantity": "1", "unit": "cup"}],
+                  },
+              }
+              for line in lines
+          ]
+          for lines in payload["ingredient_lists"]
+      ]
+      print(json.dumps({"ingredient_names": parsed_names, "ingredient_parse_data": parsed_data}))
+    PYTHON
+      stub_const("IngredientParser::SCRIPT", script)
+
       result = described_class.call(
         [
           [ "1 cup flour", "1 egg" ]
         ],
-        python: RbConfig.ruby,
-        script:,
         timeout_seconds: 5
       )
 
@@ -57,16 +65,18 @@ RSpec.describe IngredientParser do
   end
 
   it "raises a clear error when the parser returns invalid JSON" do
-    with_parser_script("puts 'not json'\n") do |script|
+    with_parser_script("print('not json')\n") do |script|
+      stub_const("IngredientParser::SCRIPT", script)
+
       expect do
-        described_class.call([ [ "1 cup flour" ] ], python: RbConfig.ruby, script:, timeout_seconds: 5)
+        described_class.call([ [ "1 cup flour" ] ], timeout_seconds: 5)
       end.to raise_error(IngredientParser::Error, /invalid JSON/)
     end
   end
 
   def with_parser_script(source)
     Dir.mktmpdir("ingredient-parser") do |dir|
-      script = File.join(dir, "parser.rb")
+      script = File.join(dir, "parser.py")
       File.write(script, source)
       yield script
     end

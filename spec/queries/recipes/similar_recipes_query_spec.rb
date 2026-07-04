@@ -8,7 +8,7 @@ RSpec.describe Recipes::SimilarRecipesQuery do
     create(:recipe, title: "Same Category Without Vector", category: "Pasta", ingredients_vector: nil)
     create(:recipe, title: "Apple Cake", category: "Pasta", ingredients_vector: vector(-1.0, 0.0))
 
-    result = described_class.new(recipe:, limit: 2).call
+    result = described_class.call(recipe:, limit: 2)
 
     expect(result).to eq([ closest, next_closest ])
   end
@@ -17,7 +17,7 @@ RSpec.describe Recipes::SimilarRecipesQuery do
     recipe = create(:recipe, ingredients_vector: nil)
     create(:recipe, ingredients_vector: vector(1.0, 0.0))
 
-    expect(described_class.new(recipe:).call).to be_empty
+    expect(described_class.call(recipe:)).to be_empty
   end
 
   def vector(first_value, second_value = 0.0)

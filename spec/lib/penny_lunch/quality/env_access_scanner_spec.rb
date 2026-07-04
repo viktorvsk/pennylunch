@@ -99,4 +99,17 @@ RSpec.describe PennyLunch::Quality::EnvAccessScanner do
       expect(result.undocumented_names).to contain_exactly("PORT")
     end
   end
+
+  it "does not require process PATH to be documented as application configuration" do
+    Dir.mktmpdir do |directory|
+      root = Pathname.new(directory)
+      FileUtils.mkdir_p(root.join("config"))
+      root.join("config/boot.rb").write("ENV[\"PATH\"] = \"/app/bin:\#{ENV[\"PATH\"]}\"\n")
+      root.join("env.example").write("")
+
+      result = described_class.new(root: root).call
+
+      expect(result).to be_success
+    end
+  end
 end

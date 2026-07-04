@@ -17,7 +17,6 @@ module Maintenance
   # and writes the derived fields back to each recipe.
   class BackfillRecipeIngredientVectorsTask < MaintenanceTasks::Task
     BATCH_SIZE = 128
-    ParserResult = Data.define(:ingredient_names, :ingredient_parse_data, :embedding_names)
 
     def collection
       Recipe.in_batches(of: BATCH_SIZE)
@@ -31,8 +30,8 @@ module Maintenance
 
       recipes.zip(parser_results).each do |recipe, parser_result|
         recipe.update!(
-          ingredient_names: parser_result.ingredient_names,
-          ingredient_parse_data: parser_result.ingredient_parse_data,
+          ingredient_names: parser_result.fetch(:ingredient_names),
+          ingredient_parse_data: parser_result.fetch(:ingredient_parse_data),
           ingredients_vector: vectors.fetch(recipe.id)
         )
       end
@@ -41,20 +40,20 @@ module Maintenance
     private
 
     def canonical_parser_result(parser_result, vector_ingredient_lookup)
-      ParserResult.new(
-        parser_result.ingredient_names.filter_map { |name| name.to_s.squish.downcase.presence }.uniq,
-        parser_result.ingredient_parse_data,
-        parser_result.ingredient_names.filter_map { |name| vector_ingredient_lookup[Ingredient.normalize_lookup_key(name)] }.uniq
-      )
+      {
+        ingredient_names: parser_result.ingredient_names.filter_map { |name| name.to_s.squish.downcase.presence }.uniq,
+        ingredient_parse_data: parser_result.ingredient_parse_data,
+        embedding_names: parser_result.ingredient_names.filter_map { |name| vector_ingredient_lookup[Ingredient.normalize_lookup_key(name)] }.uniq
+      }
     end
 
     def vectors_for(recipes_with_parser_results)
       return {} if recipes_with_parser_results.empty?
 
-      recipes_with_names = recipes_with_parser_results.select { |_recipe, parser_result| parser_result.embedding_names.any? }
+      recipes_with_names = recipes_with_parser_results.select { |_recipe, parser_result| parser_result.fetch(:embedding_names).any? }
       return recipes_with_parser_results.to_h { |(recipe, _parser_result)| [ recipe.id, nil ] } if recipes_with_names.empty?
 
-      vectors = LocalEmbedding.call(recipes_with_names.map { |_recipe, parser_result| parser_result.embedding_names.join("\n") })
+      vectors = LocalEmbedding.call(recipes_with_names.map { |_recipe, parser_result| parser_result.fetch(:embedding_names).join("\n") })
       empty_vectors = (recipes_with_parser_results - recipes_with_names).to_h { |(recipe, _parser_result)| [ recipe.id, nil ] }
       embedded_vectors = recipes_with_names.zip(vectors).to_h { |(recipe, _parser_result), vector| [ recipe.id, vector ] }
       empty_vectors.merge(embedded_vectors)

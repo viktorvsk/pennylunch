@@ -11,28 +11,8 @@ module Recipes
     }.freeze
 
     def self.call(relation:, sort:)
-      new(relation:, sort:).call
-    end
-
-    def self.default_sort
-      DEFAULT_SORT
-    end
-
-    def initialize(relation:, sort:)
-      @relation = relation
-      @sort = sort
-    end
-
-    def call
+      sort_key = SORT_ORDERS.key?(sort.to_s) ? sort.to_s : DEFAULT_SORT
       SORT_ORDERS.fetch(sort_key).call(relation)
-    end
-
-    private
-
-    attr_reader :relation, :sort
-
-    def sort_key
-      SORT_ORDERS.key?(sort.to_s) ? sort.to_s : DEFAULT_SORT
     end
   end
 end

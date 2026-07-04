@@ -16,7 +16,7 @@ class RecipesController < ApplicationController
     recipe = Recipe.find_by!(slug: params[:slug])
     @recipe_fab_filters = {}
     @recipe_ingredient_options = Ingredient.filter_options
-    render locals: { recipe:, similar_recipes: Recipes::SimilarRecipesQuery.new(recipe:).call }
+    render locals: { recipe:, similar_recipes: Recipes::SimilarRecipesQuery.call(recipe:) }
   end
 
   private

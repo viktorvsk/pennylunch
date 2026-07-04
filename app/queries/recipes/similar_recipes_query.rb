@@ -2,13 +2,7 @@ module Recipes
   class SimilarRecipesQuery
     DEFAULT_LIMIT = 3
 
-    def initialize(recipe:, limit: DEFAULT_LIMIT, relation: Recipe.all)
-      @recipe = recipe
-      @limit = limit
-      @relation = relation
-    end
-
-    def call
+    def self.call(recipe:, limit: DEFAULT_LIMIT, relation: Recipe.all)
       return relation.none if recipe.ingredients_vector.blank?
 
       relation
@@ -17,9 +11,5 @@ module Recipes
         .nearest_neighbors(:ingredients_vector, recipe.ingredients_vector, distance: "cosine")
         .limit(limit)
     end
-
-    private
-
-    attr_reader :recipe, :limit, :relation
   end
 end

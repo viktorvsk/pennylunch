@@ -13,26 +13,19 @@ class Ingredient < ApplicationRecord
     value.to_s.squish.downcase.presence
   end
 
-  def self.lookup_map
-    Ingredients::LookupMapQuery.new(scope: all).call
-  end
-
   def self.filterable_lookup_map
-    Ingredients::LookupMapQuery.new(scope: where(optional: false)).call
-  end
-
-  def self.canonical_names_for(names)
-    canonical_names_for_lookup(names, lookup_map)
+    where(optional: false).pluck(:name, :aliases).each_with_object({}) do |(name, aliases), mapping|
+      ([ name ] + Array(aliases)).each do |value|
+        key = normalize_lookup_key(value)
+        mapping[key] = name if key.present?
+      end
+    end
   end
 
   def self.filterable_canonical_names_for(names)
-    canonical_names_for_lookup(names, filterable_lookup_map)
-  end
-
-  def self.canonical_names_for_lookup(names, mapping)
+    mapping = filterable_lookup_map
     Array(names).filter_map { |name| mapping[normalize_lookup_key(name)] }.uniq
   end
-  private_class_method :canonical_names_for_lookup
 
   def self.filter_options
     order(:name).pluck(:name, :optional).map { |name, optional| { name:, optional: } }

@@ -6,53 +6,32 @@ module Recipes
     POPULAR_RATING_THRESHOLD = 4.8
 
     def self.call(params:, relation: Recipe.all)
-      new(params:, relation:).call
-    end
-
-    def self.sort(relation, sort)
-      Recipes::SortQuery.call(relation:, sort:)
+      params = params.to_h.with_indifferent_access
+      filtered = Recipes::TitleSearchQuery.call(relation:, query: params[:q])
+      filtered = in_category(filtered, params[:category])
+      filtered = quick(filtered) if active?(params[:quick])
+      filtered = popular(filtered) if active?(params[:popular])
+      filtered
     end
 
     def self.active?(value)
       BOOLEAN.cast(value)
     end
 
-    def self.default_sort
-      Recipes::SortQuery.default_sort
-    end
-
-    def initialize(params:, relation: Recipe.all)
-      @params = params
-      @relation = relation
-    end
-
-    def call
-      filtered = Recipes::TitleSearchQuery.call(relation:, query: param(:q))
-      filtered = in_category(filtered, param(:category))
-      filtered = quick(filtered) if self.class.active?(param(:quick))
-      filtered = popular(filtered) if self.class.active?(param(:popular))
-      filtered
-    end
-
-    private
-
-    attr_reader :params, :relation
-
-    def param(name)
-      params[name] || params[name.to_s]
-    end
-
-    def in_category(scope, category)
+    def self.in_category(scope, category)
       normalized = Recipe.normalize_category(category)
       normalized.present? ? scope.where(category_normalized: normalized) : scope
     end
+    private_class_method :in_category
 
-    def quick(scope)
+    def self.quick(scope)
       scope.where("total_time > ? AND total_time < ?", UNKNOWN_TOTAL_TIME, QUICK_TOTAL_TIME_LIMIT)
     end
+    private_class_method :quick
 
-    def popular(scope)
+    def self.popular(scope)
       scope.where("ratings > ?", POPULAR_RATING_THRESHOLD)
     end
+    private_class_method :popular
   end
 end

@@ -1,4 +1,4 @@
-<% current_sort = filters["sort"].presence || Recipes::RelationQuery.default_sort %>
+<% current_sort = filters["sort"].presence || Recipes::SortQuery::DEFAULT_SORT %>
 <% quick_active = Recipes::RelationQuery.active?(filters["quick"]) %>
 <% popular_active = Recipes::RelationQuery.active?(filters["popular"]) %>
 <% selected_category_label = selected_category.present? ? category_labels.fetch(selected_category, category_heading(selected_category)) : nil %>

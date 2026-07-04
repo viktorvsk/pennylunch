@@ -39,6 +39,9 @@ module PennyLunch
         ].freeze,
         central_configuration_paths: [
           "config/initializers/penny_lunch_configuration.rb"
+        ].freeze,
+        built_in_env_names: [
+          "PATH"
         ].freeze
       }.freeze
 
@@ -121,13 +124,15 @@ module PennyLunch
 
       def documented_names
         path = root.join(env_file)
-        return [] unless path.exist?
+        return RULES[:built_in_env_names] unless path.exist?
 
-        path.readlines.filter_map do |line|
+        names = path.readlines.filter_map do |line|
           next if line.lstrip.start_with?("#")
 
           line[/\A(?:export\s+)?([A-Z][A-Z0-9_]*)=/, 1]
-        end.sort
+        end
+
+        (RULES[:built_in_env_names] + names).sort
       end
     end
   end

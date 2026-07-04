@@ -52,7 +52,7 @@ RSpec.describe Ingredient do
     create(:ingredient, name: "avocado", aliases: [ "avocado", "ripe avocado", "green avocado", "green avocados" ])
     create(:ingredient, name: "tomato", aliases: [ "tomato", "tomatoes" ])
 
-    expect(described_class.canonical_names_for([ "green avocados", "tomatoes", "unknown" ])).to eq([ "avocado", "tomato" ])
+    expect(described_class.filterable_canonical_names_for([ "green avocados", "tomatoes", "unknown" ])).to eq([ "avocado", "tomato" ])
   end
 
   it "normalizes lookup text without inflecting ingredient words" do

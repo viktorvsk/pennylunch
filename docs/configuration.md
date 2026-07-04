@@ -33,8 +33,6 @@ When adding a setting:
 | `INGREDIENTS_FILTER_STRATEGY` | `naive_vector_search` | Strategy used by the ingredients textarea. |
 | `INGREDIENTS_CANDIDATE_COUNT` | `250` | Number of vector candidates kept before secondary sorting. |
 | `INGREDIENTS_MAX_COSINE_DISTANCE` | `0.7` | Maximum cosine distance for ingredient vector candidates. |
-| `INGREDIENT_PARSER_PYTHON` | `.venv/bin/python` | Python executable used by Ruby to run the ingredient parser CLI. |
-| `INGREDIENT_PARSER_SCRIPT` | `libexec/parse_ingredients.py` | JSON-in/JSON-out CLI that extracts ingredient names and structured parser data from source ingredient lines. |
 | `INGREDIENT_PARSER_TIMEOUT_SECONDS` | `120` | Timeout for each parser shell-out batch. |
 | `INFORMERS_CACHE_DIR` | `storage/informers` | Persistent local model cache path. |
 | `EMBEDDING_MODEL_PRELOAD` | `true` | Enables non-blocking model warmup after Rails server boot outside test. |
@@ -43,4 +41,4 @@ When adding a setting:
 
 ## Python Runtime Settings
 
-`NLTK_DATA` points the Python ingredient parser at its local model-data directory. Docker Compose sets it to `/rails/.venv/nltk_data`; local setup defaults to `.venv/nltk_data`.
+The Ruby parser wrapper runs `python` against `libexec/parse_ingredients.py`. Rails boot and Docker put `.venv/bin` first on `PATH`, so the command resolves to the parser virtualenv without a separate application setting. `NLTK_DATA` points the Python ingredient parser at its local model-data directory. Docker Compose sets it to `/rails/.venv/nltk_data`; local setup defaults to `.venv/nltk_data`.

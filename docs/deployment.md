@@ -27,7 +27,7 @@ The production web process runs Solid Queue inside Puma through `SOLID_QUEUE_IN_
 
 `PENNY_LUNCH_DATABASE_MAX_CONNECTIONS` defaults to `5` in production compose so the Solid Queue supervisor has enough queue database connections while Puma runs with three request threads.
 
-The production image builds a Python virtualenv at `/rails/.venv`, installs the pinned `ingredient-parser-nlp` dependency from `requirements.txt`, and warms the local NLTK parser data. Compose points Rails at that virtualenv with `INGREDIENT_PARSER_PYTHON`, `INGREDIENT_PARSER_SCRIPT`, and `NLTK_DATA`.
+The production image installs the global `python` command, builds a Python virtualenv at `/rails/.venv`, installs the pinned `ingredient-parser-nlp` dependency from `requirements.txt`, and warms the local NLTK parser data. The image puts `/rails/.venv/bin` first on `PATH`, so Rails invokes the parser with `python /rails/libexec/parse_ingredients.py`; Compose only sets `NLTK_DATA` for the parser data directory.
 
 Persistent data lives in named Docker volumes:
 

@@ -4,7 +4,7 @@ class RecipeSearch
   PER_PAGE = 24
 
   def initialize(params:, embedder: LocalEmbedding, ingredient_parser: IngredientParser)
-    @params = params
+    @params = params.to_h.with_indifferent_access
     @embedder = embedder
     @ingredient_parser = ingredient_parser
   end
@@ -12,7 +12,7 @@ class RecipeSearch
   def call
     relation = Recipes::RelationQuery.call(params:)
     relation = filter_by_ingredients(relation)
-    relation = Recipes::RelationQuery.sort(relation, param(:sort))
+    relation = Recipes::SortQuery.call(relation:, sort: params[:sort])
 
     current_page = page
     page_records = relation.offset((current_page - 1) * PER_PAGE).limit(PER_PAGE + 1).to_a
@@ -29,12 +29,8 @@ class RecipeSearch
 
   attr_reader :params, :embedder, :ingredient_parser
 
-  def param(name)
-    params[name] || params[name.to_s]
-  end
-
   def filter_by_ingredients(relation)
-    text = param(:ingredients).to_s
+    text = params[:ingredients].to_s
     return relation if text.blank?
 
     case SETTINGS.ingredients_filter_strategy.to_s
@@ -49,12 +45,10 @@ class RecipeSearch
     query_names = query_ingredient_names(text)
     return relation if query_names.empty?
 
-    Recipes::IngredientCandidateQuery.new(
+    Recipes::IngredientCandidateQuery.call(
       relation:,
-      vector: embedder.call(query_names.join("\n")),
-      candidate_count: SETTINGS.ingredients_candidate_count,
-      max_distance: SETTINGS.ingredients_max_cosine_distance
-    ).call
+      vector: embedder.call(query_names.join("\n"))
+    )
   end
 
   def query_ingredient_names(text)
@@ -64,7 +58,7 @@ class RecipeSearch
   end
 
   def page
-    value = param(:page).to_i
+    value = params[:page].to_i
     value.positive? ? value : DEFAULT_PAGE
   end
 end

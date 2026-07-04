@@ -82,14 +82,14 @@ module ApplicationHelper
   end
 
   def recipe_sort_label(sort)
-    SORT_OPTIONS.fetch(sort.presence || Recipes::SortQuery.default_sort, SORT_OPTIONS.fetch(Recipes::SortQuery.default_sort))
+    SORT_OPTIONS.fetch(sort.presence || Recipes::SortQuery::DEFAULT_SORT, SORT_OPTIONS.fetch(Recipes::SortQuery::DEFAULT_SORT))
   end
 
   def recipe_filter_path(filters = {})
     values = filters.to_h.with_indifferent_access
     category = Recipe.normalize_category(values.delete(:category))
     values.delete(:page) if values[:page].blank?
-    values.delete(:sort) if values[:sort].blank? || values[:sort] == Recipes::SortQuery.default_sort
+    values.delete(:sort) if values[:sort].blank? || values[:sort] == Recipes::SortQuery::DEFAULT_SORT
     values.compact_blank!
 
     path = category.present? ? "/recipes/#{Recipe.category_slug_for(category)}" : recipes_path
