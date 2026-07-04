@@ -3,7 +3,7 @@
 <% popular_active = Recipes::RelationQuery.active?(filters["popular"]) %>
 <% selected_category_label = selected_category.present? ? category_labels.fetch(selected_category, category_heading(selected_category)) : nil %>
 <% category_tooltip = selected_category_label.present? ? "Category: #{selected_category_label}" : "Category: all categories" %>
-<% category_slugs = search.category_options.to_h { |category| [ category, Recipes::Category.slug_for(category) ] } %>
+<% category_slugs = search.category_options.to_h { |category| [ category, Recipe.category_slug_for(category) ] } %>
 
 <header class="recipe-toolbar">
   <div class="recipe-toolbar-inner">

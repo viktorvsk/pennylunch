@@ -8,6 +8,7 @@ RSpec.describe "application configuration" do
     config = Rails.application.config.penny_lunch
 
     expect(config).to be_a(ActiveSupport::OrderedOptions)
+    expect(SETTINGS).to equal(config)
   end
 
   it "uses environment values before defaults and allows blanks to unset defaults" do

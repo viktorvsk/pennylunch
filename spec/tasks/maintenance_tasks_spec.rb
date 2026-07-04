@@ -1,20 +1,14 @@
 require "rails_helper"
 
 RSpec.describe "Maintenance tasks" do
-  it "warms the local embedding model" do
-    allow(LocalEmbedding).to receive(:warm!)
+  it "imports recipes through the import service with the task URL" do
+    allow(RecipeImport).to receive(:call)
+    task = Maintenance::ImportRecipesTask.new
+    task.url = "https://example.test/recipes.json.gz"
 
-    Maintenance::WarmEmbeddingModelTask.new.process
+    task.process
 
-    expect(LocalEmbedding).to have_received(:warm!)
-  end
-
-  it "imports recipes through the import service" do
-    allow(Recipes::Import).to receive(:call)
-
-    Maintenance::ImportRecipesTask.new.process
-
-    expect(Recipes::Import).to have_received(:call)
+    expect(RecipeImport).to have_received(:call).with(url: "https://example.test/recipes.json.gz")
   end
 
   it "backfills a missing recipe vector" do
@@ -31,7 +25,6 @@ RSpec.describe "Maintenance tasks" do
     Maintenance::BackfillRecipeIngredientVectorsTask.new.process(recipe)
 
     expect(recipe.reload.ingredient_names).to eq([ "lemon", "chicken breasts", "salt" ])
-    expect(recipe.reload.ingredients_vector_names).to eq([ "lemon", "chicken breast" ])
     expect(recipe.reload.ingredient_parse_data).to eq(parse_data_for(recipe.ingredients))
     expect(recipe.reload.ingredients_vector).to eq(vector)
     expect(LocalEmbedding).to have_received(:call).with([ "lemon\nchicken breast" ])
@@ -65,117 +58,75 @@ RSpec.describe "Maintenance tasks" do
       "chicken\ngarlic"
     ])
     expect(first.reload.ingredient_names).to eq([ "tomatoes", "basil" ])
-    expect(first.reload.ingredients_vector_names).to eq([ "tomato" ])
     expect(first.reload.ingredients_vector).to eq(vectors.first)
     expect(second.reload.ingredient_names).to eq([ "chicken", "garlic" ])
-    expect(second.reload.ingredients_vector_names).to eq([ "chicken", "garlic" ])
     expect(second.reload.ingredients_vector).to eq(vectors.second)
   end
 
-  it "backfills parser data without re-embedding when names and vectors are current" do
+  it "regenerates vectors from current catalog names" do
     recipe = create(
       :recipe,
       ingredient_names: [ "lemon", "chicken breast", "salt" ],
       ingredient_parse_data: [],
-      ingredients_vector: Array.new(384, 0.4),
-      ingredients_vector_names: [ "lemon", "chicken breast", "salt" ]
+      ingredients_vector: Array.new(384, 0.4)
     )
     recipe.ingredient_names.each { |name| create(:ingredient, name:) }
+    vector = Array.new(384, 0.5)
     allow(IngredientParser).to receive(:call).and_return([
       parser_result(recipe.ingredient_names, recipe.ingredients)
     ])
-    allow(LocalEmbedding).to receive(:call)
+    allow(LocalEmbedding).to receive(:call).and_return([ vector ])
 
     Maintenance::BackfillRecipeIngredientVectorsTask.new.process(recipe)
 
     expect(recipe.reload.ingredient_parse_data).to eq(parse_data_for(recipe.ingredients))
-    expect(LocalEmbedding).not_to have_received(:call)
+    expect(recipe.reload.ingredients_vector).to eq(vector)
+    expect(LocalEmbedding).to have_received(:call).with([ "lemon\nchicken breast\nsalt" ])
   end
 
-  it "restores raw recipe ingredient names from stored parser data" do
-    recipe = create(
-      :recipe,
-      ingredients: [ "1 cup wheat, rye, and flax hot cereal mix", "2 ripe avocados" ],
-      ingredient_names: [ "cereal mix", "avocado" ],
-      ingredients_vector_names: [ "cereal mix", "avocado" ],
-      ingredient_parse_data: [
-        {
-          "input" => "1 cup wheat, rye, and flax hot cereal mix",
-          "parser" => {
-            "name" => [
-              { "text" => "wheat, rye, and flax hot cereal mix" }
-            ]
-          }
-        },
-        {
-          "input" => "2 ripe avocados",
-          "parser" => {
-            "name" => [
-              { "text" => "ripe avocados" }
-            ]
-          }
-        }
-      ]
-    )
+  it "upserts ingredients from the manual alias catalog" do
+    avocado = create(:ingredient, name: "avocado", aliases: [ "old avocado" ])
+    retained = create(:ingredient, name: "turmeric", aliases: [ "turmeric" ])
 
-    Maintenance::RestoreRecipeRawIngredientNamesTask.new.process(recipe)
+    with_alias_catalog(<<~YAML) do
+      ingredients:
+        avocado:
+          aliases:
+            - avocado
+            - avocados
+            - ripe avocado
+        salt:
+          optional: true
+          aliases:
+            - salt
+            - kosher salt
+    YAML
 
-    expect(recipe.reload.ingredient_names).to eq([ "wheat, rye, and flax hot cereal mix", "ripe avocados" ])
-    expect(recipe.reload.ingredients_vector_names).to eq([ "cereal mix", "avocado" ])
+      synced_count = Maintenance::SyncIngredientsFromAliasCatalogTask.new.process
+
+      expect(synced_count).to eq(2)
+      expect(avocado.reload.aliases).to eq([ "avocado", "avocados", "ripe avocado" ])
+      expect(Ingredient.find_by!(name: "salt")).to be_optional
+      expect(Ingredient.find_by(id: retained.id)).to be_present
+    end
   end
 
-  it "syncs ingredients from the manual alias catalog" do
-    allow(Ingredients::SyncFromAliasCatalog).to receive(:call)
+  it "lets Ingredient model validations reject invalid catalog rows without changing ingredients" do
+    existing = create(:ingredient, name: "salt", aliases: [ "salt" ])
+    with_alias_catalog(<<~YAML) do
+      ingredients:
+        avocado:
+          aliases:
+            - avocado
+        guacamole:
+          aliases:
+            - avocado
+    YAML
 
-    Maintenance::SyncIngredientsFromAliasCatalogTask.new.process
-
-    expect(Ingredients::SyncFromAliasCatalog).to have_received(:call)
-  end
-
-  it "reloads ingredients from the manual alias catalog without recipe coverage checks" do
-    allow(Ingredients::SyncFromAliasCatalog).to receive(:call)
-
-    Maintenance::ReloadIngredientsFromAliasCatalogTask.new.process
-
-    expect(Ingredients::SyncFromAliasCatalog).to have_received(:call).with(recipe_coverage: :skip)
-  end
-
-  it "keeps the legacy ingredient bootstrap task on the manual catalog path" do
-    allow(Ingredients::SyncFromAliasCatalog).to receive(:call)
-
-    Maintenance::BootstrapIngredientsFromRecipeNamesTask.new.process
-
-    expect(Ingredients::SyncFromAliasCatalog).to have_received(:call)
-  end
-
-  it "deletes recipes without deleting ingredients" do
-    create(:recipe)
-    ingredient = create(:ingredient, name: "salt")
-
-    Maintenance::DeleteRecipesTask.new.process
-
-    expect(Recipe.count).to eq(0)
-    expect(Ingredient.find_by(id: ingredient.id)).to be_present
-  end
-
-  it "deletes ingredients without deleting recipes" do
-    recipe = create(:recipe)
-    create(:ingredient, name: "salt")
-
-    Maintenance::DeleteIngredientsTask.new.process
-
-    expect(Ingredient.count).to eq(0)
-    expect(Recipe.find_by(id: recipe.id)).to be_present
-  end
-
-  it "deletes recipes and ingredients for local data resets" do
-    create(:recipe)
-    create(:ingredient, name: "salt")
-
-    Maintenance::DeleteRecipesAndIngredientsTask.new.process
-
-    expect(Recipe.count).to eq(0)
-    expect(Ingredient.count).to eq(0)
+      expect { Maintenance::SyncIngredientsFromAliasCatalogTask.new.process }
+        .to raise_error(ActiveRecord::RecordInvalid, /Aliases must be unique across ingredients/)
+      expect(Ingredient.pluck(:id)).to eq([ existing.id ])
+    end
   end
 
   def parser_result(names, ingredients)
@@ -191,5 +142,14 @@ RSpec.describe "Maintenance tasks" do
         }
       }
     end
+  end
+
+  def with_alias_catalog(yaml)
+    path = Rails.root.join("tmp/test-ingredient-aliases.yml")
+    path.write(yaml)
+    stub_const("Maintenance::SyncIngredientsFromAliasCatalogTask::CATALOG_PATH", path)
+    yield
+  ensure
+    path.delete if path&.exist?
   end
 end

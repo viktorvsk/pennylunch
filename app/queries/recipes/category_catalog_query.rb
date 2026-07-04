@@ -38,11 +38,11 @@ module Recipes
     end
 
     def slug_map
-      options.to_h { |category| [ category, Recipes::Category.slug_for(category) ] }
+      options.to_h { |category| [ category, Recipe.category_slug_for(category) ] }
     end
 
     def from_slug(slug)
-      options.find { |category| Recipes::Category.slug_for(category) == slug.to_s }
+      options.find { |category| Recipe.category_slug_for(category) == slug.to_s }
     end
 
     private
@@ -60,7 +60,7 @@ module Recipes
     end
 
     def category_rank(category)
-      category == Recipes::Category.normalize(category) ? NORMALIZED_LABEL_RANK : SOURCE_LABEL_RANK
+      category == Recipe.normalize_category(category) ? NORMALIZED_LABEL_RANK : SOURCE_LABEL_RANK
     end
   end
 end

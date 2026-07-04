@@ -1,8 +1,7 @@
 Rails.application.config.after_initialize do
-  config = Rails.application.config.penny_lunch
   next if Rails.env.test?
   next unless defined?(Rails::Server)
-  next unless ActiveModel::Type::Boolean.new.cast(config.embedding_model_preload)
+  next unless ActiveModel::Type::Boolean.new.cast(SETTINGS.embedding_model_preload)
 
   Thread.new do
     Rails.application.executor.wrap do

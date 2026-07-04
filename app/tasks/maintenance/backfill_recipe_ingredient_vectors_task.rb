@@ -1,7 +1,23 @@
 module Maintenance
+  # Rebuilds the derived ingredient search fields for imported recipes.
+  #
+  # What it changes:
+  # - `ingredient_names`, using the current parser output for each source ingredient line.
+  # - `ingredient_parse_data`, preserving the structured parser data used by the recipe show page.
+  # - `ingredients_vector`, using only non-optional canonical Ingredient names resolved from the catalog.
+  #
+  # Why this exists:
+  # Recipe import keeps the original source ingredient strings intact, while search depends on derived
+  # parser and catalog data. Running this task after import, parser changes, or Ingredient catalog changes
+  # brings the recipe rows back in sync without changing the source-fidelity columns.
+  #
+  # How it works:
+  # The task processes recipes in Active Record batches, parses each batch with one IngredientParser call,
+  # resolves parser names through the current non-optional Ingredient lookup, embeds the canonical names,
+  # and writes the derived fields back to each recipe.
   class BackfillRecipeIngredientVectorsTask < MaintenanceTasks::Task
     BATCH_SIZE = 128
-    ParserResult = Data.define(:ingredient_names, :ingredient_parse_data, :ingredients_vector_names)
+    ParserResult = Data.define(:ingredient_names, :ingredient_parse_data, :embedding_names)
 
     def collection
       Recipe.in_batches(of: BATCH_SIZE)
@@ -11,19 +27,14 @@ module Maintenance
       recipes = records.is_a?(Recipe) ? [ records ] : records.to_a
       vector_ingredient_lookup = Ingredient.filterable_lookup_map
       parser_results = IngredientParser.call(recipes.map(&:ingredients)).map { |parser_result| canonical_parser_result(parser_result, vector_ingredient_lookup) }
-      recipes_requiring_vectors = recipes.zip(parser_results).select do |recipe, parser_result|
-        recipe.ingredients_vector.nil? || recipe.ingredient_names != parser_result.ingredient_names || recipe.ingredients_vector_names != parser_result.ingredients_vector_names
-      end
-      vectors = vectors_for(recipes_requiring_vectors)
+      vectors = vectors_for(recipes.zip(parser_results))
 
       recipes.zip(parser_results).each do |recipe, parser_result|
-        attributes = {
+        recipe.update!(
           ingredient_names: parser_result.ingredient_names,
-          ingredients_vector_names: parser_result.ingredients_vector_names,
-          ingredient_parse_data: parser_result.ingredient_parse_data
-        }
-        attributes[:ingredients_vector] = vectors.fetch(recipe.id) if vectors.key?(recipe.id)
-        recipe.update!(attributes)
+          ingredient_parse_data: parser_result.ingredient_parse_data,
+          ingredients_vector: vectors.fetch(recipe.id)
+        )
       end
     end
 
@@ -37,14 +48,14 @@ module Maintenance
       )
     end
 
-    def vectors_for(recipes_with_results)
-      return {} if recipes_with_results.empty?
+    def vectors_for(recipes_with_parser_results)
+      return {} if recipes_with_parser_results.empty?
 
-      recipes_with_names = recipes_with_results.select { |_recipe, parser_result| parser_result.ingredients_vector_names.any? }
-      return recipes_with_results.to_h { |(recipe, _parser_result)| [ recipe.id, nil ] } if recipes_with_names.empty?
+      recipes_with_names = recipes_with_parser_results.select { |_recipe, parser_result| parser_result.embedding_names.any? }
+      return recipes_with_parser_results.to_h { |(recipe, _parser_result)| [ recipe.id, nil ] } if recipes_with_names.empty?
 
-      vectors = LocalEmbedding.call(recipes_with_names.map { |_recipe, parser_result| parser_result.ingredients_vector_names.join("\n") })
-      empty_vectors = (recipes_with_results - recipes_with_names).to_h { |(recipe, _parser_result)| [ recipe.id, nil ] }
+      vectors = LocalEmbedding.call(recipes_with_names.map { |_recipe, parser_result| parser_result.embedding_names.join("\n") })
+      empty_vectors = (recipes_with_parser_results - recipes_with_names).to_h { |(recipe, _parser_result)| [ recipe.id, nil ] }
       embedded_vectors = recipes_with_names.zip(vectors).to_h { |(recipe, _parser_result), vector| [ recipe.id, vector ] }
       empty_vectors.merge(embedded_vectors)
     end

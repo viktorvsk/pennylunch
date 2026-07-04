@@ -28,25 +28,6 @@ RSpec.describe Recipe do
     end
   end
 
-  describe "#ingredients_embedding_text" do
-    it "preserves parser ingredient names without canonicalizing them" do
-      recipe = build(:recipe, ingredients: [ "1 cup Flour", "2 eggs" ], ingredient_names: [ " Flour ", "EGGS", "flour" ])
-
-      recipe.valid?
-
-      expect(recipe.ingredient_names).to eq([ "flour", "eggs" ])
-      expect(recipe.ingredients_embedding_text).to eq("flour\neggs")
-    end
-
-    it "uses vector ingredient names when they are available" do
-      recipe = build(:recipe, ingredient_names: [ "chicken", "salt" ], ingredients_vector_names: [ "chicken" ])
-
-      recipe.valid?
-
-      expect(recipe.ingredients_embedding_text).to eq("chicken")
-    end
-  end
-
   describe "validations" do
     it "allows empty parser data but rejects parser data that does not match source ingredients" do
       recipe = build(:recipe, ingredients: [ "1 cup flour", "1 egg" ], ingredient_parse_data: [ { "input" => "1 cup flour" } ])

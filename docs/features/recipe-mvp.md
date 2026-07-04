@@ -10,7 +10,7 @@ The default source is:
 https://pennylane-interviewing-assets-20220328.s3.eu-west-1.amazonaws.com/recipes-en.json.gz
 ```
 
-Override it with `RECIPES_IMPORT_URL`.
+Override it with the `url` parameter on `Maintenance::ImportRecipesTask`.
 
 The import source is a gzipped JSON array. Each item must contain exactly these fields:
 
@@ -26,7 +26,7 @@ The import source is a gzipped JSON array. Each item must contain exactly these 
 
 ## Import
 
-Run the import from `/maintenance_tasks` with `Maintenance::ImportRecipesTask`.
+Run the import from `/maintenance_tasks` with `Maintenance::ImportRecipesTask`. The task exposes a `url` parameter for the gzipped recipe JSON source and pre-fills the PennyLunch interview asset URL.
 
 The MVP import intentionally supports only an empty `recipes` table. It downloads the gzip, parses JSON, derives search fields, and writes rows with PostgreSQL `COPY`.
 
@@ -34,15 +34,15 @@ The import spec proves source-column fidelity by reconstructing source-shaped JS
 
 ## Ingredient Search
 
-Recipe import and vector backfill parse source ingredient lines with the pinned Python `ingredient-parser-nlp` CLI at `libexec/parse_ingredients.py`. The original `ingredients` JSON stays unchanged for source fidelity. Parsed ingredient names are stored as raw parser output in `recipes.ingredient_names` and must never be overwritten with canonical Ingredient names. Parsed names are resolved through the Ingredient catalog only for derived search fields: every `Ingredient` has one canonical `name`, a JSON-array of reviewed raw `aliases`, and an `optional` flag. Aliases are validated to be unique across all ingredients by normalized lookup key so each alias maps to exactly one canonical Ingredient name.
+Recipe import and vector backfill parse source ingredient lines with the pinned Python `ingredient-parser-nlp` CLI at `libexec/parse_ingredients.py`. The original `ingredients` JSON stays unchanged for source fidelity. Parsed ingredient names are stored as raw parser output in `recipes.ingredient_names` and must never be overwritten with canonical Ingredient names. Parsed names are resolved through the Ingredient catalog only for derived search fields: every `Ingredient` has one canonical `name`, a JSON-array of reviewed raw `aliases`, and an `optional` flag. Aliases are validated to be unique across all ingredients by case-and-whitespace-normalized lookup key so each alias maps to exactly one canonical Ingredient name.
 
-`recipes.ingredients_vector_names` stores only the canonical names that are allowed to affect vector search. Optional ingredients, such as salt, sugar, water, general cooking oils, cooking spray, vinegar, black pepper, and generic dressing, remain selectable and visible but are excluded from `ingredients_vector_names`. `ingredient_parse_data` stores the structured parser output for each source ingredient line, including quantities, units, preparation text, confidence values, and parser flags.
+Recipe ingredient vectors are generated from non-optional canonical Ingredient names resolved from the parser output. Optional ingredients, such as salt, sugar, water, general cooking oils, cooking spray, vinegar, black pepper, and generic dressing, remain selectable and visible but are excluded from vector text. `ingredient_parse_data` stores the structured parser output for each source ingredient line, including quantities, units, preparation text, confidence values, and parser flags.
 
-The checked-in manual catalog at `config/ingredient_aliases.yml` is the source of truth for creating Ingredient records. Each entry maps one canonical Ingredient name to raw parser/source phrases that should resolve to it, for example `avocado` can own aliases such as `avocado`, `avocados`, `ripe avocado`, and `green avocado`. Composite source phrases remain aliases of a canonical name, for example `wheat, rye, and flax hot cereal mix` maps to `cereal mix`.
+The checked-in manual catalog at `config/ingredient_aliases.yml` is the source of truth for creating Ingredient records. Each entry maps one canonical Ingredient name to raw parser/source phrases that should resolve to it, for example `avocado` can own aliases such as `avocado`, `avocados`, `ripe avocado`, and `green avocado`. Lookup does not infer plurals; source variants must be explicit aliases. Composite source phrases remain aliases of a canonical name, for example `wheat, rye, and flax hot cereal mix` maps to `cereal mix`.
 
-Run `Maintenance::WarmEmbeddingModelTask` to download and warm the local Informers model cache. `Maintenance::SyncIngredientsFromAliasCatalogTask` recreates Ingredients from `config/ingredient_aliases.yml`; before writing anything, it compares the catalog aliases with raw parser names already stored on recipes and fails with the unmapped names if the catalog is incomplete. `Maintenance::BootstrapIngredientsFromRecipeNamesTask` is kept as a legacy alias for the same manual catalog sync path. `Maintenance::DeleteRecipesTask` deletes recipes without deleting Ingredient records so local data can be re-imported and re-indexed after catalog changes. `Maintenance::DeleteIngredientsTask` deletes only Ingredients, `Maintenance::DeleteRecipesAndIngredientsTask` drops both local data sets, and `Maintenance::ReloadIngredientsFromAliasCatalogTask` reloads Ingredients directly from the YAML file without recipe coverage checks for Avo/debugging. `Maintenance::RestoreRecipeRawIngredientNamesTask` repairs local rows that were previously canonicalized by restoring `recipes.ingredient_names` from stored parser data without changing vectors. Run `Maintenance::BackfillRecipeIngredientVectorsTask` after import to populate parser data, refresh `ingredients_vector_names`, and generate ingredient vectors in batches from non-optional canonical Ingredient names.
+`Maintenance::SyncIngredientsFromAliasCatalogTask` upserts Ingredients from `config/ingredient_aliases.yml`; it does not delete Ingredient rows that are absent from the YAML file. Avo destructive actions handle local resets: `Delete selected recipes` removes recipes without deleting Ingredient records, and `Delete selected ingredients` removes only Ingredients. Delete recipes first and ingredients second when both local data sets need to be rebuilt. Run `Maintenance::BackfillRecipeIngredientVectorsTask` after import to populate parser data and generate ingredient vectors in batches from non-optional canonical Ingredient names.
 
-The first strategy is `naive_vector_search`, configured by `INGREDIENTS_FILTER_STRATEGY`. It parses the user-provided ingredients, resolves parsed names and direct basket values through the Ingredient catalog, drops optional ingredients, embeds the remaining canonical names, selects the nearest top-N recipe candidates within `INGREDIENTS_MAX_COSINE_DISTANCE`, and then applies the selected time or rating sort to that candidate set. If the basket contains only optional ingredients, the ingredient filter is ignored.
+The first strategy is `naive_vector_search`, configured by `INGREDIENTS_FILTER_STRATEGY`. It parses the user-provided ingredients, resolves parsed names and direct basket values through the Ingredient catalog, drops optional ingredients, embeds the remaining canonical names, selects the nearest top-N recipe candidates by `ingredients_vector` within `INGREDIENTS_MAX_COSINE_DISTANCE`, and then applies the selected time or rating sort to that candidate set. It does not require an exact canonical ingredient-name overlap once vectors exist. If the basket contains only optional ingredients, the ingredient filter is ignored.
 
 ## UI
 
@@ -52,7 +52,7 @@ Routes:
 - `/recipes/:category-slug`: recipe index filtered to a category.
 - `/recipes/:slug`: recipe detail.
 - `/maintenance_tasks`: local task runner.
-- `/avo`: local admin for the Ingredient catalog.
+- `/avo`: local admin for the Ingredient catalog and recipe reset actions.
 
 The index top bar supports:
 
@@ -71,7 +71,7 @@ The panel gets autocomplete options from canonical `Ingredient.name` values plus
 
 Recipe cards show the image flush to the top edge, title, a clickable category subheader, a short ingredient-name summary, a light rating widget with Basecoat tooltip, and a footer with author and known total time. The time footer item uses a Basecoat tooltip for prep and cook breakdown. Recipe images use a small CSS-only zoom on hover/focus. Exact ingredient-name matches from the saved basket are moved to the front of each card summary before the visible summary cutoff and receive a subtle highlight.
 
-The recipe UI is composed from focused Rails partials for the toolbar, filter controls, result states, cards, show detail panel, shared metadata, and ingredients FAB. Query-heavy recipe selection, category catalog lookup, similar recipes, ingredient candidate matching, and import COPY operations live under `app/queries`; page-level controller orchestration lives under `app/services/recipes`.
+The recipe UI is composed from focused Rails partials for the toolbar, filter controls, result states, cards, show detail panel, shared metadata, and ingredients FAB. Query-heavy recipe selection, category catalog lookup, similar recipes, ingredient candidate matching, and import COPY operations live under `app/queries`; recipe services are reserved for operations with real workflow or external-boundary logic such as import, search, and ingredient vector matching.
 
 The index uses infinite scroll. The server still accepts `page` internally, but the UI does not show result totals or pagination links. A spinner sentinel fetches the next page of cards and appends them to the existing grid.
 
@@ -83,4 +83,4 @@ Recipes whose imported prep plus cook time is `0` are treated as unknown time in
 
 ## Ingredient Admin
 
-Avo is mounted at `/avo` and uses the same HTTP Basic Auth credentials as `/maintenance_tasks`. It manages the Ingredient catalog. Ingredients have a required unique canonical `name`, an `optional` boolean, and `aliases` stored as a `jsonb` array. Alias validation prevents the same normalized alias from mapping to multiple ingredients and prevents aliases from colliding with another ingredient name. The Avo resource exposes `name` as text, `optional` as a boolean, and `aliases` as tags so aliases can be edited as a list instead of raw JSON. Repository-owned bulk changes should be made in `config/ingredient_aliases.yml` and applied through `Maintenance::SyncIngredientsFromAliasCatalogTask`.
+Avo is mounted at `/avo` and uses the same HTTP Basic Auth credentials as `/maintenance_tasks`. It manages the Ingredient catalog and local recipe reset actions. Ingredients have a required unique canonical `name`, an `optional` boolean, and `aliases` stored as a `jsonb` array. Alias validation prevents the same case-and-whitespace-normalized alias from mapping to multiple ingredients and prevents aliases from colliding with another ingredient name. The Avo Ingredient resource exposes `name` as text, `optional` as a boolean, and `aliases` as tags so aliases can be edited as a list instead of raw JSON. Repository-owned bulk changes should be made in `config/ingredient_aliases.yml` and applied through `Maintenance::SyncIngredientsFromAliasCatalogTask`; delete Ingredients in Avo first when a clean catalog reload is needed. The Avo Recipe resource is intentionally narrow: it exposes imported recipe records for selection and destructive reset actions without making recipe editing part of the MVP workflow.

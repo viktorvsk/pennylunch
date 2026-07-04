@@ -87,12 +87,12 @@ module ApplicationHelper
 
   def recipe_filter_path(filters = {})
     values = filters.to_h.with_indifferent_access
-    category = Recipes::Category.normalize(values.delete(:category))
+    category = Recipe.normalize_category(values.delete(:category))
     values.delete(:page) if values[:page].blank?
     values.delete(:sort) if values[:sort].blank? || values[:sort] == Recipes::SortQuery.default_sort
     values.compact_blank!
 
-    path = category.present? ? "/recipes/#{Recipes::Category.slug_for(category)}" : recipes_path
+    path = category.present? ? "/recipes/#{Recipe.category_slug_for(category)}" : recipes_path
     values.present? ? "#{path}?#{values.to_query}" : path
   end
 

@@ -8,7 +8,6 @@ module Recipes
       prep_time
       ingredients
       ingredient_names
-      ingredients_vector_names
       ingredient_parse_data
       ratings
       cuisine

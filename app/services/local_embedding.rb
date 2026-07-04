@@ -5,7 +5,7 @@ class LocalEmbedding
     @model ||= Informers.pipeline(
       "embedding",
       MODEL_NAME,
-      cache_dir: Rails.application.config.penny_lunch.informers_cache_dir,
+      cache_dir: SETTINGS.informers_cache_dir,
     )
   end
 

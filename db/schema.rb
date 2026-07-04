@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_03_193100) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_04_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -61,7 +61,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_03_193100) do
     t.jsonb "ingredient_parse_data", default: [], null: false
     t.jsonb "ingredients", default: [], null: false
     t.vector "ingredients_vector", limit: 384
-    t.text "ingredients_vector_names", default: [], null: false, array: true
     t.integer "prep_time", null: false
     t.decimal "ratings", precision: 4, scale: 2, null: false
     t.string "slug", null: false

@@ -31,6 +31,14 @@ class Recipe < ApplicationRecord
     url
   end
 
+  def self.normalize_category(value)
+    value.to_s.strip.downcase
+  end
+
+  def self.category_slug_for(value)
+    normalize_category(value).parameterize
+  end
+
   def self.slug_for(attributes)
     [ attributes.fetch(:title), attributes.fetch(:category), attributes.fetch(:author), "#{attributes.fetch(:total_time)}-minutes" ].filter_map do |part|
       part.to_s.parameterize(preserve_case: true).presence
@@ -51,11 +59,6 @@ class Recipe < ApplicationRecord
     }
   end
 
-  def ingredients_embedding_text
-    names = ingredients_vector_names.presence || ingredient_names.presence || ingredients
-    names.join("\n")
-  end
-
   def display_image_url
     self.class.display_image_url_for(image)
   end
@@ -68,8 +71,7 @@ class Recipe < ApplicationRecord
 
   def derive_fields
     self.ingredient_names = Array(ingredient_names).filter_map { |name| name.to_s.squish.downcase.presence }.uniq
-    self.ingredients_vector_names = Array(ingredients_vector_names).filter_map { |name| Ingredient.normalize_lookup_key(name) }.uniq
-    self.category_normalized = Recipes::Category.normalize(category)
+    self.category_normalized = self.class.normalize_category(category)
     self.total_time = prep_time.to_i + cook_time.to_i
     self.source_key = self.class.source_key_for(title:, category:, author:) if title && category && author
     self.slug = self.class.slug_for(title:, category:, author:, total_time:) if title && author && total_time

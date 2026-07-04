@@ -13,43 +13,47 @@ class RecipesController < ApplicationController
       return
     end
 
-    page = Recipes::ShowPage.new(slug: params[:slug]).call
+    recipe = Recipe.find_by!(slug: params[:slug])
     @recipe_fab_filters = {}
-    @recipe_ingredient_options = page.ingredient_options
-    render locals: { recipe: page.recipe, similar_recipes: page.similar_recipes }
+    @recipe_ingredient_options = Ingredient.filter_options
+    render locals: { recipe:, similar_recipes: Recipes::SimilarRecipesQuery.new(recipe:).call }
   end
 
   private
 
   def render_index(category: nil)
-    page = Recipes::IndexPage.new(params: recipe_params, category:).call
-    frame_locals = frame_locals_for(page)
+    filters = recipe_params.to_h
+    selected_category = category.presence || filters["category"].presence
+    filters["category"] = selected_category if selected_category
+    search = RecipeSearch.new(params: filters).call
+    frame_locals = {
+      search:,
+      recipes: search.recipes,
+      selected_category:,
+      filters:,
+      next_page_url: search.next_page ? helpers.recipe_filter_path(filters.merge("page" => search.next_page)) : nil,
+      random_category: search.category_options.sample
+    }
 
     if turbo_frame_request?
       render partial: "recipes/results_frame", locals: frame_locals
       return
     end
 
-    @recipe_fab_filters = page.filters
-    @recipe_ingredient_options = page.ingredient_options
-    render :index, locals: frame_locals.merge(category_labels: page.category_labels)
+    @recipe_fab_filters = filters
+    @recipe_ingredient_options = Ingredient.filter_options
+    render :index, locals: frame_locals.merge(category_labels: Recipes::CategoryCatalogQuery.labels)
   end
 
   def redirect_category_query
-    category = Recipes::Category.normalize(params[:category])
-    return render_index(category:) unless Recipes::CategoryCatalogQuery.from_slug(Recipes::Category.slug_for(category))
+    category = Recipe.normalize_category(params[:category])
+    return render_index(category:) unless Recipes::CategoryCatalogQuery.from_slug(Recipe.category_slug_for(category))
 
     query = recipe_params.except(:category).to_h.compact_blank
-    target = "/recipes/#{Recipes::Category.slug_for(category)}"
+    target = "/recipes/#{Recipe.category_slug_for(category)}"
     target = "#{target}?#{query.to_query}" if query.present?
 
     redirect_to target, status: :see_other
-  end
-
-  def frame_locals_for(page)
-    page.frame_locals.merge(
-      next_page_url: page.next_page_filters ? helpers.recipe_filter_path(page.next_page_filters) : nil
-    ).except(:next_page_filters)
   end
 
   def recipe_params

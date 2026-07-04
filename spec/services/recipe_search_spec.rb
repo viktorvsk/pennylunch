@@ -1,6 +1,15 @@
 require "rails_helper"
 
-RSpec.describe Recipes::Search do
+RSpec.describe RecipeSearch do
+  around do |example|
+    original_candidate_count = SETTINGS.ingredients_candidate_count
+    original_max_distance = SETTINGS.ingredients_max_cosine_distance
+    example.run
+  ensure
+    SETTINGS.ingredients_candidate_count = original_candidate_count
+    SETTINGS.ingredients_max_cosine_distance = original_max_distance
+  end
+
   it "returns one page and infers the next page without a total count" do
     create_list(:recipe, described_class::PER_PAGE + 1)
 
@@ -14,15 +23,15 @@ RSpec.describe Recipes::Search do
   it "sorts the ingredient candidate set with the selected sort" do
     create(:ingredient, name: "tomato", aliases: [ "tomatoes" ])
     create(:ingredient, name: "pasta")
-    tomato_fast = create(:recipe, title: "Fast Tomato Pasta", ratings: 4.4, prep_time: 5, cook_time: 10, ingredient_names: [ "tomatoes", "pasta" ], ingredients_vector_names: [ "tomato", "pasta" ], ingredients_vector: vector(1.0))
-    tomato_best = create(:recipe, title: "Best Tomato Soup", ratings: 4.9, prep_time: 20, cook_time: 30, ingredient_names: [ "tomatoes" ], ingredients_vector_names: [ "tomato" ], ingredients_vector: vector(0.8, 0.6))
-    chicken = create(:recipe, title: "Chicken Dinner", ratings: 5.0, prep_time: 10, cook_time: 15, ingredient_names: [ "chicken" ], ingredients_vector_names: [ "chicken" ], ingredients_vector: vector(-1.0))
+    tomato_fast = create(:recipe, title: "Fast Tomato Pasta", ratings: 4.4, prep_time: 5, cook_time: 10, ingredient_names: [ "tomatoes", "pasta" ], ingredients_vector: vector(1.0))
+    tomato_best = create(:recipe, title: "Best Tomato Soup", ratings: 4.9, prep_time: 20, cook_time: 30, ingredient_names: [ "tomatoes" ], ingredients_vector: vector(0.8, 0.6))
+    chicken = create(:recipe, title: "Chicken Dinner", ratings: 5.0, prep_time: 10, cook_time: 15, ingredient_names: [ "chicken" ], ingredients_vector: vector(-1.0))
+    set_candidate_count(2)
 
     result = described_class.new(
       params: { ingredients: "tomatoes, pasta", sort: "rating_desc" },
       embedder: fake_embedder(vector(1.0)),
       ingredient_parser: fake_ingredient_parser([ IngredientParser::Result.new([ "tomatoes", "pasta" ], []) ]),
-      ingredients_candidate_count: 2,
     ).call
 
     expect(result.recipes).to eq([ tomato_best, tomato_fast ])
@@ -32,34 +41,34 @@ RSpec.describe Recipes::Search do
   it "embeds canonical ingredient names resolved from basket aliases" do
     create(:ingredient, name: "avocado", aliases: [ "ripe avocado", "green avocado" ])
     create(:ingredient, name: "salt", optional: true)
-    avocado_recipe = create(:recipe, title: "Avocado Salad", ingredient_names: [ "green avocado" ], ingredients_vector_names: [ "avocado" ], ingredients_vector: vector(1.0))
-    create(:recipe, title: "Apple Cake", ingredient_names: [ "apple" ], ingredients_vector_names: [ "apple" ], ingredients_vector: vector(-1.0))
+    avocado_recipe = create(:recipe, title: "Avocado Salad", ingredient_names: [ "green avocado" ], ingredients_vector: vector(1.0))
+    create(:recipe, title: "Apple Cake", ingredient_names: [ "apple" ], ingredients_vector: vector(-1.0))
     embedder = fake_embedder(vector(1.0))
+    set_candidate_count(1)
 
     result = described_class.new(
       params: { ingredients: "green avocado, salt" },
       embedder:,
       ingredient_parser: fake_ingredient_parser([ IngredientParser::Result.new([ "green avocado", "salt" ], []) ]),
-      ingredients_candidate_count: 1,
     ).call
 
     expect(embedder.calls).to eq([ "avocado" ])
     expect(result.recipes).to eq([ avocado_recipe ])
   end
 
-  it "does not return vector-near recipes that lack the requested canonical ingredient" do
+  it "uses only vector distance for ingredient candidates" do
     create(:ingredient, name: "avocado")
-    avocado_recipe = create(:recipe, title: "Avocado Smoothie", ingredient_names: [ "green avocado", "banana" ], ingredients_vector_names: [ "avocado", "banana" ], ingredients_vector: vector(0.8, 0.6))
-    create(:recipe, title: "Banana Ice Cream", ingredient_names: [ "banana" ], ingredients_vector_names: [ "banana" ], ingredients_vector: vector(1.0))
+    create(:recipe, title: "Avocado Smoothie", ingredient_names: [ "green avocado", "banana" ], ingredients_vector: vector(0.8, 0.6))
+    banana_recipe = create(:recipe, title: "Banana Ice Cream", ingredient_names: [ "banana" ], ingredients_vector: vector(1.0))
+    set_candidate_count(2)
 
     result = described_class.new(
       params: { ingredients: "avocado" },
       embedder: fake_embedder(vector(1.0)),
       ingredient_parser: fake_ingredient_parser([ IngredientParser::Result.new([ "avocado" ], []) ]),
-      ingredients_candidate_count: 2,
     ).call
 
-    expect(result.recipes).to eq([ avocado_recipe ])
+    expect(result.recipes).to include(banana_recipe)
   end
 
   it "does not filter when the basket only has optional ingredients" do
@@ -94,12 +103,13 @@ RSpec.describe Recipes::Search do
     ])
 
     [ pasta, apple_cake ].each do |recipe|
-      recipe.update!(ingredients_vector: LocalEmbedding.call(recipe.ingredients_embedding_text))
+      names = recipe.ingredient_names.presence || recipe.ingredients
+      recipe.update!(ingredients_vector: LocalEmbedding.call(names.join("\n")))
     end
+    set_candidate_count(1)
 
     result = described_class.new(
       params: { ingredients: "tomatoes basil spaghetti garlic", sort: "rating_desc" },
-      ingredients_candidate_count: 1,
     ).call
 
     expect(result.recipes).to eq([ pasta ])
@@ -107,6 +117,10 @@ RSpec.describe Recipes::Search do
 
   def vector(first_value, second_value = 0.0)
     [ first_value, second_value ] + Array.new(382, 0.0)
+  end
+
+  def set_candidate_count(value)
+    SETTINGS.ingredients_candidate_count = value
   end
 
   def fake_embedder(value)

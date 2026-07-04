@@ -4,9 +4,9 @@ RSpec.describe Ingredient do
   it "requires a unique normalized name and stores aliases as a JSON array" do
     ingredient = described_class.create!(name: " Tomatoes ", aliases: [ "roma tomatoes", "", "roma tomatoes", " grape tomatoes " ])
 
-    expect(ingredient.name).to eq("tomato")
+    expect(ingredient.name).to eq("tomatoes")
     expect(ingredient.aliases).to eq([ "roma tomatoes", "grape tomatoes" ])
-    expect(described_class.new(name: "tomato")).not_to be_valid
+    expect(described_class.new(name: "tomatoes")).not_to be_valid
   end
 
   it "rejects non-array aliases" do
@@ -35,7 +35,7 @@ RSpec.describe Ingredient do
   it "rejects aliases matching another ingredient name" do
     create(:ingredient, name: "avocado")
 
-    ingredient = described_class.new(name: "pear", aliases: [ "avocados" ])
+    ingredient = described_class.new(name: "pear", aliases: [ "avocado" ])
 
     expect(ingredient).not_to be_valid
     expect(ingredient.errors[:aliases]).to include("must not match another ingredient name")
@@ -49,19 +49,19 @@ RSpec.describe Ingredient do
   end
 
   it "maps aliases and names to canonical ingredient names" do
-    create(:ingredient, name: "avocado", aliases: [ "avocado", "ripe avocado", "green avocado" ])
+    create(:ingredient, name: "avocado", aliases: [ "avocado", "ripe avocado", "green avocado", "green avocados" ])
     create(:ingredient, name: "tomato", aliases: [ "tomato", "tomatoes" ])
 
     expect(described_class.canonical_names_for([ "green avocados", "tomatoes", "unknown" ])).to eq([ "avocado", "tomato" ])
   end
 
-  it "normalizes common ingredient plurals without damaging uncountable names" do
+  it "normalizes lookup text without inflecting ingredient words" do
     expect(described_class.normalize_lookup_key("pasta")).to eq("pasta")
-    expect(described_class.normalize_lookup_key("cookies")).to eq("cookie")
-    expect(described_class.normalize_lookup_key("strawberries")).to eq("strawberry")
-    expect(described_class.normalize_lookup_key("tomatoes")).to eq("tomato")
-    expect(described_class.normalize_lookup_key("zucchinis")).to eq("zucchini")
-    expect(described_class.normalize_lookup_key("s green onions")).to eq("green onion")
+    expect(described_class.normalize_lookup_key(" Cookies ")).to eq("cookies")
+    expect(described_class.normalize_lookup_key("strawberries")).to eq("strawberries")
+    expect(described_class.normalize_lookup_key("tomatoes")).to eq("tomatoes")
+    expect(described_class.normalize_lookup_key("zucchinis")).to eq("zucchinis")
+    expect(described_class.normalize_lookup_key("s green onions")).to eq("s green onions")
   end
 
   it "keeps optional ingredients out of filterable canonical names" do

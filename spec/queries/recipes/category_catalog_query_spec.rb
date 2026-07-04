@@ -5,7 +5,7 @@ RSpec.describe Recipes::CategoryCatalogQuery do
     it "resolves normalized categories from parameterized slugs" do
       create(:recipe, category: "Air Fryer Main Dish Recipes", category_normalized: "air fryer main dish recipes")
 
-      expect(Recipes::Category.slug_for("air fryer main dish recipes")).to eq("air-fryer-main-dish-recipes")
+      expect(Recipe.category_slug_for("air fryer main dish recipes")).to eq("air-fryer-main-dish-recipes")
       expect(described_class.from_slug("air-fryer-main-dish-recipes")).to eq("air fryer main dish recipes")
     end
   end

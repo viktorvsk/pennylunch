@@ -8,4 +8,8 @@ class Avo::Resources::Ingredient < Avo::BaseResource
     field :optional, as: :boolean
     field :aliases, as: :tags
   end
+
+  def actions
+    action Avo::Actions::DeleteSelectedIngredients, icon: "tabler/outline/trash"
+  end
 end

@@ -10,7 +10,7 @@ class Ingredient < ApplicationRecord
   validate :name_must_be_canonical
 
   def self.normalize_lookup_key(value)
-    Ingredients::LookupKey.normalize(value)
+    value.to_s.squish.downcase.presence
   end
 
   def self.lookup_map

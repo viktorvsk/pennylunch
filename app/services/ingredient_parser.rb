@@ -17,9 +17,9 @@ class IngredientParser
 
   def self.default_options
     {
-      python: Rails.application.config.penny_lunch.ingredient_parser_python,
-      script: Rails.application.config.penny_lunch.ingredient_parser_script,
-      timeout_seconds: Rails.application.config.penny_lunch.ingredient_parser_timeout_seconds
+      python: SETTINGS.ingredient_parser_python,
+      script: SETTINGS.ingredient_parser_script,
+      timeout_seconds: SETTINGS.ingredient_parser_timeout_seconds
     }
   end
 

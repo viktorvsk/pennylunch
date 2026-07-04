@@ -30,7 +30,6 @@ When adding a setting:
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
-| `RECIPES_IMPORT_URL` | PennyLunch interview recipe gzip URL | Source used by `Maintenance::ImportRecipesTask`. |
 | `INGREDIENTS_FILTER_STRATEGY` | `naive_vector_search` | Strategy used by the ingredients textarea. |
 | `INGREDIENTS_CANDIDATE_COUNT` | `250` | Number of vector candidates kept before secondary sorting. |
 | `INGREDIENTS_MAX_COSINE_DISTANCE` | `0.7` | Maximum cosine distance for ingredient vector candidates. |

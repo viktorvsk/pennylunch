@@ -74,7 +74,7 @@ RSpec.describe "Recipes", type: :request do
   end
 
   it "renders infinite scroll instead of totals and pagination links" do
-    create_list(:recipe, Recipes::Search::PER_PAGE + 1)
+    create_list(:recipe, RecipeSearch::PER_PAGE + 1)
 
     get recipes_path
 
@@ -83,7 +83,7 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("data-infinite-scroll-sentinel")
     expect(response.body).to include("data-next-url=\"/recipes?page=2\"")
     expect(response.body).to include("infinite-scroll-spinner")
-    expect(response.body).not_to include("#{Recipes::Search::PER_PAGE + 1} recipes")
+    expect(response.body).not_to include("#{RecipeSearch::PER_PAGE + 1} recipes")
     expect(response.body).not_to include(">Next<")
   end
 
@@ -124,7 +124,7 @@ RSpec.describe "Recipes", type: :request do
     create(:ingredient, name: "pasta")
     create(:ingredient, name: "garlic")
     create(:ingredient, name: "olive oil")
-    pasta = create(:recipe, title: "Pasta and Garlic", ingredient_names: [ "pasta", "garlic", "olive oil" ], ingredients_vector_names: [ "pasta", "garlic", "olive oil" ], ingredients_vector: vector(1.0))
+    pasta = create(:recipe, title: "Pasta and Garlic", ingredient_names: [ "pasta", "garlic", "olive oil" ], ingredients_vector: vector(1.0))
     create(:recipe, title: "Apple Cake", ingredients_vector: vector(-1.0))
     allow(IngredientParser).to receive(:call).and_return([
       IngredientParser::Result.new([ "pasta", "garlic", "olive oil" ], [])

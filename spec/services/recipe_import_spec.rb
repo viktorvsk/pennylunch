@@ -1,7 +1,7 @@
 require "rails_helper"
 require "zlib"
 
-RSpec.describe Recipes::Import do
+RSpec.describe RecipeImport do
   subject(:import) { described_class.call(url: "https://example.test/recipes.json.gz", downloader:, ingredient_parser:) }
 
   let(:downloader) { ->(_url) { gzipped(source_records) } }
@@ -68,17 +68,11 @@ RSpec.describe Recipes::Import do
     create(:ingredient, name: "pasta")
     create(:ingredient, name: "basil")
 
-    result = import
-
-    expect(result.imported_count).to eq(2)
+    expect(import).to eq(2)
     expect(Recipe.order(:source_position).map(&:source_hash)).to eq(source_records)
     expect(Recipe.order(:source_position).pluck(:ingredient_names)).to eq([
       [ "flour", "egg", "milk" ],
       [ "tomatoes", "pasta", "basil" ]
-    ])
-    expect(Recipe.order(:source_position).pluck(:ingredients_vector_names)).to eq([
-      [ "flour", "egg", "milk" ],
-      [ "pasta", "basil" ]
     ])
     expect(Recipe.order(:source_position).map(&:ingredient_parse_data)).to eq([
       [
@@ -101,24 +95,24 @@ RSpec.describe Recipes::Import do
       [ "flour", "egg", "milk" ],
       [ "tomatoes", "pasta", "basil" ]
     ])
-    expect(Recipe.order(:source_position).pluck(:ingredients_vector_names)).to eq([
-      [ "flour", "egg", "milk" ],
-      [ "tomato", "pasta", "basil" ]
-    ])
   end
 
   it "fails before writing when recipes already exist" do
     create(:recipe)
 
-    expect { import }.to raise_error(Recipes::Import::NonEmptyDestinationError)
+    expect { import }.to raise_error(RecipeImport::NonEmptyDestinationError)
     expect(Recipe.count).to eq(1)
   end
 
   it "rejects duplicate source identities" do
     source_records << source_records.first.merge("cook_time" => 30)
 
-    expect { import }.to raise_error(Recipes::Import::DuplicateSourceIdentityError)
+    expect { import }.to raise_error(RecipeImport::DuplicateSourceIdentityError)
     expect(Recipe.count).to eq(0)
+  end
+
+  it "requires an explicit source URL" do
+    expect { described_class.call(downloader:, ingredient_parser:) }.to raise_error(ArgumentError, /missing keyword: :url/)
   end
 
   def gzipped(records)

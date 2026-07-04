@@ -1,11 +1,11 @@
 penny_lunch_config = Rails.application.config.penny_lunch = ActiveSupport::OrderedOptions.new
+SETTINGS = penny_lunch_config
 
 def penny_lunch_config.add_config(name, value)
   environment_name = name.to_s.upcase
   self[name] = ENV.key?(environment_name) ? ENV[environment_name].presence : value
 end
 
-penny_lunch_config.add_config(:recipes_import_url, "https://pennylane-interviewing-assets-20220328.s3.eu-west-1.amazonaws.com/recipes-en.json.gz")
 penny_lunch_config.add_config(:ingredients_filter_strategy, "naive_vector_search")
 penny_lunch_config.add_config(:ingredients_candidate_count, "250")
 penny_lunch_config.add_config(:ingredients_max_cosine_distance, "0.7")
