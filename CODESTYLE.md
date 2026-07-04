@@ -13,3 +13,5 @@
 11. **Boundary Normalization**: Normalize external data at ingestion boundaries and keep request-time lookups exact against stored values.
 12. **Canonical Param Formats**: Use one controlled wire format for internal params instead of preserving ad hoc delimiters.
 13. **View State Models**: Replace clusters of thin view helper wrappers with focused data models that prepare partial state.
+14. **Service Facades**: Keep public service entrypoints as small orchestration facades and move protocol-specific work into named collaborators.
+15. **External Request Safety**: Use focused security libraries for SSRF-safe user URL fetching instead of hand-rolled IP and redirect filters.

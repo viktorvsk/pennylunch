@@ -75,7 +75,7 @@ RSpec.describe ImageReader do
 
   it "validates and passes a direct image URL before calling OpenRouter" do
     image_url = "https://static.toiimg.com/thumb/imgsize-23456,msid-67569873,width-600,resizemode-4/67569873.jpg"
-    allow(Addrinfo).to receive(:getaddrinfo).with("static.toiimg.com", nil, nil, :STREAM).and_return([ double(ip_address: "93.184.216.34") ])
+    allow(Resolv).to receive(:getaddresses).with("static.toiimg.com").and_return([ "93.184.216.34" ])
     stub_request(:get, image_url)
       .to_return(status: 200, body: "jpeg-bytes", headers: { "Content-Type" => "image/jpeg" })
     stub_request(:post, "https://openrouter.ai/api/v1/chat/completions")

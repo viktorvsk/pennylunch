@@ -15,24 +15,7 @@ detectors:
     enabled: false
   InstanceVariableAssumption:
     enabled: false
-  TooManyInstanceVariables:
-    exclude:
-      - "RecipesController"
-  LongParameterList:
-    exclude:
-      - "RecipeHelper#rating_stars"
-      - "ImageReader#call"
-  ControlParameter:
-    exclude:
-      - "RecipeSortQuery#call"
-  TooManyConstants:
-    exclude:
-      - "RecipeSortQuery"
-      - "ImageReader"
-      - "RecipeImport"
-  TooManyMethods:
-    exclude:
-      - "ImageReader"
+
 
 exclude_paths:
   - bin
