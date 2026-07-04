@@ -1,31 +1,38 @@
 <% fab_filters = (local_assigns[:filters] || {}).to_h.with_indifferent_access %>
+<% fab_ingredients_enabled = fab_filters["ingredients"].to_s.strip.present? %>
 
-<section id="recipe-ingredients-fab" class="recipe-ingredients-fab" data-turbo-permanent data-controller="ingredients-fab" data-ingredients-fab-current-ingredients-value="<%= fab_filters["ingredients"].to_s %>" data-action="keydown->ingredients-fab#escape pointerdown@document->ingredients-fab#closeFromOutside turbo:visit@document->ingredients-fab#close turbo:load@document->ingredients-fab#refreshPageContext">
+<section id="recipe-ingredients-fab" class="recipe-ingredients-fab" data-turbo-permanent data-controller="ingredients-fab" data-ingredients-fab-current-ingredients-value="<%= fab_filters["ingredients"].to_s %>" data-action="keydown->ingredients-fab#escape pointerdown@document->ingredients-fab#closeFromOutside turbo:load@document->ingredients-fab#refreshPageContext">
   <div id="recipe-ingredients-panel" class="recipe-ingredients-panel" data-ingredients-fab-target="panel" hidden>
     <header>
       <div class="recipe-ingredients-panel-header">
         <div class="recipe-ingredients-panel-copy">
-          <h2 class="recipe-ingredients-panel-title">Ingredients at home</h2>
-          <p class="recipe-ingredients-panel-description">Pick matching ingredients. Enable to include them in filters.</p>
+          <h2 class="recipe-ingredients-panel-title">Basket</h2>
+          <p class="recipe-ingredients-filter-status">
+            <span>When</span>
+            <label class="recipe-ingredients-switch" data-state="<%= fab_ingredients_enabled ? "enabled" : "disabled" %>" data-ingredients-fab-target="enabledControl">
+              <%= tag.input type: "checkbox", class: "sr-only", role: "switch", checked: fab_ingredients_enabled, aria: { label: "Use ingredients in filters" }, data: { ingredients_fab_target: "enabledInput", action: "change->ingredients-fab#changeEnabled" } %>
+              <span class="recipe-ingredients-switch-track" aria-hidden="true">
+                <span class="recipe-ingredients-switch-thumb"></span>
+              </span>
+              <span class="recipe-ingredients-switch-text" data-ingredients-fab-target="enabledText"><%= fab_ingredients_enabled ? "On" : "Off" %></span>
+            </label>
+            <span data-ingredients-fab-target="modeText"><%= fab_ingredients_enabled ? "only matching recipes are displayed." : "you see all recipes." %></span>
+          </p>
         </div>
-        <label class="recipe-ingredients-switch" data-state="disabled">
-          <%= tag.input type: "checkbox", class: "sr-only", role: "switch", aria: { label: "Use ingredients in filters" }, data: { ingredients_fab_target: "enabledInput", action: "change->ingredients-fab#changeEnabled" } %>
-          <span class="recipe-ingredients-switch-track" aria-hidden="true">
-            <span class="recipe-ingredients-switch-thumb"></span>
-          </span>
-          <span class="recipe-ingredients-switch-text" data-ingredients-fab-target="enabledText">Off</span>
-        </label>
       </div>
     </header>
 
     <section class="recipe-ingredients-picker">
       <div class="recipe-ingredients-selected">
-        <div class="recipe-ingredients-selected-list" data-empty-text="No ingredients selected yet." data-ingredients-fab-target="selectedList"></div>
+        <div class="recipe-ingredients-empty-state">
+          <p class="recipe-ingredients-empty-state-phrase">Your basket is empty. If you tell me what food you have at home — I'll do my best to help you cook something amazing!</p>
+        </div>
+        <div class="recipe-ingredients-selected-list" data-ingredients-fab-target="selectedList"></div>
       </div>
 
       <div class="recipe-ingredients-field">
         <div class="recipe-ingredients-input-group">
-          <input id="recipe-ingredients-input" class="input" type="text" placeholder="Start typing, then choose a match" autocomplete="off" role="combobox" aria-label="Ingredient name" aria-autocomplete="list" aria-expanded="false" aria-controls="recipe-ingredients-options" data-ingredients-fab-target="input" data-action="input->ingredients-fab#search keydown->ingredients-fab#keydown blur->ingredients-fab#blur">
+          <input id="recipe-ingredients-input" class="input" type="text" placeholder="Open the fridge and start typing..." autocomplete="off" role="combobox" aria-label="Ingredient name" aria-autocomplete="list" aria-expanded="false" aria-controls="recipe-ingredients-options" data-ingredients-fab-target="input" data-action="input->ingredients-fab#search keydown->ingredients-fab#keydown blur->ingredients-fab#blur">
         </div>
         <div id="recipe-ingredients-options" class="recipe-ingredients-options" role="listbox" data-ingredients-fab-target="options" hidden></div>
       </div>

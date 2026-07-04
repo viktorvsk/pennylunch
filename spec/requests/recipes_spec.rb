@@ -11,6 +11,27 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).not_to include("<h1")
   end
 
+  it "advertises the web app icon set" do
+    get recipes_path
+
+    document = Nokogiri::HTML(response.body)
+    png_icons = document.css("link[rel='icon'][type='image/png']").map { |link| [ link["href"], link["sizes"] ] }
+
+    expect(document.at_css("link[rel='manifest']")["href"]).to eq("/manifest.json")
+    expect(document.at_css("link[rel='icon'][href='/favicon.ico'][sizes='any']")).not_to be_nil
+    expect(document.at_css("link[rel='icon'][href='/pen.svg'][type='image/svg+xml']")).not_to be_nil
+    expect(png_icons).to include(
+      [ "/favicon-16x16.png", "16x16" ],
+      [ "/favicon-32x32.png", "32x32" ],
+      [ "/favicon-48x48.png", "48x48" ],
+      [ "/icon-64x64.png", "64x64" ],
+      [ "/icon-192x192.png", "192x192" ],
+      [ "/icon-512x512.png", "512x512" ]
+    )
+    expect(document.at_css("link[rel='apple-touch-icon'][href='/apple-touch-icon.png'][sizes='180x180']")).not_to be_nil
+    expect(document.at_css("meta[name='theme-color']")["content"]).to eq("#f97316")
+  end
+
   it "filters recipes and links to the show page" do
     create(:ingredient, name: "tomato", optional: true)
     create(:ingredient, name: "pasta")
@@ -63,8 +84,10 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("id=\"recipe-ingredients-fab\"")
     expect(response.body).to include("data-turbo-permanent")
     expect(response.body).to include("data-controller=\"ingredients-fab\"")
-    expect(response.body).to include("Ingredients at home")
-    expect(response.body).to include("Pick matching ingredients. Enable to include them in filters.")
+    expect(response.body).to include("Basket")
+    expect(response.body).to include("Your basket is empty.")
+    expect(response.body).to include("you see all recipes.")
+    expect(response.body).not_to include("Pick matching ingredients. Enable to include them in filters.")
     expect(document.css("label[for='recipe-ingredients-input']")).to be_empty
     expect(document.css("[data-ingredients-filter-help]")).to be_empty
     expect(document.css("[data-ingredients-fab-target='addButton']")).to be_empty

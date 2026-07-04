@@ -120,6 +120,9 @@ RSpec.describe "Recipe filters", type: :system do
         const picker = document.querySelector(".recipe-ingredients-picker");
         const pickerRect = picker.getBoundingClientRect();
         const selected = document.querySelector(".recipe-ingredients-selected").getBoundingClientRect();
+        const emptyState = document.querySelector(".recipe-ingredients-empty-state").getBoundingClientRect();
+        const emptyStatePhrase = document.querySelector(".recipe-ingredients-empty-state-phrase").getBoundingClientRect();
+        const emptyStateMark = getComputedStyle(document.querySelector(".recipe-ingredients-empty-state"), "::before");
         const inputGroup = document.querySelector(".recipe-ingredients-input-group").getBoundingClientRect();
         const pickerStyle = getComputedStyle(picker);
         const paddingBottom = Number.parseFloat(getComputedStyle(picker).paddingBottom);
@@ -129,7 +132,11 @@ RSpec.describe "Recipe filters", type: :system do
           inputBottomGap: Math.round(panel.bottom - inputGroup.bottom - paddingBottom),
           selectedTopGap: Math.round(selected.top - pickerRect.top),
           selectedInputGap: Math.round(inputGroup.top - selected.bottom - gap),
-          selectedHeight: Math.round(selected.height)
+          selectedHeight: Math.round(selected.height),
+          emptyStateBackground: emptyStateMark.backgroundImage,
+          emptyStatePhraseBelowCenter: emptyStatePhrase.top > (emptyState.top + emptyState.height / 2),
+          emptyStatePhraseLeftGap: Math.round(emptyStatePhrase.left - selected.left),
+          emptyStatePhraseRightGap: Math.round(selected.right - emptyStatePhrase.right)
         };
       })()
     JS
@@ -138,6 +145,50 @@ RSpec.describe "Recipe filters", type: :system do
     expect(layout.fetch("selectedTopGap").abs).to be <= 2
     expect(layout.fetch("selectedInputGap").abs).to be <= 2
     expect(layout.fetch("selectedHeight")).to be_positive
+    expect(layout.fetch("emptyStateBackground")).to include("/icon-512x512.png")
+    expect(layout.fetch("emptyStatePhraseBelowCenter")).to be(true)
+    expect(layout.fetch("emptyStatePhraseLeftGap")).to be >= 16
+    expect(layout.fetch("emptyStatePhraseRightGap")).to be >= 16
+  end
+
+  it "keeps the basket panel open after adding an ingredient while filtering is enabled" do
+    honey = create(:ingredient, name: "honey")
+    matching_recipe = create(:recipe, title: "E2E Honey Toast", ingredient_names: [ "honey" ])
+    create(:recipe_ingredient, recipe: matching_recipe, ingredient: honey)
+
+    visit recipes_path
+
+    find("[data-ingredients-fab-target='trigger']").click
+    find(".recipe-ingredients-switch").click
+    expect(page).to have_text("only matching recipes are displayed.")
+
+    find("#recipe-ingredients-input").set("hon")
+    expect(page).to have_css(".recipe-ingredients-option", text: "honey")
+    find("#recipe-ingredients-input").send_keys(:enter)
+    page.driver.browser.execute_async_script("const done = arguments[arguments.length - 1]; setTimeout(done, 400);")
+
+    expect(page).to have_css("#recipe-ingredients-panel:not([hidden])")
+    expect(page).to have_css(".recipe-ingredients-row", text: "honey")
+    expect(page).to have_text("only matching recipes are displayed.")
+    expect(page).to have_no_text("Your basket is empty.")
+
+    empty_state = page.evaluate_script(<<~JS)
+      (() => {
+        const emptyState = document.querySelector(".recipe-ingredients-empty-state");
+        const phrase = document.querySelector(".recipe-ingredients-empty-state-phrase");
+        const mark = getComputedStyle(emptyState, "::before");
+
+        return {
+          stateDisplay: getComputedStyle(emptyState).display,
+          phraseDisplay: getComputedStyle(phrase).display,
+          markImage: mark.backgroundImage
+        };
+      })()
+    JS
+
+    expect(empty_state.fetch("stateDisplay")).not_to eq("none")
+    expect(empty_state.fetch("phraseDisplay")).to eq("none")
+    expect(empty_state.fetch("markImage")).to include("/icon-512x512.png")
   end
 
   it "does not resubmit ingredient filters after returning from a show page" do

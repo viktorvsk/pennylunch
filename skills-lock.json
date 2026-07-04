@@ -37,6 +37,12 @@
       "skillPath": "skills/engineering/grill-with-docs/SKILL.md",
       "computedHash": "e7ef25bbee50cda2eb7b3a8ef541db0a0396dad7d369f7d14fb610671dd1864b"
     },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "7463775a7569482158c83807f614da305bc45f006e1504993a21f5cfe434f86d"
+    },
     "rails-agent-skills": {
       "source": "igmarin/rails-agent-skills",
       "sourceType": "github",

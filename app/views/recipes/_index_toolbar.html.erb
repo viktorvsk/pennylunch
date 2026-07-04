@@ -1,7 +1,7 @@
 <% toolbar = recipe_toolbar_state(filters:, selected_category:) %>
 <header class="recipe-toolbar">
   <div class="recipe-toolbar-inner">
-    <%= link_to "PennyLunch", root_path, class: "recipe-toolbar-brand" %>
+    <%= render "toolbar_brand" %>
 
     <%= form_with url: recipes_path, method: :get, local: true, html: { data: { controller: "auto-submit", action: "submit->auto-submit#submit input->auto-submit#input change->auto-submit#change", auto_submit_filter_root_value: recipes_path } }, class: "recipe-toolbar-form" do |form| %>
       <%= hidden_field_tag :sort, toolbar.current_sort %>

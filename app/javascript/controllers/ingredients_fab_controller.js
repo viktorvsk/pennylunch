@@ -17,9 +17,11 @@ const SUBMIT_DELAY_MS = 250
 
 export default class extends Controller {
   static targets = [
+    "enabledControl",
     "enabledInput",
     "enabledText",
     "input",
+    "modeText",
     "options",
     "panel",
     "selectedList",
@@ -39,7 +41,6 @@ export default class extends Controller {
     this.selected = []
     this.initialized = false
     this.activeOptionIndex = NO_OPTION_INDEX
-    this.enabledControl = this.enabledInputTarget.closest("[data-state]")
 
     const storedBasket = readBasket()
     if (storedBasket.selected.length > 0) this.seedSelected(storedBasket.selected)
@@ -97,10 +98,6 @@ export default class extends Controller {
   closeFromOutside(event) {
     if (this.element.contains(event.target)) return
 
-    this.setOpen(false)
-  }
-
-  close() {
     this.setOpen(false)
   }
 
@@ -278,8 +275,9 @@ export default class extends Controller {
     const state = enabled ? "enabled" : "disabled"
 
     this.triggerTarget.dataset.state = state
-    if (this.enabledControl) this.enabledControl.dataset.state = state
+    this.enabledControlTarget.dataset.state = state
     this.enabledTextTarget.textContent = enabled ? "On" : "Off"
+    this.modeTextTarget.textContent = enabled ? "only matching recipes are displayed." : "you see all recipes."
 
     if (enabled && this.filterableSelected().length > 0) {
       this.statusTarget.textContent = `Filtering with ${this.filterableSelected().length} selected`
@@ -359,17 +357,5 @@ export default class extends Controller {
 
   currentHidden() {
     return this.currentForm()?.querySelector("[data-auto-submit-target~='ingredients']")
-  }
-
-  get requiredTargetsPresent() {
-    return this.hasTriggerTarget &&
-      this.hasPanelTarget &&
-      this.hasInputTarget &&
-      this.hasAddButtonTarget &&
-      this.hasOptionsTarget &&
-      this.hasSelectedListTarget &&
-      this.hasEnabledInputTarget &&
-      this.hasEnabledTextTarget &&
-      this.hasStatusTarget
   }
 }
