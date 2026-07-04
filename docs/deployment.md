@@ -17,6 +17,54 @@ The default stack starts:
 
 Override the public HTTP port with `PENNY_LUNCH_HTTP_PORT`.
 
+## fibe-distilled Deployment
+
+The production Compose file is also launchable through fibe-distilled. The `web` service carries `fibe.gg/*` labels that
+route it at the Marquee root domain, so the expected public URL for the live deployment is:
+
+```text
+https://pennylunch.viktorvsk.com
+```
+
+The fibe-distilled API is expected to stay private on the remote host. Use a local SSH tunnel and a dedicated local Fibe
+CLI profile, for example:
+
+```bash
+ssh -N -L 2402:127.0.0.1:2402 root@165.22.82.180
+fibe auth login --profile pennylunch-distilled --domain http://127.0.0.1:2402 --api-key "$FIBE_API_KEY"
+```
+
+Launch from the local Compose file after pushing `main`. fibe-distilled receives the Compose content from the CLI, then
+uses the embedded `fibe.gg/repo_url` and `fibe.gg/branch` labels to clone/build the pushed GitHub source on the remote
+host. This keeps the launch path inside fibe-distilled's supported supplied-Compose API while still matching the later
+GitHub webhook path.
+
+```bash
+fibe --profile pennylunch-distilled launch \
+  --compose @docker-compose.yml \
+  --name pennylunch \
+  --marquee default \
+  --create-playground \
+  --persist-volumes \
+  --subdomain web=@ \
+  --wait \
+  --wait-timeout 20m
+```
+
+Pass these production env overrides during launch and keep the same values in the remote operator-only recovery notes:
+
+- `RAILS_MASTER_KEY`
+- `SECRET_KEY_BASE`
+- `PENNY_LUNCH_DATABASE_PASSWORD`
+- `AVO_USERNAME`
+- `AVO_PASSWORD`
+- `OPENROUTER_API_KEY`
+- `PENNYLUNCH_BASE_URL=https://pennylunch.viktorvsk.com`
+
+The GitHub repository webhook should point to `https://pennylunch.viktorvsk.com/webhooks/github` with the shared
+`GITHUB_WEBHOOK_SECRET`. When fibe-distilled runs with `FIBE_GITHUB_WEBHOOK_AUTO_ROLLOUT=true`, a clean push build
+rolls out automatically.
+
 The same `db` service is used in development and production. Development defaults are intentionally usable without secrets; production deployments must set `PENNY_LUNCH_DATABASE_PASSWORD`, `SECRET_KEY_BASE`, and Avo credentials before starting the full stack.
 
 The Compose-managed PostgreSQL service uses the application database user as the official Postgres bootstrap user. `POSTGRES_DB` creates the primary production database, and Rails `db:prepare` creates the additional queue and cache databases because that bootstrap user is privileged inside this self-contained Compose stack.

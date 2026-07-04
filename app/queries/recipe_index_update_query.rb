@@ -1,9 +1,9 @@
 # Builds one bulk `UPDATE recipes ... FROM (VALUES ...)` statement for recipe
 # index fields produced by `RecipeIndexEntry`.
 #
-# Returns a SQL string intended for `Recipe.connection.execute`. Each entry
-# contributes the target recipe id, parsed ingredient names, parser details, and
-# nullable pgvector embedding.
+# Returns a SQL string for the caller to run. Each entry contributes the target
+# recipe id, parsed ingredient names, parser details, and nullable pgvector
+# embedding.
 #
 # Example generated query:
 #   UPDATE "recipes"

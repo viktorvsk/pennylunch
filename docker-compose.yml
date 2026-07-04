@@ -5,11 +5,22 @@ services:
       context: .
       dockerfile: Dockerfile
       pull: true
+    labels:
+      fibe.gg/branch: main
+      fibe.gg/dockerfile: Dockerfile
+      fibe.gg/port: "80"
+      fibe.gg/production: "true"
+      fibe.gg/repo_url: https://github.com/viktorvsk/pennylunch.git
+      fibe.gg/source_mount: /rails
+      fibe.gg/subdomain: "@"
+      fibe.gg/visibility: external
     init: true
     depends_on:
       db:
         condition: service_healthy
     environment:
+      AVO_PASSWORD: ${AVO_PASSWORD:-pennylunch}
+      AVO_USERNAME: ${AVO_USERNAME:-pennylunch}
       EMBEDDING_MODEL_PRELOAD: ${EMBEDDING_MODEL_PRELOAD:-true}
       INFORMERS_CACHE_DIR: /rails/storage/informers
       INGREDIENTS_MAX_COSINE_DISTANCE: ${INGREDIENTS_MAX_COSINE_DISTANCE:-0.7}
@@ -18,6 +29,8 @@ services:
       MAINTENANCE_TASKS_PASSWORD: ${MAINTENANCE_TASKS_PASSWORD:-pennylunch}
       MAINTENANCE_TASKS_USERNAME: ${MAINTENANCE_TASKS_USERNAME:-pennylunch}
       NLTK_DATA: /rails/.venv/nltk_data
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      PENNYLUNCH_BASE_URL: ${PENNYLUNCH_BASE_URL:-http://127.0.0.1:3000}
       PENNY_LUNCH_DATABASE_HOST: db
       PENNY_LUNCH_DATABASE_MAX_CONNECTIONS: ${PENNY_LUNCH_DATABASE_MAX_CONNECTIONS:-5}
       PENNY_LUNCH_DATABASE_PASSWORD: ${PENNY_LUNCH_DATABASE_PASSWORD:-postgres}
