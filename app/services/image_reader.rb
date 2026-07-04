@@ -81,8 +81,7 @@ class ImageReader
     end
 
     def uploaded_image_data_url(file)
-      content_type = image_content_type(file.respond_to?(:content_type) ? file.content_type : nil, file.respond_to?(:original_filename) ? file.original_filename : nil)
-      data_url(content_type, read_limited(file))
+      data_url(image_content_type(file.content_type, file.original_filename), read_limited(file))
     end
 
     def remote_image_url(url)
@@ -165,6 +164,8 @@ class ImageReader
       end
 
       [ response, body ]
+    rescue Timeout::Error, SystemCallError, SocketError => error
+      raise RemoteImageError, "Image URL could not be loaded: #{error.message}"
     end
 
     def validate_public_host(host)
@@ -229,6 +230,8 @@ class ImageReader
       JSON.parse(response.body)
     rescue JSON::ParserError
       raise RemoteImageError, "OpenRouter returned invalid JSON."
+    rescue Timeout::Error, SystemCallError, SocketError => error
+      raise RemoteImageError, "OpenRouter request failed: #{error.message}"
     end
 
     def parse_ingredient_names(response, catalog_names)

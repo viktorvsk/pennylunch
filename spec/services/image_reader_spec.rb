@@ -118,4 +118,20 @@ RSpec.describe ImageReader do
       described_class.call(file: empty_file, ingredient_names: [ "tomato" ], api_key:)
     }.to raise_error(ImageReader::InvalidImageError, "Image cannot be empty.")
   end
+
+  it "wraps remote image network failures in RemoteImageError" do
+    stub_request(:get, "https://example.com/pantry.jpg").to_timeout
+
+    expect {
+      described_class.call(url: "https://example.com/pantry.jpg", ingredient_names: [ "tomato" ], api_key:)
+    }.to raise_error(ImageReader::RemoteImageError, /could not be loaded/)
+  end
+
+  it "wraps OpenRouter network failures in RemoteImageError" do
+    stub_request(:post, "https://openrouter.ai/api/v1/chat/completions").to_timeout
+
+    expect {
+      described_class.call(file: uploaded_file, ingredient_names: [ "tomato" ], api_key:)
+    }.to raise_error(ImageReader::RemoteImageError, /request failed/)
+  end
 end

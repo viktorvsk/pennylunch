@@ -64,6 +64,13 @@ RSpec.describe Ingredient do
     expect(described_class.filterable_matches("kosher salt\navocado")).to eq([ avocado ])
   end
 
+  it "returns filterable matches in filter-text order" do
+    create(:ingredient, name: "pasta")
+    create(:ingredient, name: "garlic")
+
+    expect(described_class.filterable_matches("garlic\npasta").map(&:name)).to eq([ "garlic", "pasta" ])
+  end
+
   it "exposes ingredient filter options with optional metadata" do
     create(:ingredient, name: "salt", optional: true)
     create(:ingredient, name: "avocado")

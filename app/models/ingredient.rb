@@ -41,7 +41,8 @@ class Ingredient < ApplicationRecord
       names = text.to_s.split(/[\n,;]+/).filter_map { normalize_lookup_key(it) }.uniq
       return [] if names.empty?
 
-      where(optional: false, name: names).to_a
+      by_name = where(optional: false, name: names).index_by(&:name)
+      names.filter_map { by_name[it] }
     end
 
     def catalog_metadata

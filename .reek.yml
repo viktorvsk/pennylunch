@@ -17,7 +17,6 @@ detectors:
     exclude:
       - "RecipeHelper#rating_stars"
       - "ImageReader#call"
-      - "PennyLunch::Quality::EnvAccessScanner#scan_file"
   ControlParameter:
     exclude:
       - "RecipeSortQuery#call"
@@ -29,9 +28,6 @@ detectors:
   TooManyMethods:
     exclude:
       - "ImageReader"
-  ManualDispatch:
-    exclude:
-      - "ImageReader#uploaded_image_data_url"
 
 exclude_paths:
   - bin
