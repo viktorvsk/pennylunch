@@ -1,7 +1,7 @@
 # Deployment
 
-PennyLunch keeps a production final image in `Dockerfile`, and uses `docker-compose.yml` for the fibe-distilled
-source-mounted runtime.
+PennyLunch keeps a production final image in `Dockerfile`, and uses `docker-compose.yml` for a source-mounted
+development runtime.
 
 Build the final production image directly with:
 
@@ -11,45 +11,22 @@ docker build -t penny_lunch:production .
 
 The Compose stack starts:
 
-- `web`: the `fibe-dev` image target with Rails running through `bin/dev` on host port `3000`.
+- `web`: the `dev-runtime` image target with Rails running through `bin/dev` on host port `3000`.
 - `db`: PostgreSQL 18 with pgvector for the Rails development primary and queue databases.
 
 Override the public HTTP port with `PENNY_LUNCH_HTTP_PORT`.
 
-## fibe-distilled Deployment
+## Source-Mounted Deployment
+The `web` service carries `fibe.gg/*` labels that route it at the deployment root domain and run it as a source-mounted
+service. Because it uses `fibe.gg/production: "false"`, Rails must run with `RAILS_ENV=development` and the development
+process (`bin/dev`) so code reloads from the mounted checkout.
 
-The Compose file is launchable through fibe-distilled. The `web` service carries `fibe.gg/*` labels that route it at the
-Marquee root domain and run it as a source-mounted service. Because it uses `fibe.gg/production: "false"`, Rails must run
-with `RAILS_ENV=development` and the development process (`bin/dev`) so code reloads from the mounted checkout.
+Launch from the local Compose file after pushing `main`. The deployment runtime receives the Compose content, then uses
+the embedded `fibe.gg/repo_url` and `fibe.gg/branch` labels to clone the pushed GitHub source on the remote host. That
+keeps the deployment path aligned with later GitHub webhook source sync.
 
-```text
-https://pennylunch.viktorvsk.com
-```
-
-The fibe-distilled API is expected to stay private on the remote host. Use a local SSH tunnel and a dedicated local Fibe
-CLI profile, for example:
-
-```bash
-ssh -N -L 2402:127.0.0.1:2402 root@165.22.82.180
-fibe auth login --profile pennylunch-distilled --domain http://127.0.0.1:2402 --api-key "$FIBE_API_KEY"
-```
-
-Launch from the local Compose file after pushing `main`. fibe-distilled receives the Compose content from the CLI, then
-uses the embedded `fibe.gg/repo_url` and `fibe.gg/branch` labels to clone the pushed GitHub source on the remote host.
-This keeps the launch path inside fibe-distilled's supported supplied-Compose API while still matching the later GitHub
-webhook path.
-
-```bash
-fibe --profile pennylunch-distilled launch \
-  --compose @docker-compose.yml \
-  --name pennylunch \
-  --marquee default \
-  --create-playground \
-  --persist-volumes \
-  --subdomain web=@ \
-  --wait \
-  --wait-timeout 20m
-```
+The launch should create a long-running environment named for the app, target the deployment root domain, persist
+volumes, and route the `web` service at the root subdomain.
 
 Pass these env overrides during launch and keep the same values in the remote operator-only recovery notes:
 
@@ -59,13 +36,13 @@ Pass these env overrides during launch and keep the same values in the remote op
 - `AVO_USERNAME`
 - `AVO_PASSWORD`
 - `OPENROUTER_API_KEY`
-- `PENNYLUNCH_BASE_URL=https://pennylunch.viktorvsk.com`
+- `PENNYLUNCH_BASE_URL`
 
-The GitHub repository webhook should point to `https://pennylunch.viktorvsk.com/webhooks/github` with the shared
+The GitHub repository webhook should point to the deployment runtime's GitHub webhook endpoint with the shared
 `GITHUB_WEBHOOK_SECRET`. Because the service uses `fibe.gg/production: "false"`, clean pushes sync the mounted checkout
 and refresh runtime state automatically.
 
-The same `db` service is used for the Fibe source-mounted runtime and local development. Development defaults are
+The same `db` service is used for source-mounted runtime and local development. Development defaults are
 intentionally usable without secrets; remote deployments should set `PENNY_LUNCH_DATABASE_PASSWORD`, `SECRET_KEY_BASE`,
 and Avo credentials before starting the full stack.
 

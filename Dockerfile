@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # check=error=true
 
-# This Dockerfile is production-first, with a fibe-dev target for source-mounted Fibe runs.
+# This Dockerfile is production-first, with a dev-runtime target for source-mounted runs.
 # Use the final image with Kamal or build'n'run by hand:
 # docker build -t penny_lunch .
 # docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value from config/master.key> --name penny_lunch penny_lunch
@@ -30,8 +30,8 @@ ENV RAILS_ENV="production" \
     NLTK_DATA="/rails/.venv/nltk_data" \
     PATH="/rails/.venv/bin:$PATH"
 
-# Development image target for Fibe source-mounted production:false deployments.
-FROM base AS fibe-dev
+# Development image target for source-mounted deployments.
+FROM base AS dev-runtime
 
 ENV RAILS_ENV="development" \
     BUNDLE_DEPLOYMENT="false" \
@@ -50,7 +50,7 @@ COPY requirements.txt ./
 RUN bundle install && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git
 
-# Copy application code for local Compose use. Fibe replaces /rails with a synced source mount.
+# Copy application code for local Compose use. Deployment platforms may replace /rails with a synced source mount.
 COPY . .
 
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
