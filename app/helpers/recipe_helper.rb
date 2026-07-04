@@ -2,7 +2,11 @@ module RecipeHelper
   MAX_RATING_STARS = 5
   RATING_PRECISION = 2
 
-  def rating_stars(rating, class_name: "recipe-rating", side: "bottom", align: "end")
+  def rating_stars(rating, **options)
+    options.assert_valid_keys(:class_name, :side, :align)
+    class_name = options.fetch(:class_name, "recipe-rating")
+    side = options.fetch(:side, "bottom")
+    align = options.fetch(:align, "end")
     value = number_with_precision(rating, precision: RATING_PRECISION)
     tag.span(
       filled_stars(rating),

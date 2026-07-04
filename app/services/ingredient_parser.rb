@@ -1,6 +1,16 @@
 require "open3"
 require "timeout"
 
+# Normalizes batches of raw recipe ingredient lines and sends them to the local
+# Python ingredient parser.
+#
+# Returns `Array<IngredientParser::Result>`, one result per submitted ingredient
+# list. Each result has `ingredient_names: Array<String>` and
+# `ingredient_parse_data: Array<Hash>` aligned to the parser response.
+#
+# Raises `IngredientParser::Error` for invalid parser JSON, missing response
+# keys, response-size mismatches, non-zero script exits, startup failures, and
+# timeouts.
 class IngredientParser
   class Error < StandardError; end
 

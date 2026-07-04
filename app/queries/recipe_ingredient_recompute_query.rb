@@ -1,3 +1,15 @@
+# Builds SQL that synchronizes `recipe_ingredients` rows for the given recipes
+# from each recipe's normalized `ingredient_names` JSON array.
+#
+# Returns a SQL string intended for `Recipe.connection.exec_query`. The
+# statement deletes stale recipe/ingredient pairs and inserts missing pairs by
+# matching each parsed name against `ingredients.name` and `ingredients.aliases`.
+#
+# Example generated query:
+#   WITH target_recipes AS (SELECT "recipes"."id" FROM "recipes" WHERE "recipes"."id" IN (1, 2)),
+#   desired_pairs AS (... jsonb_array_elements_text(recipes.ingredient_names) ...),
+#   deleted_pairs AS (DELETE FROM recipe_ingredients ...)
+#   INSERT INTO recipe_ingredients (...) SELECT ... ON CONFLICT (recipe_id, ingredient_id) DO NOTHING
 class RecipeIngredientRecomputeQuery
   class << self
     def call(recipe_ids:)

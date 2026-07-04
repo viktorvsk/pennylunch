@@ -3,12 +3,23 @@ require "ssrf_filter"
 require "uri"
 
 class ImageReader
+  # Normalizes a submitted image into a URL string that OpenRouter can consume.
+  #
+  # Uploaded files become validated base64 data URLs. Remote URLs are fetched
+  # through `SsrfFilter` for scheme, redirect, private-network, content type, and
+  # size checks, then returned as their final URL.
+  #
+  # Returns `ImageReader::ImageReference` with a `url` attribute. Raises
+  # `InvalidImageError` for user-correctable image input problems and
+  # `RemoteImageError` when a remote URL cannot be loaded safely.
   class ImageReference < Data.define(:url)
     MAX_IMAGE_BYTES = 10 * 1024 * 1024
-    MAX_REDIRECTS = 3
-    OPEN_TIMEOUT_SECONDS = 5
-    READ_TIMEOUT_SECONDS = 30
     SIZE_ERROR_MESSAGE = "Image must be smaller than 10 MB."
+    FETCH_OPTIONS = {
+      max_redirects: 3,
+      headers: { "User-Agent" => "PennyLunch ImageReader" },
+      http_options: { open_timeout: 5, read_timeout: 30 }
+    }.freeze
     ALLOWED_CONTENT_TYPES = {
       "image/jpg" => "image/jpeg",
       "image/jpeg" => "image/jpeg",
@@ -65,9 +76,7 @@ class ImageReader
       def fetch_remote_image(url)
         SsrfFilter.get(
           url,
-          max_redirects: MAX_REDIRECTS,
-          headers: { "User-Agent" => "PennyLunch ImageReader" },
-          http_options: { open_timeout: OPEN_TIMEOUT_SECONDS, read_timeout: READ_TIMEOUT_SECONDS }
+          **FETCH_OPTIONS
         ) do |response|
           read_success_body(response) if response.is_a?(Net::HTTPSuccess)
         end

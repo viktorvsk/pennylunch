@@ -1,6 +1,12 @@
-# Returns a cached hash of all catalog ingredient names and aliases mapped to metadata.
-# Shape: { "normalized_key" => IngredientCatalogMetadata::Entry }
-# Example: { "green onion" => IngredientCatalogMetadata::Entry(name: "Onion", optional: false) }
+# Reads the ingredient catalog into the cached lookup used when displaying parsed
+# recipe ingredients and resolving parser output.
+#
+# Returns a `Hash<String, IngredientCatalogMetadata::Entry>` keyed by every
+# canonical ingredient name and alias, including optional ingredients. Values
+# expose the canonical `name` and whether that ingredient is `optional`.
+#
+# Example shape:
+#   { "green onion" => IngredientCatalogMetadata::Entry(name: "onion", optional: false) }
 class IngredientCatalogMetadata
   Entry = Data.define(:name, :optional)
   CACHE_KEY = "ingredients/catalog_metadata/v2"

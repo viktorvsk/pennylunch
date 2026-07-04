@@ -2,12 +2,17 @@ require "net/http"
 require "uri"
 
 class ImageReader
+  # Calls OpenRouter's chat-completions API with a forced ingredient-detection
+  # tool call.
+  #
+  # Returns `Array<String>` after parsing the tool arguments and filtering them
+  # back to exact catalog names supplied in the prompt. Raises `RemoteImageError`
+  # for HTTP failures, transport failures, invalid JSON, or missing tool results.
   class OpenRouterClient < Data.define(:api_key, :catalog_names, :image_url)
     ENDPOINT = URI("https://openrouter.ai/api/v1/chat/completions")
     MODELS = [ "google/gemini-2.5-flash-lite", "google/gemini-2.5-flash" ].freeze
     TOOL_NAME = "set_detected_ingredients"
-    OPEN_TIMEOUT_SECONDS = 5
-    READ_TIMEOUT_SECONDS = 30
+    HTTP_OPTIONS = { use_ssl: true, open_timeout: 5, read_timeout: 30 }.freeze
     TOOL_DEFINITION = {
       type: "function",
       function: {
@@ -64,7 +69,7 @@ class ImageReader
     end
 
     def post(payload)
-      response = Net::HTTP.start(ENDPOINT.host, ENDPOINT.port, use_ssl: true, open_timeout: OPEN_TIMEOUT_SECONDS, read_timeout: READ_TIMEOUT_SECONDS) do |http|
+      response = Net::HTTP.start(ENDPOINT.host, ENDPOINT.port, **HTTP_OPTIONS) do |http|
         request = Net::HTTP::Post.new(ENDPOINT)
         request["Authorization"] = "Bearer #{api_key}"
         request["Content-Type"] = "application/json"

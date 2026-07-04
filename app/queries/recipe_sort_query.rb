@@ -1,31 +1,24 @@
 class RecipeSortQuery
   DEFAULT_SORT = "best_match"
-  UNKNOWN_TIME_LAST_SQL = "CASE WHEN total_time = 0 THEN 1 ELSE 0 END ASC"
-  RECIPE_INGREDIENTS_JOIN_SQL = "LEFT JOIN recipe_ingredients recipe_sort_recipe_ingredients ON recipe_sort_recipe_ingredients.recipe_id = recipes.id"
-  CATALOG_INGREDIENTS_JOIN_SQL = "LEFT JOIN ingredients recipe_sort_ingredients ON recipe_sort_ingredients.id = recipe_sort_recipe_ingredients.ingredient_id"
-  REQUIRED_INGREDIENT_ID_SQL = "CASE WHEN recipe_sort_ingredients.optional = FALSE THEN recipe_sort_recipe_ingredients.ingredient_id END"
-  TOTAL_INGREDIENT_COUNT_SQL = "COUNT(DISTINCT #{REQUIRED_INGREDIENT_ID_SQL})"
-  BEST_MATCH_ORDER_SQL = <<~SQL.squish
-    CASE WHEN recipe_sort_match_stats.matched_ingredients > 0 THEN 0 ELSE 1 END ASC,
-    COALESCE(recipe_sort_match_stats.missing_ingredients, 2147483647) ASC,
-    COALESCE(recipe_sort_match_stats.matched_ingredients, 0) DESC,
-    COALESCE(recipe_sort_match_stats.total_ingredients, 2147483647) ASC
-  SQL
+  SQL = {
+    unknown_time_last: "CASE WHEN total_time = 0 THEN 1 ELSE 0 END ASC",
+    recipe_ingredients_join: "LEFT JOIN recipe_ingredients recipe_sort_recipe_ingredients ON recipe_sort_recipe_ingredients.recipe_id = recipes.id",
+    catalog_ingredients_join: "LEFT JOIN ingredients recipe_sort_ingredients ON recipe_sort_ingredients.id = recipe_sort_recipe_ingredients.ingredient_id",
+    required_ingredient_id: "CASE WHEN recipe_sort_ingredients.optional = FALSE THEN recipe_sort_recipe_ingredients.ingredient_id END"
+  }.freeze
+  SORT_ORDERS = {
+    "time_desc" => [ Arel.sql(SQL.fetch(:unknown_time_last)), { total_time: :desc, id: :asc } ],
+    "time_asc" => [ Arel.sql(SQL.fetch(:unknown_time_last)), { total_time: :asc, id: :asc } ],
+    "rating_asc" => [ { ratings: :asc, id: :asc } ],
+    "rating_desc" => [ { ratings: :desc, id: :asc } ]
+  }.freeze
 
   class << self
     def call(relation:, sort:, ingredients:)
-      case sort
-      when "time_desc"
-        relation.reorder(Arel.sql(UNKNOWN_TIME_LAST_SQL), total_time: :desc, id: :asc)
-      when "time_asc"
-        relation.reorder(Arel.sql(UNKNOWN_TIME_LAST_SQL), total_time: :asc, id: :asc)
-      when "rating_asc"
-        relation.reorder(ratings: :asc, id: :asc)
-      when "rating_desc"
-        relation.reorder(ratings: :desc, id: :asc)
-      else
-        order_by_best_match(relation:, ingredients:).order(ratings: :desc, total_time: :asc, id: :asc)
-      end
+      sort_order = SORT_ORDERS[sort.to_s]
+      return relation.reorder(*sort_order) if sort_order
+
+      order_by_best_match(relation:, ingredients:).order(ratings: :desc, total_time: :asc, id: :asc)
     end
 
     private
@@ -37,23 +30,37 @@ class RecipeSortQuery
       match_stats = ingredient_match_stats_relation(relation, ids).to_sql
       relation
         .joins("LEFT JOIN (#{match_stats}) recipe_sort_match_stats ON recipe_sort_match_stats.recipe_id = recipes.id")
-        .reorder(Arel.sql(BEST_MATCH_ORDER_SQL))
+        .reorder(Arel.sql(best_match_order_sql))
     end
 
     def ingredient_match_stats_relation(relation, ids)
       matched_count_sql = matched_ingredient_count_sql(ids)
+      total_count_sql = total_ingredient_count_sql
 
       relation
         .unscope(:order)
-        .joins(RECIPE_INGREDIENTS_JOIN_SQL)
-        .joins(CATALOG_INGREDIENTS_JOIN_SQL)
+        .joins(SQL.fetch(:recipe_ingredients_join))
+        .joins(SQL.fetch(:catalog_ingredients_join))
         .select(<<~SQL.squish)
           recipes.id AS recipe_id,
-          #{TOTAL_INGREDIENT_COUNT_SQL} AS total_ingredients,
+          #{total_count_sql} AS total_ingredients,
           #{matched_count_sql} AS matched_ingredients,
-          #{TOTAL_INGREDIENT_COUNT_SQL} - #{matched_count_sql} AS missing_ingredients
+          #{total_count_sql} - #{matched_count_sql} AS missing_ingredients
         SQL
         .group("recipes.id")
+    end
+
+    def total_ingredient_count_sql
+      "COUNT(DISTINCT #{SQL.fetch(:required_ingredient_id)})"
+    end
+
+    def best_match_order_sql
+      <<~SQL.squish
+        CASE WHEN recipe_sort_match_stats.matched_ingredients > 0 THEN 0 ELSE 1 END ASC,
+        COALESCE(recipe_sort_match_stats.missing_ingredients, 2147483647) ASC,
+        COALESCE(recipe_sort_match_stats.matched_ingredients, 0) DESC,
+        COALESCE(recipe_sort_match_stats.total_ingredients, 2147483647) ASC
+      SQL
     end
 
     def matched_ingredient_count_sql(ids)

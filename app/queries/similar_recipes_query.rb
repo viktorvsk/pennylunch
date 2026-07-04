@@ -1,4 +1,14 @@
-# Returns recipes nearest to a recipe by ingredient-vector distance.
+# Finds recipes nearest to a source recipe by pgvector cosine distance over
+# `ingredients_vector`.
+#
+# Returns an `ActiveRecord::Relation<Recipe>` limited by `limit`; returns
+# `relation.none` when the source recipe has not been indexed with a vector.
+#
+# Example generated query:
+#   SELECT "recipes".*, "recipes"."ingredients_vector" <=> '[...]' AS neighbor_distance
+#   FROM "recipes"
+#   WHERE "recipes"."id" != 42 AND "recipes"."ingredients_vector" IS NOT NULL
+#   ORDER BY "recipes"."ingredients_vector" <=> '[...]' LIMIT 3
 class SimilarRecipesQuery
   DEFAULT_LIMIT = 3
 

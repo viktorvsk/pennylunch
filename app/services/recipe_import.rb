@@ -3,6 +3,15 @@ require "open-uri"
 require "stringio"
 require "zlib"
 
+# Imports the gzipped source recipe JSON into an empty `recipes` table using
+# PostgreSQL `COPY`.
+#
+# Validates the source payload shape, enforces unique title/category/author
+# identities, locks the table during the empty-destination check, and writes raw
+# recipe rows with empty index fields for later indexing.
+#
+# Returns the imported record count as an `Integer`; raises typed `RecipeImport`
+# errors for invalid payloads, duplicate source identities, or non-empty targets.
 class RecipeImport
   DEFAULT_URL = "https://pennylane-interviewing-assets-20220328.s3.eu-west-1.amazonaws.com/recipes-en.json.gz"
   DEFAULT_DOWNLOADER = ->(source_url) { URI.open(source_url, "rb", &:read) }
@@ -17,8 +26,10 @@ class RecipeImport
     title cook_time prep_time ingredients ingredient_names ingredient_parse_data
     ratings cuisine category category_normalized author image total_time source_position created_at updated_at
   ].freeze
-  COPY_SQL = "COPY recipes (#{COPY_COLUMNS.join(', ')}) FROM STDIN WITH (FORMAT csv)"
-  LOCK_SQL = "LOCK TABLE recipes IN EXCLUSIVE MODE"
+  SQL = {
+    copy: "COPY recipes (#{COPY_COLUMNS.join(', ')}) FROM STDIN WITH (FORMAT csv)",
+    lock: "LOCK TABLE recipes IN EXCLUSIVE MODE"
+  }.freeze
 
   class << self
     def call(url:, downloader: DEFAULT_DOWNLOADER)
@@ -28,7 +39,7 @@ class RecipeImport
       validate_records(records)
 
       Recipe.transaction do
-        Recipe.connection.execute(LOCK_SQL)
+        Recipe.connection.execute(SQL.fetch(:lock))
         raise NonEmptyDestinationError, "recipes table must be empty before MVP import" if Recipe.exists?
 
         copy_records(records)
@@ -68,7 +79,7 @@ class RecipeImport
       now = Time.current.utc.iso8601(6)
       raw_connection = Recipe.connection.raw_connection
 
-      raw_connection.copy_data(COPY_SQL) do
+      raw_connection.copy_data(SQL.fetch(:copy)) do
         records.each_with_index do |record, index|
           total_time = record.fetch("prep_time").to_i + record.fetch("cook_time").to_i
           row = [

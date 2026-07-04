@@ -45,6 +45,6 @@
     <div class="recipe-content-loading" aria-hidden="true">
       <span class="recipe-content-loading-spinner"></span>
     </div>
-    <%= render "recipes/ingredients_fab", filters: @filters&.slice("ingredients") || {} %>
+    <%= render "recipes/ingredients_fab", filters: @recipe_index&.filters&.slice("ingredients") || {} %>
   </body>
 </html>

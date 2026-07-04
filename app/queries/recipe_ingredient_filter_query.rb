@@ -1,3 +1,26 @@
+# Narrows a recipe relation to recipes matching canonical, non-optional basket
+# ingredients.
+#
+# Returns an `ActiveRecord::Relation<Recipe>` and leaves the relation unchanged
+# when no filterable catalog ingredients are present. The default overlap
+# strategy filters through `recipe_ingredients`; the vector strategy embeds the
+# canonical ingredient names and filters by pgvector cosine distance.
+#
+# Example generated query for overlap strategy:
+#   SELECT "recipes".* FROM "recipes"
+#   WHERE "recipes"."id" IN (
+#     SELECT "recipe_ingredients"."recipe_id"
+#     FROM "recipe_ingredients"
+#     WHERE "recipe_ingredients"."ingredient_id" IN (1, 2)
+#   )
+#
+# Example generated query for vector strategy:
+#   SELECT "recipes".* FROM "recipes"
+#   WHERE "recipes"."id" IN (
+#     SELECT "recipes"."id" FROM "recipes"
+#     WHERE "recipes"."ingredients_vector" IS NOT NULL
+#       AND "recipes"."ingredients_vector" <=> '[...]' <= 0.35
+#   )
 class RecipeIngredientFilterQuery
   SEARCH_STRATEGY_CACHE_KEY = "search_strategy"
   STRATEGIES = %w[overlap vector].freeze
