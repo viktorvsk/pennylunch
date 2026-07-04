@@ -1,4 +1,5 @@
 require "active_support/core_ext/integer/time"
+require "uri"
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
@@ -14,6 +15,20 @@ Rails.application.configure do
 
   # Enable server timing.
   config.server_timing = true
+
+  allowed_hosts = ENV.fetch("PENNYLUNCH_ALLOWED_HOSTS", "").split(",").map(&:strip)
+  base_url = ENV["PENNYLUNCH_BASE_URL"].to_s.strip
+  if base_url != ""
+    begin
+      host = URI.parse(base_url).host
+      allowed_hosts << host if host && host != ""
+    rescue URI::InvalidURIError
+      # Ignore malformed local URLs here; application config validation owns them.
+    end
+  end
+  allowed_hosts.uniq.each do |host|
+    config.hosts << host if host != ""
+  end
 
   # Enable/disable Action Controller caching. By default Action Controller caching is disabled.
   # Run rails dev:cache to toggle Action Controller caching.
