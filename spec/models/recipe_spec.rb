@@ -42,6 +42,21 @@ RSpec.describe Recipe do
     end
   end
 
+  describe ".category_labels" do
+    it "maps normalized categories to original display names" do
+      create(:recipe, category: "Air Fryer Main Dish Recipes", category_normalized: "air fryer main dish recipes")
+      create(:recipe, category: "air fryer main dish recipes", category_normalized: "air fryer main dish recipes")
+      create(:recipe, category: "Dinner", category_normalized: "dinner")
+      create(:recipe, category: "dinner", category_normalized: "dinner")
+      create(:recipe, category: "", category_normalized: "")
+
+      expect(described_class.category_labels).to eq(
+        "air fryer main dish recipes" => "Air Fryer Main Dish Recipes",
+        "dinner" => "Dinner"
+      )
+    end
+  end
+
   describe "#display_image_url" do
     it "extracts direct Allrecipes image URLs from Meredith proxy URLs" do
       recipe = described_class.new(image: "https://imagesvc.meredithcorp.io/v3/mm/image?url=https%3A%2F%2Fimages.media-allrecipes.com%2Fuserphotos%2F8263243.jpg")

@@ -1,4 +1,5 @@
 module Recipes
+  # Returns a relation limited to nearest ingredient-vector candidates.
   class IngredientCandidateQuery
     DEFAULT_CANDIDATE_COUNT = 250
 

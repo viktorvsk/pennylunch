@@ -1,3 +1,4 @@
+require "csv"
 require "open-uri"
 require "stringio"
 require "zlib"
@@ -9,6 +10,26 @@ class RecipeImport
   class NonEmptyDestinationError < Error; end
   class InvalidSourceError < Error; end
   class DuplicateSourceIdentityError < Error; end
+  COPY_COLUMNS = %w[
+    title
+    cook_time
+    prep_time
+    ingredients
+    ingredient_names
+    ingredient_parse_data
+    ratings
+    cuisine
+    category
+    category_normalized
+    author
+    image
+    total_time
+    source_position
+    created_at
+    updated_at
+  ].freeze
+  COPY_SQL = "COPY recipes (#{COPY_COLUMNS.join(', ')}) FROM STDIN WITH (FORMAT csv)"
+  LOCK_SQL = "LOCK TABLE recipes IN EXCLUSIVE MODE"
   PARSER_BATCH_SIZE = 256
 
   def self.call(url:, downloader: DEFAULT_DOWNLOADER, ingredient_parser: IngredientParser)
@@ -35,7 +56,7 @@ class RecipeImport
     validate_parser_results(records, parser_results)
 
     Recipe.transaction do
-      Recipes::ImportCopyQuery.lock_table
+      Recipe.connection.execute(LOCK_SQL)
       raise NonEmptyDestinationError, "recipes table must be empty before MVP import" if Recipe.exists?
 
       copy_records(records, parser_results)
@@ -117,7 +138,11 @@ class RecipeImport
         ]
       end
     end
-    Recipes::ImportCopyQuery.copy(rows)
+
+    raw_connection = Recipe.connection.raw_connection
+    raw_connection.copy_data(COPY_SQL) do
+      rows.each { |row| raw_connection.put_copy_data(CSV.generate_line(row)) }
+    end
   end
 
   def postgres_text_array(values)

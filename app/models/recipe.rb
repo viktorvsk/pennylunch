@@ -19,6 +19,18 @@ class Recipe < ApplicationRecord
       normalize_category(value).parameterize
     end
 
+    def category_labels
+      source_categories = where.not(category_normalized: "").pluck(:category_normalized, :category).group_by(&:first)
+
+      source_categories.keys.sort.to_h do |normalized|
+        label = source_categories.fetch(normalized, [])
+          .filter_map { |(_, category)| category.to_s.squish.presence }
+          .min_by { |category| [ category == normalize_category(category) ? 1 : 0, category.downcase ] }
+
+        [ normalized, label || normalized ]
+      end
+    end
+
     def slug_for(attributes)
       [ attributes.fetch(:title), attributes.fetch(:category), attributes.fetch(:author), "#{attributes.fetch(:total_time)}-minutes" ].filter_map do |part|
         part.to_s.parameterize(preserve_case: true).presence

@@ -1,4 +1,5 @@
 module Recipes
+  # Returns a relation filtered and ranked by PostgreSQL full-text title search.
   class TitleSearchQuery
     TITLE_RANK_SQL = "ts_rank_cd(title_search_vector, websearch_to_tsquery('english', ?)) DESC"
     TITLE_MATCH_SQL = "title_search_vector @@ websearch_to_tsquery('english', ?)"

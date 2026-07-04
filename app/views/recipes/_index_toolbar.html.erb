@@ -1,6 +1,6 @@
-<% current_sort = filters["sort"].presence || Recipes::SortQuery::DEFAULT_SORT %>
-<% quick_active = Recipes::RelationQuery.active?(filters["quick"]) %>
-<% popular_active = Recipes::RelationQuery.active?(filters["popular"]) %>
+<% current_sort = filters["sort"].presence || RecipeSearch::DEFAULT_SORT %>
+<% quick_active = recipe_filter_active?(filters["quick"]) %>
+<% popular_active = recipe_filter_active?(filters["popular"]) %>
 <% category_labels = recipe_category_labels %>
 <% selected_category_label = selected_category.present? ? category_labels.fetch(selected_category, category_heading(selected_category)) : nil %>
 <% category_tooltip = selected_category_label.present? ? "Category: #{selected_category_label}" : "Category: all categories" %>

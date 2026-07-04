@@ -21,6 +21,28 @@ RSpec.describe RecipeSearch do
     expect(result).not_to respond_to(:category_options)
   end
 
+  it "filters recipes by the public search controls" do
+    quick_popular = create(:recipe, title: "Quick Tomato Pasta", prep_time: 8, cook_time: 15, ratings: 4.91, category: "Pasta")
+    create(:recipe, title: "Slow Roast Chicken", prep_time: 20, cook_time: 120, ratings: 4.5, category: "Dinner")
+    other = create(:recipe, title: "Blueberry Muffins", prep_time: 10, cook_time: 18, ratings: 4.85, category: "Breakfast")
+
+    expect(described_class.new(params: { q: "tomato" }).call.recipes).to contain_exactly(quick_popular)
+    expect(described_class.new(params: { category: "pasta" }).call.recipes).to contain_exactly(quick_popular)
+    expect(described_class.new(params: { quick: "1" }).call.recipes).to contain_exactly(quick_popular, other)
+    expect(described_class.new(params: { popular: "1" }).call.recipes).to contain_exactly(quick_popular, other)
+  end
+
+  it "sorts recipes by public sort options" do
+    quick_popular = create(:recipe, title: "Quick Tomato Pasta", prep_time: 8, cook_time: 15, ratings: 4.91)
+    slow = create(:recipe, title: "Slow Roast Chicken", prep_time: 20, cook_time: 120, ratings: 4.5)
+    other = create(:recipe, title: "Blueberry Muffins", prep_time: 10, cook_time: 18, ratings: 4.85)
+    unknown_time = create(:recipe, title: "Mystery Bread", prep_time: 0, cook_time: 0, ratings: 4.7)
+
+    expect(described_class.new(params: { sort: "time_asc" }).call.recipes).to eq([ quick_popular, other, slow, unknown_time ])
+    expect(described_class.new(params: { sort: "time_desc" }).call.recipes).to eq([ unknown_time, slow, other, quick_popular ])
+    expect(described_class.new(params: { sort: "rating_asc" }).call.recipes).to eq([ slow, unknown_time, other, quick_popular ])
+  end
+
   it "sorts the ingredient candidate set with the selected sort" do
     create(:ingredient, name: "tomato", aliases: [ "tomatoes" ])
     create(:ingredient, name: "pasta")

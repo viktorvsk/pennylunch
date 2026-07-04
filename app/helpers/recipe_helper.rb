@@ -52,12 +52,16 @@ module RecipeHelper
   end
 
   def recipe_sort_label(sort)
-    SORT_OPTIONS.fetch(sort.presence || Recipes::SortQuery::DEFAULT_SORT, SORT_OPTIONS.fetch(Recipes::SortQuery::DEFAULT_SORT))
+    SORT_OPTIONS.fetch(sort.presence || RecipeSearch::DEFAULT_SORT, SORT_OPTIONS.fetch(RecipeSearch::DEFAULT_SORT))
+  end
+
+  def recipe_filter_active?(value)
+    ActiveModel::Type::Boolean.new.cast(value)
   end
 
   def recipe_ui_catalog
     Rails.cache.fetch(RECIPE_UI_CATALOG_CACHE_KEY, expires_in: RECIPE_UI_CATALOG_CACHE_EXPIRATION) do
-      category_labels = Recipes::CategoryCatalogQuery.labels
+      category_labels = Recipe.category_labels
 
       {
         ingredient_options: Ingredient.filter_options,
@@ -92,7 +96,7 @@ module RecipeHelper
     values = filters.to_h.with_indifferent_access
     category = Recipe.normalize_category(values.delete(:category))
     values.delete(:page) if values[:page].blank?
-    values.delete(:sort) if values[:sort].blank? || values[:sort] == Recipes::SortQuery::DEFAULT_SORT
+    values.delete(:sort) if values[:sort].blank? || values[:sort] == RecipeSearch::DEFAULT_SORT
     values.compact_blank!
 
     path = category.present? ? "/recipes/#{Recipe.category_slug_for(category)}" : recipes_path

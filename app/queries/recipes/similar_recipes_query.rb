@@ -1,4 +1,5 @@
 module Recipes
+  # Returns recipes nearest to a recipe by ingredient-vector distance.
   class SimilarRecipesQuery
     DEFAULT_LIMIT = 3
 
