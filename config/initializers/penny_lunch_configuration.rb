@@ -8,6 +8,7 @@ end
 
 penny_lunch_config.add_config(:ingredients_max_cosine_distance, "0.7")
 penny_lunch_config.add_config(:ingredient_parser_timeout_seconds, "120")
+penny_lunch_config.add_config(:recipe_index_batch_size, "100")
 penny_lunch_config.add_config(:informers_cache_dir, Rails.root.join("storage", "informers").to_s)
 penny_lunch_config.add_config(:embedding_model_preload, "true")
 penny_lunch_config.add_config(:avo_username, "pennylunch")

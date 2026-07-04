@@ -108,6 +108,28 @@ RSpec.describe "Avo-queued jobs", type: :job do
     expect(LocalEmbedding).to have_received(:call).with("lemon\nchicken breast\nsalt")
   end
 
+  it "indexes all recipes in configured parser batches" do
+    create(:ingredient, name: "tomato")
+    create(:ingredient, name: "pasta")
+    recipes = create_list(:recipe, 3, ingredients_vector: nil, ingredients: [ "tomato", "pasta" ])
+    allow(IngredientParser).to receive(:call) do |ingredient_batches|
+      ingredient_batches.map { |ingredients| parser_result([ "tomato", "pasta" ], ingredients) }
+    end
+    allow(LocalEmbedding).to receive(:call).and_return(Array.new(384, 0.6))
+
+    statements = recorded_sql do
+      with_recipe_index_batch_size(2) do
+        IndexRecipeJob.perform_now("all")
+      end
+    end
+
+    expect(IngredientParser).to have_received(:call).twice
+    expect(statements.grep(/\AUPDATE "recipes"/).size).to eq(2)
+    expect(statements.grep(/\AWITH target_recipes AS/).size).to eq(2)
+    expect(recipes.map { it.reload.ingredients_vector }).to all(eq(Array.new(384, 0.6)))
+    expect(recipes.flat_map { it.reload.resolved_ingredients.order(:name).pluck(:name) }.uniq).to match_array([ "pasta", "tomato" ])
+  end
+
   it "clears stale vectors when recipe indexing has no filterable catalog names" do
     stale = create(:ingredient, name: "apple")
     recipe = create(:recipe, ingredients_vector: Array.new(384, 0.4))
@@ -235,6 +257,14 @@ RSpec.describe "Avo-queued jobs", type: :job do
     cache = ActiveSupport::Cache::MemoryStore.new
     allow(Rails).to receive(:cache).and_return(cache)
     yield cache
+  end
+
+  def with_recipe_index_batch_size(value)
+    previous = SETTINGS.recipe_index_batch_size
+    SETTINGS.recipe_index_batch_size = value.to_s
+    yield
+  ensure
+    SETTINGS.recipe_index_batch_size = previous
   end
 
   def recorded_sql
