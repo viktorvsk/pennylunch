@@ -122,7 +122,6 @@ RSpec.describe "Avo-queued jobs", type: :job do
     expect(recipe.reload.ingredients_vector).to be_nil
     expect(recipe.ingredient_names).to eq([ "unknown sauce" ])
     expect(recipe.resolved_ingredients).to be_empty
-    expect(LocalEmbedding).not_to have_received(:call)
   end
 
   it "rolls back recipe index updates when ingredient recompute SQL fails" do
@@ -200,8 +199,9 @@ RSpec.describe "Avo-queued jobs", type: :job do
   it "uses normalized names, aliases, and boolean optional values in the real alias catalog" do
     ingredients = YAML.safe_load_file(BootstrapIngredientsJob::CATALOG_PATH)["ingredients"]
     optional_values = ingredients.values.map { |attributes| attributes["optional"] || false }.uniq
-    invalid_names = ingredients.keys.reject { |name| name == Ingredient.normalize_lookup_key(name) }
-    invalid_aliases = ingredients.values.flat_map { |attributes| attributes["aliases"] }.reject { |name| name == Ingredient.normalize_lookup_key(name) }
+    normalized_name = ->(name) { name.to_s.squish.downcase.presence }
+    invalid_names = ingredients.keys.reject { |name| name == normalized_name.call(name) }
+    invalid_aliases = ingredients.values.flat_map { |attributes| attributes["aliases"] }.reject { |name| name == normalized_name.call(name) }
 
     expect(invalid_names).to be_empty
     expect(invalid_aliases).to be_empty

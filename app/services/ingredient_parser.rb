@@ -59,7 +59,7 @@ class IngredientParser
     end
 
     def normalized_names(names)
-      Array(names).filter_map { Ingredient.normalize_lookup_key(it) }.uniq
+      Array(names).filter_map { it.to_s.squish.downcase.presence }.uniq
     end
   end
 end

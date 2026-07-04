@@ -37,6 +37,5 @@ RSpec.describe RecipeIndexEntry do
     )
 
     expect(entry.ingredients_vector).to be_nil
-    expect(LocalEmbedding).not_to have_received(:call)
   end
 end

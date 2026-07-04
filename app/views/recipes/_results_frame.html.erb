@@ -2,12 +2,13 @@
   <main class="recipe-page">
     <% if selected_category.present? %>
       <section class="recipe-title-section">
-        <h1 class="recipe-page-title"><%= category_heading(selected_category) %></h1>
+        <h1 class="recipe-page-title"><%= recipe_category_labels.fetch(selected_category) %></h1>
       </section>
     <% end %>
 
     <% if recipes.any? %>
-      <%= render "results_grid", recipes:, next_page_url:, selected_ingredient_names: recipe_filter_ingredient_names(filters["ingredients"]) %>
+      <% selected_ingredient_names = Array(filters["ingredients"]).filter_map { it.to_s.squish.presence }.uniq %>
+      <%= render "results_grid", recipes:, next_page_url:, selected_ingredient_names: %>
     <% else %>
       <%= render "empty_results" %>
     <% end %>

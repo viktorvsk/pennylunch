@@ -5,7 +5,11 @@
 
     <%= form_with url: recipes_path, method: :get, local: true, html: { data: { controller: "auto-submit", action: "submit->auto-submit#submit input->auto-submit#input change->auto-submit#change", auto_submit_filter_root_value: recipes_path } }, class: "recipe-toolbar-form" do |form| %>
       <%= hidden_field_tag :sort, toolbar.current_sort %>
-      <%= hidden_field_tag :ingredients, filters["ingredients"], data: { auto_submit_target: "ingredients" } %>
+      <span data-auto-submit-target="ingredients">
+        <% Array(filters["ingredients"]).each do |name| %>
+          <%= hidden_field_tag "ingredients[]", name %>
+        <% end %>
+      </span>
 
       <div class="recipe-toolbar-search">
         <%= form.label :q, "Title", class: "sr-only" %>
@@ -14,8 +18,8 @@
 
       <%= render "toolbar_filter_toggle", name: :quick, active: toolbar.quick_active, aria_label: "Quick recipes", icon: :quick, tooltip: "Quick: #{toolbar.quick_active ? "on" : "off"}. Shows recipes under 30 minutes." %>
       <%= render "toolbar_filter_toggle", name: :popular, active: toolbar.popular_active, aria_label: "Popular recipes", icon: :popular, tooltip: "Popular: #{toolbar.popular_active ? "on" : "off"}. Shows recipes rated above 4.8." %>
-      <%= render "toolbar_category_combobox", selected_category:, selected_category_label: toolbar.selected_category_label, tooltip: toolbar.category_tooltip, categories: toolbar.category_labels.keys, category_labels: toolbar.category_labels %>
-      <%= render "toolbar_sort_menu", current_sort: toolbar.current_sort, filters: %>
+      <%= render "toolbar_category_combobox", toolbar: %>
+      <%= render "toolbar_sort_menu", toolbar:, filters: %>
     <% end %>
 
     <%= render "toolbar_admin_link" %>

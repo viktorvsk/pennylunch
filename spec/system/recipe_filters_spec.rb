@@ -235,7 +235,7 @@ RSpec.describe "Recipe filters", type: :system do
     recipe = create(:recipe, title: "E2E Tooltip Pancakes", ingredient_names: [ "eggs", "milk", "all-purpose flour" ])
     [ eggs, milk, flour ].each { |ingredient| create(:recipe_ingredient, recipe:, ingredient:) }
 
-    visit recipes_path(ingredients: "eggs, milk")
+    visit recipes_path(ingredients: [ "eggs", "milk" ])
 
     find(".recipe-card", text: "E2E Tooltip Pancakes").find(".recipe-match-readiness").hover
 
@@ -362,6 +362,7 @@ RSpec.describe "Recipe filters", type: :system do
     find("#recipe-ingredients-input").send_keys(:enter)
     page.driver.browser.execute_async_script("const done = arguments[arguments.length - 1]; setTimeout(done, 400);")
 
+    expect(Rack::Utils.parse_nested_query(URI.parse(page.current_url).query)).to include("ingredients" => [ "honey" ])
     expect(page).to have_css("#recipe-ingredients-panel:not([hidden])")
     expect(page).to have_css(".recipe-ingredients-row", text: "honey")
     expect(page).to have_text("only matching recipes are displayed.")

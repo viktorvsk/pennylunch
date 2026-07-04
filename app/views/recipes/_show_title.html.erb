@@ -1,6 +1,6 @@
 <section class="recipe-title-section">
   <h1 class="recipe-page-title"><%= recipe.title %></h1>
   <% if recipe.category_normalized.present? %>
-    <%= link_to category_label(recipe), recipe_filter_path("category" => recipe.category_normalized), class: "recipe-card-category" %>
+    <%= link_to recipe.category, recipe_filter_path("category" => recipe.category_normalized), class: "recipe-card-category" %>
   <% end %>
 </section>

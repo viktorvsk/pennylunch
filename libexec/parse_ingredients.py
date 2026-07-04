@@ -53,6 +53,14 @@ def parsed_name_values(value):
     return [getattr(value, "text", str(value))]
 
 
+def normalized_parser_payload(value):
+    parser = json_ready(value)
+    for name in parser.get("name") or []:
+        if isinstance(name, dict) and "text" in name:
+            name["text"] = normalized_text(name["text"])
+    return parser
+
+
 def parse_sentence(sentence):
     global _parse_ingredient
 
@@ -70,7 +78,7 @@ def parsed_entry(sentence):
     parsed = parse_sentence(sentence)
     return {
         "input": sentence,
-        "parser": json_ready(parsed),
+        "parser": normalized_parser_payload(parsed),
     }, parsed_name_values(parsed.name)
 
 

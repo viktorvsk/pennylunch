@@ -4,7 +4,6 @@ import {
   present,
   recipeIngredientOptions,
   readBasket,
-  splitIngredientText,
   submitFilterForm,
   writeBasket
 } from "lib/recipe_filter_core"
@@ -40,14 +39,14 @@ export default class extends Controller {
   ]
 
   static values = {
-    currentIngredients: String
+    currentIngredients: Array
   }
 
   connect() {
     this.optionRecords = this.parseOptionRecords()
     this.optionNames = this.optionRecords.map((option) => option.name)
     this.optionByKey = new Map(this.optionRecords.map((option) => [normalizeIngredientName(option.name), option]))
-    this.currentIngredients = (this.currentIngredientsValue || "").trim()
+    this.currentIngredients = Array.isArray(this.currentIngredientsValue) ? this.currentIngredientsValue : []
     this.selected = []
     this.initialized = false
     this.activeOptionIndex = NO_OPTION_INDEX
@@ -55,9 +54,9 @@ export default class extends Controller {
 
     const storedBasket = readBasket()
     if (storedBasket.selected.length > 0) this.seedSelected(storedBasket.selected)
-    if (present(this.currentIngredients)) this.seedSelected(splitIngredientText(this.currentIngredients))
+    if (this.currentIngredients.length > 0) this.seedSelected(this.currentIngredients)
 
-    this.enabledInputTarget.checked = present(this.currentIngredients) || storedBasket.enabled
+    this.enabledInputTarget.checked = this.currentIngredients.length > 0 || storedBasket.enabled
     this.sync()
     this.initialized = true
     this.setOpen(false)
@@ -540,10 +539,9 @@ export default class extends Controller {
 
   sync({ submit = false, delay = 0 } = {}) {
     const enabled = this.enabledInputTarget.checked
-    const filterText = this.selected.filter((name) => !this.optionalIngredient(name)).join("\n")
-    const hidden = this.currentHidden()
+    const filterableNames = this.selected.filter((name) => !this.optionalIngredient(name))
 
-    if (hidden) hidden.value = enabled ? filterText : ""
+    this.syncFilterInputs(enabled ? filterableNames : [])
     writeBasket({ selected: this.selected, enabled })
     this.renderSelected()
     this.setStatus()
@@ -598,7 +596,20 @@ export default class extends Controller {
     return document.querySelector("form[data-controller~='auto-submit']")
   }
 
-  currentHidden() {
+  currentIngredientsContainer() {
     return this.currentForm()?.querySelector("[data-auto-submit-target~='ingredients']")
+  }
+
+  syncFilterInputs(names) {
+    const container = this.currentIngredientsContainer()
+    if (!container) return
+
+    container.replaceChildren(...names.map((name) => {
+      const input = document.createElement("input")
+      input.type = "hidden"
+      input.name = "ingredients[]"
+      input.value = name
+      return input
+    }))
   }
 }

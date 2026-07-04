@@ -83,6 +83,65 @@ RSpec.describe Recipe do
     end
   end
 
+  describe "#parsed_ingredients" do
+    it "resolves parsed ingredient details with catalog metadata" do
+      create(:ingredient, name: "banana", aliases: [ "banana", "overripe bananas" ])
+      recipe = build(
+        :recipe,
+        ingredients: [ "3 mashed overripe bananas" ],
+        ingredient_names: [ "overripe bananas" ],
+        ingredient_parse_data: [
+          {
+            "parser" => {
+              "amount" => [ { "quantity" => "3" } ],
+              "name" => [ { "text" => "overripe bananas" } ],
+              "preparation" => "mashed"
+            }
+          }
+        ]
+      )
+
+      result = recipe.parsed_ingredients.first
+
+      expect(result).to be_a(ParsedIngredient)
+      expect(result.name).to eq("overripe bananas")
+      expect(result.catalog_name).to eq("banana")
+      expect(result.catalog_names).to eq([ "banana" ])
+      expect(result.optional).to be(false)
+      expect(result.state).to eq("mashed")
+    end
+
+    it "resolves multi-name parser rows with all catalog names" do
+      create(:ingredient, name: "bread", aliases: [ "ciabatta bread" ])
+      create(:ingredient, name: "crusty sourdough")
+      recipe = build(
+        :recipe,
+        ingredients: [ "1 loaf crusty sourdough or ciabatta bread, sliced" ],
+        ingredient_names: [ "crusty sourdough", "ciabatta bread" ],
+        ingredient_parse_data: [
+          {
+            "parser" => {
+              "amount" => [ { "quantity" => "1", "unit" => "loaf" } ],
+              "name" => [ { "text" => "crusty sourdough" }, { "text" => "ciabatta bread" } ],
+              "preparation" => "sliced"
+            }
+          }
+        ]
+      )
+
+      result = recipe.parsed_ingredients.first
+
+      expect(result.name).to eq("crusty sourdough and ciabatta bread")
+      expect(result.name_parts).to eq([
+        { name: "crusty sourdough", catalog_name: "crusty sourdough" },
+        { name: "ciabatta bread", catalog_name: "bread" }
+      ])
+      expect(result.catalog_name).to eq("crusty sourdough")
+      expect(result.catalog_names).to eq([ "crusty sourdough", "bread" ])
+      expect(result.optional).to be(false)
+    end
+  end
+
   describe "validations" do
     it "leaves parser data alignment to import and indexing workflows" do
       recipe = build(:recipe, ingredients: [ "1 cup flour", "1 egg" ], ingredient_parse_data: [ { "input" => "1 cup flour" } ])

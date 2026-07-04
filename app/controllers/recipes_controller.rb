@@ -1,14 +1,11 @@
 class RecipesController < ApplicationController
   helper_method :selected_category
 
-  FILTER_KEYS = %i[q category ingredients quick popular sort page].freeze
-  INGREDIENT_BASKET_COOKIE = "pennylunch.ingredients".freeze
-  MAX_INGREDIENT_BASKET_ITEMS = 100
+  FILTER_KEYS = %i[q category quick popular sort page].freeze
   PER_PAGE = 24
 
   def index
     @filters = recipe_filters
-    @recipe_layout_fab_filters = @filters.slice("ingredients")
 
     current_page = [ @filters["page"].to_i, 1 ].max
     relation = RecipeFilterQuery.call(filters: @filters)
@@ -46,21 +43,9 @@ class RecipesController < ApplicationController
   end
 
   def recipe_filters
-    filters = params.permit(*FILTER_KEYS).to_h
-    check_basket(filters)
+    filters = params.permit(*FILTER_KEYS, ingredients: []).to_h
+    filters["ingredients"] = ingredients_basket unless filters.key?("ingredients")
     filters["category"] = selected_category
     filters
-  end
-
-  def check_basket(filters)
-    return if filters.key?("ingredients")
-
-    payload = JSON.parse(cookies[INGREDIENT_BASKET_COOKIE].to_s)
-    return unless payload.is_a?(Hash) && payload["enabled"]
-
-    names = Array(payload["selected"]).map(&:squish).compact_blank.first(MAX_INGREDIENT_BASKET_ITEMS)
-    filters["ingredients"] = names.join("\n")
-  rescue JSON::ParserError
-    nil
   end
 end

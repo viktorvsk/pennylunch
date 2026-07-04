@@ -10,7 +10,7 @@ RSpec.describe RecipeSortQuery do
     fuller_match_with_missing = create(:recipe, title: "Avocado Rice Bowl", ratings: 5.0, ingredient_names: [ "avocados", "lime", "rice" ])
     create_recipe_ingredient_rows
 
-    result = described_class.call(relation: Recipe.all, sort: "best_match", ingredients: "avocado, lime")
+    result = described_class.call(relation: Recipe.all, sort: "best_match", ingredients: [ "avocado", "lime" ])
 
     expect(result).to eq([ exact_match, fewer_missing_partial, fuller_match_with_missing ])
   end
@@ -24,7 +24,7 @@ RSpec.describe RecipeSortQuery do
     complete = create(:recipe, title: "Avocado Plate", ingredient_names: [ "avocados" ])
     create_recipe_ingredient_rows
 
-    result = described_class.call(relation: Recipe.all, sort: "best_match", ingredients: "avocado, lime").order(id: :asc)
+    result = described_class.call(relation: Recipe.all, sort: "best_match", ingredients: [ "avocado", "lime" ]).order(id: :asc)
 
     expect(result).to eq([ missing_optional, missing_unknown, complete ])
   end
@@ -34,8 +34,8 @@ RSpec.describe RecipeSortQuery do
     create(:recipe, title: "Avocado Toast", ingredient_names: [ "avocado" ])
     create_recipe_ingredient_rows
 
-    relation = RecipeIngredientFilterQuery.call(relation: Recipe.all, ingredients: "avocado")
-    sql = described_class.call(relation:, sort: "best_match", ingredients: "avocado").to_sql
+    relation = RecipeIngredientFilterQuery.call(relation: Recipe.all, ingredients: [ "avocado" ])
+    sql = described_class.call(relation:, sort: "best_match", ingredients: [ "avocado" ]).to_sql
 
     expect(sql).not_to include("jsonb_array_elements_text")
     expect(sql).not_to include("aliases @>")
@@ -52,16 +52,6 @@ RSpec.describe RecipeSortQuery do
   end
 
   def create_recipe_ingredient_rows
-    ingredient_ids_by_name = Ingredient.pluck(:name, :id).to_h
-    metadata = IngredientCatalogMetadata.call
-
-    Recipe.find_each do |recipe|
-      recipe.ingredient_names.filter_map do |raw_name|
-        record = metadata[Ingredient.normalize_lookup_key(raw_name)]
-        ingredient_ids_by_name[record.name] if record
-      end.uniq.each do |ingredient_id|
-        RecipeIngredient.find_or_create_by!(recipe:, ingredient_id:)
-      end
-    end
+    Recipe.connection.exec_query(RecipeIngredientRecomputeQuery.call(recipe_ids: Recipe.ids), RecipeIngredientRecomputeQuery.name)
   end
 end

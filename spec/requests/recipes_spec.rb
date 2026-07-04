@@ -66,11 +66,11 @@ RSpec.describe "Recipes", type: :request do
       { "name" => "pasta", "matchName" => "pasta" },
       { "name" => "garlic", "matchName" => nil }
     ])
-    expect(recipe_ui_catalog_from(document)).to include(
+    expect(recipe_catalog_from(document)).to include(
       "categoryLabels" => hash_including("air fryer main dish recipes" => "Air Fryer Main Dish Recipes"),
       "categorySlugs" => hash_including("pasta" => "pasta")
     )
-    expect(recipe_ui_catalog_from(document).fetch("ingredientOptions")).to include(
+    expect(recipe_catalog_from(document).fetch("ingredientOptions")).to include(
       { "name" => "tomato", "optional" => true },
       { "name" => "pasta", "optional" => false }
     )
@@ -111,7 +111,7 @@ RSpec.describe "Recipes", type: :request do
     expect(document.css("[data-ingredients-filter-help]")).to be_empty
     expect(document.css("[data-ingredients-fab-target='addButton']")).to be_empty
     expect(response.body).not_to include("Add Ingredient")
-    expect(response.body).to include("data-recipe-ui-catalog")
+    expect(response.body).to include("data-recipe-catalog")
     expect(response.body).not_to include("data-ingredient-options")
     expect(response.body).to include("data-ingredients-fab-target=\"input\"")
     expect(response.body).to include("data-ingredients-fab-target=\"selectedList\"")
@@ -160,7 +160,7 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).not_to include("recipe-content-loading")
     expect(response.body).not_to include("recipe-ingredients-fab")
     expect(response.body).not_to include("data-ingredient-options")
-    expect(response.body).not_to include("data-recipe-ui-catalog")
+    expect(response.body).not_to include("data-recipe-catalog")
   end
 
   it "suggests a category from the empty state when filters find no recipes" do
@@ -217,14 +217,17 @@ RSpec.describe "Recipes", type: :request do
     create_recipe_ingredient_rows
     allow(IngredientParser).to receive(:call)
 
-    get recipes_path, params: { ingredients: "pasta, garlic, olive oil", sort: "rating_desc" }
+    ingredient_filter = [ "pasta", "garlic", "olive oil" ]
+
+    get recipes_path, params: { ingredients: ingredient_filter, sort: "rating_desc" }
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Pasta and Garlic")
     expect(response.body).not_to include("Apple Cake")
     expect(response.body).to include(recipe_path(pasta))
-    expect(response.body).to include("value=\"pasta, garlic, olive oil\"")
-    expect(response.body).to include("data-ingredients-fab-current-ingredients-value=\"pasta, garlic, olive oil\"")
+    document = Nokogiri::HTML(response.body)
+    expect(document.css("input[name='ingredients[]']").map { |input| input["value"] }).to eq(ingredient_filter)
+    expect(JSON.parse(document.at_css("#recipe-ingredients-fab")["data-ingredients-fab-current-ingredients-value"])).to eq(ingredient_filter)
     expect(IngredientParser).not_to have_received(:call)
   end
 
@@ -242,7 +245,7 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).not_to include("Cookie Basket Apple Cake")
     expect(response.body).to include(recipe_path(pasta))
     document = Nokogiri::HTML(response.body)
-    expect(document.at_css("#recipe-ingredients-fab")["data-ingredients-fab-current-ingredients-value"]).to eq("pasta\ngarlic")
+    expect(JSON.parse(document.at_css("#recipe-ingredients-fab")["data-ingredients-fab-current-ingredients-value"])).to eq([ "pasta", "garlic" ])
   end
 
   it "keeps explicit ingredient params ahead of the ingredient basket cookie" do
@@ -252,7 +255,7 @@ RSpec.describe "Recipes", type: :request do
     garlic = create(:recipe, title: "Cookie Param Garlic", ingredient_names: [ "garlic" ])
     create_recipe_ingredient_rows
 
-    get recipes_path, params: { ingredients: "garlic" }, headers: { "Cookie" => ingredient_basket_cookie(enabled: true, selected: [ "pasta" ]) }
+    get recipes_path, params: { ingredients: [ "garlic" ] }, headers: { "Cookie" => ingredient_basket_cookie(enabled: true, selected: [ "pasta" ]) }
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Cookie Param Garlic")
@@ -268,7 +271,7 @@ RSpec.describe "Recipes", type: :request do
     avocado_rice_bowl = create(:recipe, title: "Avocado Rice Bowl", ratings: 5.0, ingredient_names: [ "avocados", "lime", "rice" ])
     create_recipe_ingredient_rows
 
-    get recipes_path, params: { ingredients: "avocado, lime" }
+    get recipes_path, params: { ingredients: [ "avocado", "lime" ] }
 
     expect(response).to have_http_status(:ok)
     expect(response.body.index(simple_avocado.title)).to be < response.body.index(avocado_rice_bowl.title)
@@ -284,7 +287,7 @@ RSpec.describe "Recipes", type: :request do
     recipe = create(:recipe, title: "Avocado Rice Bowl", ingredient_names: [ "avocados", "lime", "rice", "salt" ])
     create_recipe_ingredient_rows
 
-    get recipes_path, params: { ingredients: "avocado, lime" }
+    get recipes_path, params: { ingredients: [ "avocado", "lime" ] }
 
     document = Nokogiri::HTML(response.body)
     card = document.css(".recipe-card").find { |node| node.text.include?(recipe.title) }
@@ -309,7 +312,7 @@ RSpec.describe "Recipes", type: :request do
     allow(IngredientParser).to receive(:call)
     allow(LocalEmbedding).to receive(:call).and_return(vector(1.0))
 
-    get recipes_path, params: { ingredients: "avocado, lime" }
+    get recipes_path, params: { ingredients: [ "avocado", "lime" ] }
 
     expect(response).to have_http_status(:ok)
     expect(response.body.index(simple_avocado.title)).to be < response.body.index(avocado_rice_bowl.title)
@@ -474,8 +477,8 @@ RSpec.describe "Recipes", type: :request do
     [ first_value, second_value ] + Array.new(382, 0.0)
   end
 
-  def recipe_ui_catalog_from(document)
-    JSON.parse(document.at_css("script[data-recipe-ui-catalog]").text)
+  def recipe_catalog_from(document)
+    JSON.parse(document.at_css("script[data-recipe-catalog]").text)
   end
 
   def ingredient_basket_cookie(payload)
@@ -483,16 +486,6 @@ RSpec.describe "Recipes", type: :request do
   end
 
   def create_recipe_ingredient_rows
-    ingredient_ids_by_name = Ingredient.pluck(:name, :id).to_h
-    metadata = IngredientCatalogMetadata.call
-
-    Recipe.find_each do |recipe|
-      recipe.ingredient_names.filter_map do |raw_name|
-        record = metadata[Ingredient.normalize_lookup_key(raw_name)]
-        ingredient_ids_by_name[record.name] if record
-      end.uniq.each do |ingredient_id|
-        RecipeIngredient.find_or_create_by!(recipe:, ingredient_id:)
-      end
-    end
+    Recipe.connection.exec_query(RecipeIngredientRecomputeQuery.call(recipe_ids: Recipe.ids), RecipeIngredientRecomputeQuery.name)
   end
 end

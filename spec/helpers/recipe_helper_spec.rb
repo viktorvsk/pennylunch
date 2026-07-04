@@ -10,66 +10,52 @@ RSpec.describe RecipeHelper, type: :helper do
     end
   end
 
-  describe "#recipe_ui_catalog" do
-    it "fetches the shared recipe UI catalog through a short-lived cache" do
-      create(:ingredient, name: "tomato", optional: true)
-      create(:recipe, category: "Pasta", category_normalized: "pasta")
-      allow(Rails.cache).to receive(:fetch).and_call_original
-
-      catalog = helper.recipe_ui_catalog
-
-      expect(catalog).to include(
+  describe "#recipe_catalog" do
+    let(:catalog) do
+      Catalog.new(
         ingredient_options: [ { name: "tomato", optional: true } ],
-        category_slugs: { "pasta" => "pasta" },
-        category_labels: { "pasta" => "Pasta" }
+        category_labels: { "pasta" => "Pasta" },
+        category_slugs: { "pasta" => "pasta" }
       )
-      expect(helper.recipe_category_from_slug("pasta")).to eq("pasta")
-      expect(Rails.cache).to have_received(:fetch).with(
-        [
-          RecipeHelper::RECIPE_UI_CATALOG_CACHE_KEY,
-          Ingredient.all.cache_key_with_version,
-          Recipe.all.cache_key_with_version
-        ]
-      ).at_least(:once)
     end
 
-    it "does not serve a stale empty ingredient catalog after ingredients are created" do
-      cache = ActiveSupport::Cache::MemoryStore.new
-      allow(Rails).to receive(:cache).and_return(cache)
+    before do
+      allow(Catalog).to receive(:fetch).and_return(catalog)
+    end
 
-      expect(helper.recipe_ui_catalog.fetch(:ingredient_options)).to eq([])
+    it "delegates shared catalog loading to Catalog" do
+      expect(helper.recipe_catalog).to eq(catalog)
+      expect(helper.recipe_category_labels).to eq("pasta" => "Pasta")
+      expect(helper.recipe_category_from_slug("pasta")).to eq("pasta")
+    end
 
-      create(:ingredient, name: "avocado")
-
-      expect(helper.recipe_ui_catalog.fetch(:ingredient_options)).to eq([
-        { name: "avocado", optional: false }
-      ])
+    it "serializes the shared catalog browser payload" do
+      expect(JSON.parse(helper.recipe_catalog_json)).to eq(
+        "ingredientOptions" => [ { "name" => "tomato", "optional" => true } ],
+        "categoryLabels" => { "pasta" => "Pasta" },
+        "categorySlugs" => { "pasta" => "pasta" }
+      )
     end
   end
 
   describe "#recipe_toolbar_state" do
     it "builds toolbar display state from filters and selected category" do
-      create(:recipe, category: "Pasta", category_normalized: "pasta")
+      allow(Catalog).to receive(:fetch).and_return(
+        Catalog.new(
+          ingredient_options: [],
+          category_labels: { "pasta" => "Pasta" },
+          category_slugs: { "pasta" => "pasta" }
+        )
+      )
 
       expect(helper.recipe_toolbar_state(filters: { "sort" => "rating_desc", "quick" => "1", "popular" => "0" }, selected_category: "pasta")).to have_attributes(
         current_sort: "rating_desc",
+        current_sort_label: "Popular First",
         quick_active: true,
         popular_active: false,
-        category_labels: { "pasta" => "Pasta" },
+        selected_category: "pasta",
         selected_category_label: "Pasta",
         category_tooltip: "Category: Pasta"
-      )
-    end
-
-    it "defaults to best matching sort" do
-      expect(helper.recipe_toolbar_state(filters: {}, selected_category: nil).current_sort).to eq("best_match")
-      expect(helper.recipe_sort_label(nil)).to eq("Best Match")
-      expect(helper.recipe_sort_options).to include(
-        "best_match" => "Best Match",
-        "time_asc" => "Fastest First",
-        "time_desc" => "Slowest First",
-        "rating_asc" => "Popular Last",
-        "rating_desc" => "Popular First"
       )
     end
   end

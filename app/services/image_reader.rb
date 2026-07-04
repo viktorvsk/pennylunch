@@ -241,9 +241,9 @@ class ImageReader
       raise RemoteImageError, "OpenRouter response did not include ingredient results." unless tool_call
 
       arguments = parse_tool_arguments(tool_call.dig("function", "arguments"))
-      catalog_lookup = catalog_names.index_by { Ingredient.normalize_lookup_key(it) }
+      catalog_lookup = catalog_names.index_by(&:itself)
 
-      Array(arguments["ingredient_names"]).filter_map { catalog_lookup[Ingredient.normalize_lookup_key(it)] }.uniq
+      Array(arguments["ingredient_names"]).filter_map { catalog_lookup[it.to_s.squish] }.uniq
     end
 
     def parse_tool_arguments(arguments)

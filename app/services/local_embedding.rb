@@ -11,6 +11,8 @@ class LocalEmbedding
     end
 
     def call(text)
+      return if text.blank?
+
       model.call(text)
     end
   end

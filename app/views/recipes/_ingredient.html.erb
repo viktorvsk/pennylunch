@@ -1,6 +1,6 @@
-<% basket_ingredient_name = ingredient[:catalog_name].presence %>
-<% ingredient_name_parts = ingredient[:name_parts].presence || [ { name: ingredient[:name], catalog_name: ingredient[:catalog_name] } ] %>
-<% ingredient_match_names = ingredient[:catalog_names].presence&.to_json %>
+<% basket_ingredient_name = ingredient.catalog_name.presence %>
+<% ingredient_name_parts = ingredient.name_parts.presence || [ { name: ingredient.name, catalog_name: ingredient.catalog_name } ] %>
+<% ingredient_match_names = ingredient.catalog_names.presence&.to_json %>
 
 <div class="recipe-ingredient-row" data-recipe-ingredient-row>
   <% if basket_ingredient_name.present? %>
@@ -14,11 +14,11 @@
   <% end %>
   <span class="recipe-ingredient-content">
     <span class="recipe-ingredient-leading">
-      <code><%= ingredient[:size] %></code>
-      <% if ingredient[:unit].present? %>
-        <b><%= ingredient[:unit].humanize.downcase.pluralize(ingredient[:size].to_i) %></b> of
+      <code><%= ingredient.size %></code>
+      <% if ingredient.unit.present? %>
+        <b><%= ingredient.unit.humanize.downcase.pluralize(ingredient.size.to_i) %></b> of
       <% end %>
-      <i><%= ingredient[:state] %></i>
+      <i><%= ingredient.state %></i>
     </span>
     <% ingredient_name_parts.each_with_index do |name_part, index| %>
       <%= index == ingredient_name_parts.size - 1 ? " or " : ", " if index.positive? %>
@@ -27,7 +27,7 @@
     <% end %>
   </span>
   <% if basket_ingredient_name.present? %>
-    <button type="button" class="btn recipe-ingredient-basket-button" data-variant="outline" data-size="sm" data-action="click->ingredient-matches#addToBasket" data-ingredient-basket-name="<%= basket_ingredient_name %>" aria-label="I have <%= ingredient[:name] %>">
+    <button type="button" class="btn recipe-ingredient-basket-button" data-variant="outline" data-size="sm" data-action="click->ingredient-matches#addToBasket" data-ingredient-basket-name="<%= basket_ingredient_name %>" aria-label="I have <%= ingredient.name %>">
       I have it
     </button>
   <% end %>

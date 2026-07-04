@@ -1,4 +1,4 @@
-<% random_category = recipe_category_labels.keys.sample %>
+<% random_category = recipe_category_labels.to_a.sample %>
 
 <section class="recipe-empty-state">
   <div class="recipe-empty-state-icon">
@@ -7,7 +7,7 @@
   <h2>No recipe matches yet</h2>
   <% if random_category.present? %>
     <p>
-      Try fewer filters, remove an ingredient, or browse <%= link_to category_heading(random_category), recipe_filter_path("category" => random_category) %>.
+      Try fewer filters, remove an ingredient, or browse <%= link_to random_category.second, recipe_filter_path("category" => random_category.first) %>.
     </p>
   <% else %>
     <p>Try fewer filters or remove an ingredient from your basket.</p>

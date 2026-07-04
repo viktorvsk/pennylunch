@@ -6,7 +6,7 @@ class RecipeIndexEntry < Data.define(:recipe, :ingredient_names, :ingredient_par
       recipe:,
       ingredient_names: parser_result.ingredient_names,
       ingredient_parse_data: parser_result.ingredient_parse_data,
-      ingredients_vector: vector_names.any? ? LocalEmbedding.call(vector_names.join("\n")) : nil
+      ingredients_vector: LocalEmbedding.call(vector_names.join("\n"))
     )
   end
 end

@@ -1,15 +1,6 @@
 module RecipeHelper
-  RecipeToolbarState = Data.define(:current_sort, :quick_active, :popular_active, :category_labels, :selected_category_label, :category_tooltip)
   MAX_RATING_STARS = 5
   RATING_PRECISION = 2
-  RECIPE_UI_CATALOG_CACHE_KEY = "recipes/ui_catalog/v1"
-  SORT_OPTIONS = {
-    "best_match" => "Best Match",
-    "time_asc" => "Fastest First",
-    "time_desc" => "Slowest First",
-    "rating_asc" => "Popular Last",
-    "rating_desc" => "Popular First"
-  }.freeze
 
   def rating_stars(rating, class_name: "recipe-rating", side: "bottom", align: "end")
     value = number_with_precision(rating, precision: RATING_PRECISION)
@@ -19,14 +10,6 @@ module RecipeHelper
       aria: { label: "Rating #{value} out of 5" },
       data: { tooltip: "Rating: #{value} out of 5", side:, align: }
     )
-  end
-
-  def category_label(recipe)
-    recipe.category.presence || "Uncategorized"
-  end
-
-  def category_heading(category)
-    category.to_s.titleize
   end
 
   def recipe_time_tooltip(recipe)
@@ -46,71 +29,24 @@ module RecipeHelper
     parts.join(" ")
   end
 
-  def recipe_sort_options
-    SORT_OPTIONS
-  end
-
-  def recipe_sort_label(sort)
-    SORT_OPTIONS.fetch(sort.presence || RecipeSortQuery::DEFAULT_SORT, SORT_OPTIONS.fetch(RecipeSortQuery::DEFAULT_SORT))
-  end
-
-  def recipe_filter_active?(value)
-    ActiveModel::Type::Boolean.new.cast(value)
-  end
-
   def recipe_toolbar_state(filters:, selected_category:)
-    category_labels = recipe_category_labels
-    selected_category_label = selected_category.present? ? category_labels.fetch(selected_category, category_heading(selected_category)) : nil
-
-    RecipeToolbarState.new(
-      current_sort: filters["sort"].presence || RecipeSortQuery::DEFAULT_SORT,
-      quick_active: recipe_filter_active?(filters["quick"]),
-      popular_active: recipe_filter_active?(filters["popular"]),
-      category_labels:,
-      selected_category_label:,
-      category_tooltip: selected_category_label.present? ? "Category: #{selected_category_label}" : "Category: all categories"
-    )
+    RecipeToolbar.build(filters:, selected_category:, category_labels: recipe_category_labels)
   end
 
-  def recipe_ui_catalog
-    Rails.cache.fetch(recipe_ui_catalog_cache_key) do
-      category_labels = Recipe.category_labels
-
-      {
-        ingredient_options: Ingredient.filter_options,
-        category_labels:,
-        category_slugs: category_labels.keys.to_h { |category| [ category, Recipe.category_slug_for(category) ] }
-      }
-    end
+  def recipe_catalog
+    Catalog.fetch
   end
 
-  def recipe_ui_catalog_json
-    catalog = recipe_ui_catalog
-    {
-      ingredientOptions: catalog.fetch(:ingredient_options),
-      categoryLabels: catalog.fetch(:category_labels),
-      categorySlugs: catalog.fetch(:category_slugs)
-    }.to_json
+  def recipe_catalog_json
+    recipe_catalog.as_json.to_json
   end
 
   def recipe_category_labels
-    recipe_ui_catalog.fetch(:category_labels)
+    recipe_catalog.category_labels
   end
 
   def recipe_category_from_slug(slug)
-    recipe_ui_catalog.fetch(:category_slugs).key(slug.to_s)
-  end
-
-  def recipe_ui_catalog_cache_key
-    [
-      RECIPE_UI_CATALOG_CACHE_KEY,
-      Ingredient.all.cache_key_with_version,
-      Recipe.all.cache_key_with_version
-    ]
-  end
-
-  def recipe_layout_fab_filters
-    @recipe_layout_fab_filters || params.permit(:ingredients).to_h
+    recipe_catalog.category_from_slug(slug)
   end
 
   def recipe_filter_path(filters = {})

@@ -6,9 +6,8 @@ class IngredientFilterLookup
     def call
       Rails.cache.fetch("ingredients/filterable_lookup_map") do
         Ingredient.where(optional: false).pluck(:name, :aliases).each_with_object({}) do |(name, aliases), mapping|
-          ([ name ] + aliases).each do |value|
-            key = Ingredient.normalize_lookup_key(value)
-            mapping[key] = name if key.present?
+          [ name, *aliases ].each do |value|
+            mapping[value] = name
           end
         end
       end

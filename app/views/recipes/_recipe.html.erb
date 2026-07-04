@@ -16,7 +16,7 @@
           <%= link_to recipe.title, recipe_path(recipe), data: { turbo_frame: "_top" } %>
         </h2>
         <% if recipe.category_normalized.present? %>
-          <%= link_to category_label(recipe), recipe_filter_path("category" => recipe.category_normalized), class: "recipe-card-category", data: { turbo_frame: "_top" } %>
+          <%= link_to recipe.category, recipe_filter_path("category" => recipe.category_normalized), class: "recipe-card-category", data: { turbo_frame: "_top" } %>
         <% end %>
       </div>
       <%= rating_stars(recipe.ratings, class_name: "recipe-rating") %>

@@ -111,8 +111,8 @@ export const readBasket = () => {
   return legacyBasket
 }
 
-export const recipeUiCatalog = () => {
-  const element = document.querySelector("[data-recipe-ui-catalog]")
+export const recipeCatalog = () => {
+  const element = document.querySelector("[data-recipe-catalog]")
 
   if (!element) return {}
 
@@ -124,7 +124,7 @@ export const recipeUiCatalog = () => {
 }
 
 export const categorySlugsFor = (form) => {
-  const slugs = recipeUiCatalog().categorySlugs
+  const slugs = recipeCatalog().categorySlugs
   if (slugs && typeof slugs === "object") return slugs
 
   try {
@@ -135,7 +135,7 @@ export const categorySlugsFor = (form) => {
 }
 
 export const recipeIngredientOptions = () => {
-  const options = recipeUiCatalog().ingredientOptions
+  const options = recipeCatalog().ingredientOptions
   return Array.isArray(options) ? options : []
 }
 
@@ -153,11 +153,16 @@ export const filterUrlFor = (form) => {
   }
 
   formData.forEach((value, key) => {
-    if (key === "category" || key === "page") return
+    const normalizedKey = key.endsWith("[]") ? key.slice(0, -2) : key
+    if (normalizedKey === "category" || normalizedKey === "page") return
     if (!present(value)) return
-    if (key === "sort" && value === "best_match") return
+    if (normalizedKey === "sort" && value === "best_match") return
 
-    url.searchParams.set(key, value)
+    if (key.endsWith("[]")) {
+      url.searchParams.append(key, value)
+    } else {
+      url.searchParams.set(key, value)
+    }
   })
 
   return url.toString()

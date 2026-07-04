@@ -33,7 +33,7 @@ RSpec.describe RecipeIngredientFilterQuery do
 
     result = described_class.call(
       relation: Recipe.all,
-      ingredients: "avocado, lime"
+      ingredients: [ "avocado", "lime" ]
     ).order(ratings: :desc)
 
     expect(result).to eq([ avocado_rice_bowl, simple_avocado, lime_water ])
@@ -52,7 +52,7 @@ RSpec.describe RecipeIngredientFilterQuery do
 
     result = described_class.call(
       relation: Recipe.all,
-      ingredients: "tomato, pasta"
+      ingredients: [ "tomato", "pasta" ]
     )
 
     expect(result).to contain_exactly(tomato_pasta, tomato_soup)
@@ -71,7 +71,7 @@ RSpec.describe RecipeIngredientFilterQuery do
 
     result = described_class.call(
       relation: Recipe.all,
-      ingredients: "avocado, salt"
+      ingredients: [ "avocado", "salt" ]
     )
 
     expect(LocalEmbedding).to have_received(:call).with("avocado")
@@ -88,7 +88,7 @@ RSpec.describe RecipeIngredientFilterQuery do
 
     result = described_class.call(
       relation: Recipe.all,
-      ingredients: "avocado"
+      ingredients: [ "avocado" ]
     )
 
     expect(result).to include(banana_recipe)
@@ -102,7 +102,7 @@ RSpec.describe RecipeIngredientFilterQuery do
 
     result = described_class.call(
       relation: Recipe.all,
-      ingredients: "salt"
+      ingredients: [ "salt" ]
     )
 
     expect(LocalEmbedding).not_to have_received(:call)
@@ -121,7 +121,7 @@ RSpec.describe RecipeIngredientFilterQuery do
 
     result = described_class.call(
       relation: Recipe.all,
-      ingredients: "avocado"
+      ingredients: [ "avocado" ]
     )
 
     expect(LocalEmbedding).not_to have_received(:call)
@@ -156,7 +156,7 @@ RSpec.describe RecipeIngredientFilterQuery do
     create(:ingredient, name: "spaghetti")
     create(:ingredient, name: "garlic")
 
-    result = described_class.call(relation: Recipe.all, ingredients: "tomato\nbasil\nspaghetti\ngarlic")
+    result = described_class.call(relation: Recipe.all, ingredients: [ "tomato", "basil", "spaghetti", "garlic" ])
 
     expect(result).to eq([ pasta ])
   end
@@ -170,16 +170,6 @@ RSpec.describe RecipeIngredientFilterQuery do
   end
 
   def create_recipe_ingredient_rows
-    ingredient_ids_by_name = Ingredient.pluck(:name, :id).to_h
-    metadata = IngredientCatalogMetadata.call
-
-    Recipe.find_each do |recipe|
-      recipe.ingredient_names.filter_map do |raw_name|
-        record = metadata[Ingredient.normalize_lookup_key(raw_name)]
-        ingredient_ids_by_name[record.name] if record
-      end.uniq.each do |ingredient_id|
-        RecipeIngredient.find_or_create_by!(recipe:, ingredient_id:)
-      end
-    end
+    Recipe.connection.exec_query(RecipeIngredientRecomputeQuery.call(recipe_ids: Recipe.ids), RecipeIngredientRecomputeQuery.name)
   end
 end

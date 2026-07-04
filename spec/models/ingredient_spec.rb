@@ -48,36 +48,23 @@ RSpec.describe Ingredient do
     expect(ingredient.errors[:name]).to include("must not contain commas")
   end
 
-  it "normalizes lookup text without inflecting ingredient words" do
-    expect(described_class.normalize_lookup_key("pasta")).to eq("pasta")
-    expect(described_class.normalize_lookup_key(" Cookies ")).to eq("cookies")
-    expect(described_class.normalize_lookup_key("strawberries")).to eq("strawberries")
-    expect(described_class.normalize_lookup_key("tomatoes")).to eq("tomatoes")
-    expect(described_class.normalize_lookup_key("zucchinis")).to eq("zucchinis")
-    expect(described_class.normalize_lookup_key("s green onions")).to eq("s green onions")
-  end
-
   it "filters matches from text excluding optional ingredients" do
     create(:ingredient, name: "salt", aliases: [ "salt", "kosher salt" ], optional: true)
     avocado = create(:ingredient, name: "avocado")
 
-    expect(described_class.filterable_matches("kosher salt\navocado")).to eq([ avocado ])
+    expect(described_class.filterable_matches([ "salt", "avocado" ])).to eq([ avocado ])
+  end
+
+  it "filters only exact canonical ingredient names" do
+    avocado = create(:ingredient, name: "avocado", aliases: [ "ripe avocado" ])
+
+    expect(described_class.filterable_matches([ " Avocado ", "avocado", "ripe avocado" ])).to eq([ avocado ])
   end
 
   it "returns filterable matches in filter-text order" do
     create(:ingredient, name: "pasta")
     create(:ingredient, name: "garlic")
 
-    expect(described_class.filterable_matches("garlic\npasta").map(&:name)).to eq([ "garlic", "pasta" ])
-  end
-
-  it "exposes ingredient filter options with optional metadata" do
-    create(:ingredient, name: "salt", optional: true)
-    create(:ingredient, name: "avocado")
-
-    expect(described_class.filter_options).to eq([
-      { name: "avocado", optional: false },
-      { name: "salt", optional: true }
-    ])
+    expect(described_class.filterable_matches([ "garlic", "pasta" ]).map(&:name)).to eq([ "garlic", "pasta" ])
   end
 end

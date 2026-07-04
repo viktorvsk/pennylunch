@@ -40,11 +40,11 @@
   </head>
 
   <body class="min-h-[100dvh] bg-background text-foreground" data-controller="recipe-ui ingredient-matches" data-action="turbo:visit@document->recipe-ui#startLoading turbo:before-render@document->recipe-ui#stopLoading turbo:load@document->recipe-ui#turboLoad turbo:render@document->recipe-ui#turboRender turbo:frame-render@document->recipe-ui#turboFrameRender turbo:fetch-request-error@document->recipe-ui#stopLoading recipes:updated@document->recipe-ui#recipesUpdated recipes:updated@document->ingredient-matches#refresh turbo:frame-render@document->ingredient-matches#refresh pennylunch:ingredient-basket-change@window->ingredient-matches#refresh">
-    <script type="application/json" id="recipe-ui-catalog" data-recipe-ui-catalog><%== json_escape(recipe_ui_catalog_json) %></script>
+    <script type="application/json" id="recipe-catalog" data-recipe-catalog><%== json_escape(recipe_catalog_json) %></script>
     <%= yield %>
     <div class="recipe-content-loading" aria-hidden="true">
       <span class="recipe-content-loading-spinner"></span>
     </div>
-    <%= render "recipes/ingredients_fab", filters: recipe_layout_fab_filters %>
+    <%= render "recipes/ingredients_fab", filters: @filters&.slice("ingredients") || {} %>
   </body>
 </html>

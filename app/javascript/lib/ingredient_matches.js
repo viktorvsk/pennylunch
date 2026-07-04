@@ -2,8 +2,7 @@ import {
   ADD_BASKET_INGREDIENT_EVENT,
   REMOVE_BASKET_INGREDIENT_EVENT,
   normalizeIngredientName,
-  readBasket,
-  splitIngredientText
+  readBasket
 } from "lib/recipe_filter_core"
 
 export { ADD_BASKET_INGREDIENT_EVENT, REMOVE_BASKET_INGREDIENT_EVENT }
@@ -18,10 +17,10 @@ export const storedIngredientNames = () => {
 }
 
 export const activeIngredientNames = () => {
-  const hidden = document.querySelector("[data-controller~='auto-submit'] [data-auto-submit-target~='ingredients']")
-  const filterNames = hidden ? splitIngredientText(hidden.value || "") : []
+  const container = document.querySelector("[data-controller~='auto-submit'] [data-auto-submit-target~='ingredients']")
+  const filterNames = container ? Array.from(container.querySelectorAll("input[name='ingredients[]']")).map((input) => input.value.trim()).filter(Boolean) : []
   const basketNames = storedIngredientNames()
-  if (!hidden) return basketNames
+  if (!container) return basketNames
 
   const selectedKeys = new Set(filterNames.map(normalizeIngredientName))
   basketNames.forEach((name) => {

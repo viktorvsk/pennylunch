@@ -10,3 +10,6 @@
 8. **Boundary Error Rescues**: Rescue external network timeouts and socket failures at boundary interfaces and map them to domain-specific error classes.
 9. **Ordering Stability**: Maintain original user-supplied order of records during querying/sorting to prevent instability in downstream computations.
 10. **Natural Linter Cleanliness**: Refactor classes to satisfy linter complexity thresholds (like variable counts and statement limits) instead of adding suppressions in config.
+11. **Boundary Normalization**: Normalize external data at ingestion boundaries and keep request-time lookups exact against stored values.
+12. **Canonical Param Formats**: Use one controlled wire format for internal params instead of preserving ad hoc delimiters.
+13. **View State Models**: Replace clusters of thin view helper wrappers with focused data models that prepare partial state.

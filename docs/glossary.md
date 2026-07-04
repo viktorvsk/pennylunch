@@ -26,15 +26,15 @@ Notes: Stored in `recipe_ingredients` with required `recipe_id` and `ingredient_
 
 ## Ingredient Name
 
-Definition: A raw ingredient name emitted by `ingredient-parser-nlp` for a recipe source ingredient line.
+Definition: A normalized ingredient phrase emitted by recipe indexing for a recipe source ingredient line.
 Owner: Ingredient search.
-Notes: Populated by recipe indexing, stored in the `recipes.ingredient_names` JSONB array, and shown in recipe cards. These names must not be overwritten with canonical Ingredient names. Canonical names are resolved from the catalog when generating recipe vectors and recomputing `RecipeIngredient` associations.
+Notes: Populated by recipe indexing, stored in the `recipes.ingredient_names` JSONB array, and shown in recipe cards. These names are lowercase/squished parser phrases and must not be overwritten with canonical Ingredient names. Canonical names are resolved from the catalog when generating recipe vectors and recomputing `RecipeIngredient` associations.
 
 ## Ingredient Alias
 
 Definition: A reviewed alternate phrase for an Ingredient, such as a plural, preparation-specific, or source-parser-specific name.
 Owner: Ingredient search.
-Notes: Stored in `ingredients.aliases` as a JSONB array and maintained in `config/ingredient_aliases.yml`. Alias uniqueness is enforced by case-and-whitespace-normalized lookup key so each raw phrase maps to exactly one canonical Ingredient name. Plurals and source-specific variants must be explicit aliases.
+Notes: Stored in normalized form in `ingredients.aliases` as a JSONB array and maintained in `config/ingredient_aliases.yml`. Alias uniqueness is enforced after model normalization so each phrase maps to exactly one canonical Ingredient name. Plurals and source-specific variants must be explicit aliases.
 
 ## Optional Ingredient
 
@@ -46,4 +46,4 @@ Notes: Stored as `ingredients.optional`. Optional ingredients remain selectable 
 
 Definition: Structured `ingredient-parser-nlp` output stored per source ingredient line, including name, amount, unit, preparation, comments, purpose, confidence values, flags, and parser sentence.
 Owner: Ingredient search.
-Notes: Populated by recipe indexing and stored in `recipes.ingredient_parse_data` as JSONB for future ranking, explanations, or missing-ingredient features.
+Notes: Populated by recipe indexing and stored in `recipes.ingredient_parse_data` as JSONB for future ranking, explanations, or missing-ingredient features. Parser name text is normalized so detail-page catalog resolution uses exact stored values.

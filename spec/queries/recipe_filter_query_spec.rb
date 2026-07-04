@@ -16,7 +16,7 @@ RSpec.describe RecipeFilterQuery do
         "category" => "Dinner",
         "quick" => "1",
         "popular" => "1",
-        "ingredients" => "tomato"
+        "ingredients" => [ "tomato" ]
       }
     )
 
@@ -24,16 +24,6 @@ RSpec.describe RecipeFilterQuery do
   end
 
   def create_recipe_ingredient_rows
-    ingredient_ids_by_name = Ingredient.pluck(:name, :id).to_h
-    metadata = IngredientCatalogMetadata.call
-
-    Recipe.find_each do |recipe|
-      recipe.ingredient_names.filter_map do |raw_name|
-        record = metadata[Ingredient.normalize_lookup_key(raw_name)]
-        ingredient_ids_by_name[record.name] if record
-      end.uniq.each do |ingredient_id|
-        RecipeIngredient.find_or_create_by!(recipe:, ingredient_id:)
-      end
-    end
+    Recipe.connection.exec_query(RecipeIngredientRecomputeQuery.call(recipe_ids: Recipe.ids), RecipeIngredientRecomputeQuery.name)
   end
 end

@@ -1,14 +1,14 @@
 <div id="recipe-sort-menu" class="dropdown-menu">
-  <button type="button" class="btn recipe-toolbar-sort recipe-toolbar-control" data-variant="outline" data-size="icon" data-tooltip="Sort: <%= recipe_sort_label(current_sort) %>" data-side="bottom" data-align="end" aria-label="Sort" aria-haspopup="menu" aria-controls="recipe-sort-options" aria-expanded="false">
+  <button type="button" class="btn recipe-toolbar-sort recipe-toolbar-control" data-variant="outline" data-size="icon" data-tooltip="Sort: <%= toolbar.current_sort_label %>" data-side="bottom" data-align="end" aria-label="Sort" aria-haspopup="menu" aria-controls="recipe-sort-options" aria-expanded="false">
     <%= icon_svg(:sort) %>
   </button>
 
   <div id="recipe-sort-popover" data-popover data-side="bottom" data-align="end" aria-hidden="true" class="recipe-toolbar-sort-popover">
     <div role="menu" id="recipe-sort-options" aria-labelledby="recipe-sort-menu">
-      <% recipe_sort_options.each do |value, label| %>
-        <%= link_to recipe_filter_path(filters.merge("sort" => value, "page" => nil)), role: "menuitem", class: "recipe-toolbar-sort-option", aria: { current: current_sort == value ? "true" : nil } do %>
-          <span><%= label %></span>
-          <% if current_sort == value %>
+      <% toolbar.sort_options.each do |option| %>
+        <%= link_to recipe_filter_path(filters.merge("sort" => option.value, "page" => nil)), role: "menuitem", class: "recipe-toolbar-sort-option", aria: { current: toolbar.current_sort == option.value ? "true" : nil } do %>
+          <span><%= option.label %></span>
+          <% if toolbar.current_sort == option.value %>
             <%= icon_svg(:check, class_name: "size-4 text-primary") %>
           <% end %>
         <% end %>

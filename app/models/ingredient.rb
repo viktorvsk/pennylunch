@@ -14,20 +14,8 @@ class Ingredient < ApplicationRecord
   after_commit :clear_cache
 
   class << self
-    def normalize_lookup_key(value)
-      value.to_s.squish.downcase.presence
-    end
-
-    def normalize_lookup_keys(values)
-      Array(values).filter_map { normalize_lookup_key(it) }.uniq
-    end
-
-    def filter_options
-      order(:name).pluck(:name, :optional).map { |name, optional| { name:, optional: } }
-    end
-
     def filterable_matches(text)
-      names = text.to_s.tr(",;", "\n").split("\n").filter_map { normalize_lookup_key(it) }.uniq
+      names = Array(text).filter_map { it.to_s.squish.presence }.uniq
       return [] if names.empty?
 
       by_name = where(optional: false, name: names).index_by(&:name)
@@ -38,7 +26,7 @@ class Ingredient < ApplicationRecord
   private
 
   def clear_cache
-    Rails.cache.delete("ingredients/catalog_metadata")
+    Rails.cache.delete(IngredientCatalogMetadata::CACHE_KEY)
     Rails.cache.delete("ingredients/filterable_lookup_map")
   end
 

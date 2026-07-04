@@ -54,10 +54,16 @@ class Recipe < ApplicationRecord
     ingredient_names.map { |name| { name:, matchName: metadata[name]&.name } }
   end
 
+  def parsed_ingredients
+    metadata = IngredientCatalogMetadata.call
+    ingredients.zip(ingredient_parse_data).map do |raw_line, parse_item|
+      ParsedIngredient.from_parser(raw_line, parse_item, metadata)
+    end
+  end
+
   private
 
   def derive_fields
-    self.ingredient_names = Array(ingredient_names).filter_map { Ingredient.normalize_lookup_key(it) }.uniq
     self.category_normalized = self.class.normalize_category(category)
     self.total_time = prep_time.to_i + cook_time.to_i
   end
