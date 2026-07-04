@@ -50,6 +50,9 @@ The Compose-managed PostgreSQL service uses the application database user as the
 `POSTGRES_DB` creates the primary development database, and Rails `db:prepare` creates the additional queue database
 because that bootstrap user is privileged inside this self-contained Compose stack.
 
+PostgreSQL loads `config/postgresql/postgresql.conf` through the Compose `postgres_config` config. The settings are
+conservative for a small shared host and take effect on the next `db` container restart.
+
 If a local Compose volume was initialized with older database defaults, recreate that volume before using these defaults.
 
 The source-mounted web process runs `bin/dev`, which starts Rails, Tailwind watch, and Solid Queue jobs through
