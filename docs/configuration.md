@@ -38,7 +38,7 @@ When adding a setting:
 | `AVO_PASSWORD` | `pennylunch` | HTTP basic password for `/avo`. |
 | `OPENROUTER_API_KEY` | Rails credential `openrouter_api_key` | OpenRouter key used by ingredient image reading. |
 
-Ingredient search strategy is controlled at runtime through the Rails cache key `search_strategy`. The Avo `Set recipe search strategy` action enqueues `SetRecipeSearchStrategyJob`, which sets the key to `vector` when its `strategy` parameter is `vector`, and deletes the key when its `strategy` parameter is `overlap`. Missing or non-`vector` cache values use overlap search.
+Ingredient search strategy is controlled at runtime through the Rails cache key `search_strategy`. The Avo `Set recipe search strategy` action updates this key directly: the key is set to `vector` when the `strategy` parameter is `vector`, and `overlap` when the `strategy` parameter is `overlap`. Missing or non-`vector` cache values use overlap search.
 
 ## Python Runtime Settings
 

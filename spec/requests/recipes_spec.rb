@@ -61,7 +61,11 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("href=\"/recipes/pasta\"")
     expect(response.body).to include("tomato, pasta, garlic")
     ingredient_summary = document.at_css("[data-ingredient-matches-target='summary']")
-    expect(JSON.parse(ingredient_summary["data-ingredient-names"])).to eq([ "tomato", "pasta", "garlic" ])
+    expect(JSON.parse(ingredient_summary["data-recipe-ingredients"])).to eq([
+      { "name" => "tomato", "matchName" => "tomato" },
+      { "name" => "pasta", "matchName" => "pasta" },
+      { "name" => "garlic", "matchName" => nil }
+    ])
     expect(recipe_ui_catalog_from(document)).to include(
       "categoryLabels" => hash_including("air fryer main dish recipes" => "Air Fryer Main Dish Recipes"),
       "categorySlugs" => hash_including("pasta" => "pasta")
@@ -179,6 +183,16 @@ RSpec.describe "Recipes", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Tomato Pasta")
     expect(response.body).not_to include("Tomato Soup")
+  end
+
+  it "returns 404 when category query parameter is invalid" do
+    get recipes_path, params: { category: "not-real" }
+    expect(response).to have_http_status(:not_found)
+  end
+
+  it "returns 404 when category path parameter is invalid" do
+    get "/recipes/not-real"
+    expect(response).to have_http_status(:not_found)
   end
 
   it "applies quick filtering and selected sorting" do
@@ -470,11 +484,12 @@ RSpec.describe "Recipes", type: :request do
 
   def create_recipe_ingredient_rows
     ingredient_ids_by_name = Ingredient.pluck(:name, :id).to_h
-    lookup = Ingredient.lookup_map
+    metadata = IngredientCatalogMetadata.call
 
     Recipe.find_each do |recipe|
-      Array(recipe.ingredient_names).filter_map do |raw_name|
-        ingredient_ids_by_name[lookup[Ingredient.normalize_lookup_key(raw_name)]]
+      recipe.ingredient_names.filter_map do |raw_name|
+        record = metadata[Ingredient.normalize_lookup_key(raw_name)]
+        ingredient_ids_by_name[record.name] if record
       end.uniq.each do |ingredient_id|
         RecipeIngredient.find_or_create_by!(recipe:, ingredient_id:)
       end

@@ -59,12 +59,11 @@ export const ingredientMatchRank = (entry, selectedKeys) => {
 
 export const recipeIngredientEntriesFor = (element) => {
   try {
-    const parsed = JSON.parse(element.dataset.ingredientNames || "[]")
-    const catalogNames = JSON.parse(element.dataset.ingredientCatalogNames || "[]")
+    const parsed = JSON.parse(element.dataset.recipeIngredients || "[]")
     if (Array.isArray(parsed)) {
-      return parsed.map((name, index) => {
-        const displayName = name.toString().trim()
-        const catalogName = Array.isArray(catalogNames) && catalogNames[index] ? catalogNames[index].toString().trim() : ""
+      return parsed.map((entry) => {
+        const displayName = entry.name.toString().trim()
+        const catalogName = entry.matchName ? entry.matchName.toString().trim() : ""
         return { name: displayName, matchName: catalogName || displayName }
       }).filter((entry) => entry.name)
     }

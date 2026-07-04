@@ -11,6 +11,8 @@ class Ingredient < ApplicationRecord
   validate :aliases_must_be_globally_unique
   validate :name_must_not_match_another_alias
 
+  after_commit :clear_cache
+
   class << self
     def normalize_lookup_key(value)
       value.to_s.squish.downcase.presence
@@ -20,42 +22,25 @@ class Ingredient < ApplicationRecord
       Array(values).filter_map { normalize_lookup_key(it) }.uniq
     end
 
-    def lookup_map(scope = all)
-      scope.pluck(:name, :aliases).each_with_object({}) do |(name, aliases), mapping|
-        ([ name ] + aliases).each do |value|
-          key = normalize_lookup_key(value)
-          mapping[key] = name if key.present?
-        end
-      end
-    end
-
-    def filterable_lookup_map
-      lookup_map(where(optional: false))
-    end
-
     def filter_options
       order(:name).pluck(:name, :optional).map { |name, optional| { name:, optional: } }
     end
 
     def filterable_matches(text)
-      names = text.to_s.split(/[\n,;]+/).filter_map { normalize_lookup_key(it) }.uniq
+      names = text.to_s.tr(",;", "\n").split("\n").filter_map { normalize_lookup_key(it) }.uniq
       return [] if names.empty?
 
       by_name = where(optional: false, name: names).index_by(&:name)
       names.filter_map { by_name[it] }
     end
-
-    def catalog_metadata
-      pluck(:name, :aliases, :optional).each_with_object({}) do |(name, aliases, optional), mapping|
-        ([ name ] + aliases).each do |value|
-          key = normalize_lookup_key(value)
-          mapping[key] = { name:, optional: } if key.present?
-        end
-      end
-    end
   end
 
   private
+
+  def clear_cache
+    Rails.cache.delete("ingredients/catalog_metadata")
+    Rails.cache.delete("ingredients/filterable_lookup_map")
+  end
 
   def aliases_must_be_array
     errors.add(:aliases, "must be an array") unless aliases.is_a?(Array)

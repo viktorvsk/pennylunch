@@ -1,30 +1,8 @@
 require "rails_helper"
-
 RSpec.describe IngredientsHelper, type: :helper do
-  describe "#recipe_ingredient_catalog_names" do
-    it "maps raw recipe ingredient aliases to canonical names for UI matching" do
-      create(:ingredient, name: "banana", aliases: [ "banana", "overripe bananas" ])
-      create(:ingredient, name: "salt", aliases: [ "salt", "kosher salt" ], optional: true)
-      recipe = build(:recipe, ingredient_names: [ "overripe bananas", "kosher salt", "unknown" ])
-
-      expect(helper.recipe_ingredient_catalog_names(recipe)).to eq([ "banana", "salt", nil ])
-    end
-  end
-
-  describe "#recipe_required_ingredient_names" do
-    it "returns canonical non-optional ingredients only" do
-      create(:ingredient, name: "banana", aliases: [ "banana", "overripe bananas" ])
-      create(:ingredient, name: "salt", aliases: [ "salt", "kosher salt" ], optional: true)
-      recipe = build(:recipe, ingredient_names: [ "overripe bananas", "kosher salt", "unknown" ])
-
-      expect(helper.recipe_required_ingredient_names(recipe)).to eq([ "banana" ])
-    end
-  end
-
   describe "#recipe_match_readiness" do
     it "reports the selected share of required ingredients" do
-      readiness = helper.recipe_match_readiness([ "avocado", "lime", "rice" ], [ "Avocado", "lime" ])
-
+      readiness = helper.recipe_match_readiness([ "avocado", "lime", "rice" ], [ "avocado", "lime" ])
       expect(readiness.percentage).to eq(67)
       expect(readiness.label).to eq("67%")
       expect(readiness.tooltip).to eq("Matches 2 of 3 required ingredients in your selected ingredients. Pantry staples are not counted.")

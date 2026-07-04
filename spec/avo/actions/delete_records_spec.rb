@@ -111,18 +111,23 @@ RSpec.describe "Avo record actions" do
     expect(action.response[:messages]).to include(hash_including(type: :error, body: "Select at least one recipe."))
   end
 
-  it "queues recipe search strategy updates" do
+  it "updates recipe search strategy in-place" do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    allow(Rails).to receive(:cache).and_return(cache)
+
     action = run_action(Avo::Actions::SetRecipeSearchStrategy, [], fields: { strategy: "vector" })
 
-    expect(enqueued_jobs.first[:job]).to eq(SetRecipeSearchStrategyJob)
-    expect(enqueued_jobs.first[:args]).to eq([ "vector" ])
-    expect(action.response[:messages]).to include(hash_including(type: :success, body: "Queued recipe search strategy update to vector."))
+    expect(cache.read("search_strategy")).to eq("vector")
+    expect(action.response[:messages]).to include(hash_including(type: :success, body: "Updated recipe search strategy to vector."))
   end
 
   it "keeps the search strategy modal open when the strategy is invalid" do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    allow(Rails).to receive(:cache).and_return(cache)
+
     action = run_action(Avo::Actions::SetRecipeSearchStrategy, [], fields: { strategy: "naive_vector_search" })
 
-    expect(enqueued_jobs).to be_empty
+    expect(cache.read("search_strategy")).to be_nil
     expect(action.response[:type]).to eq(:keep_modal_open)
     expect(action.response[:messages]).to include(hash_including(type: :error, body: "Unknown recipe search strategy."))
   end
@@ -137,7 +142,17 @@ RSpec.describe "Avo record actions" do
 
   def run_action(action_class, query, fields: {})
     action = action_class.new
-    action.handle(query:, fields:, current_user: nil, resource: nil)
+    relation =
+      case query
+      when ActiveRecord::Relation
+        query
+      when Array
+        model_class = action_class.to_s.include?("Ingredient") ? Ingredient : Recipe
+        model_class.where(id: query.map { |item| item.respond_to?(:id) ? item.id : item })
+      else
+        Recipe.all
+      end
+    action.handle(query: relation, fields:, current_user: nil, resource: nil)
     action
   end
 end

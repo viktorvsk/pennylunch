@@ -4,15 +4,14 @@ class Avo::Actions::IndexSelectedRecipes < Avo::BaseAction
   self.confirm_button_label = "Queue indexing"
 
   def handle(query:, **)
-    recipes = Recipe.where(id: query)
-    count = recipes.count
+    count = query.count
     return error("Select at least one recipe.").keep_modal_open if count.zero?
 
-    if query.is_a?(ActiveRecord::Relation) && query.where_clause.empty?
+    if query.where_clause.empty?
       IndexRecipeJob.perform_later("all")
       succeed "Queued recipe indexing for all recipes."
     else
-      ids = recipes.pluck(:id).uniq
+      ids = query.pluck(:id).uniq
       IndexRecipeJob.perform_later(ids)
       succeed "Queued recipe indexing for #{ids.size} #{"recipe".pluralize(ids.size)}."
     end

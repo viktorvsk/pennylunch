@@ -11,6 +11,6 @@ class IngredientImagesController < ApplicationController
   private
 
   def image_params
-    params.expect(image: [ :file, :url ])
+    params.require(:image).permit(:file, :url)
   end
 end

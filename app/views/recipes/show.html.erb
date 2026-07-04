@@ -1,9 +1,9 @@
-<% content_for :title, recipe.title %>
+<% content_for :title, @recipe.title %>
 
 <%= render "show_toolbar" %>
 
 <main class="recipe-page">
-  <%= render "show_title", recipe: %>
-  <%= render "show_detail", recipe: %>
-  <%= render "similar_recipes", similar_recipes: %>
+  <%= render "show_title", recipe: @recipe %>
+  <%= render "show_detail", recipe: @recipe %>
+  <%= render "similar_recipes", similar_recipes: @similar_recipes %>
 </main>

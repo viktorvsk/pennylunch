@@ -4,7 +4,7 @@ class IndexRecipeJob < ApplicationJob
     return if recipes.empty?
 
     parser_results = IngredientParser.call(recipes.map(&:ingredients))
-    ingredient_lookup = Ingredient.filterable_lookup_map
+    ingredient_lookup = IngredientFilterLookup.call
     entries = recipes.zip(parser_results).map do |recipe, parser_result|
       RecipeIndexEntry.from(recipe:, parser_result:, ingredient_lookup:)
     end

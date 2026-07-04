@@ -17,28 +17,7 @@ RSpec.describe "Avo-queued jobs", type: :job do
     expect(RecipeImport).to have_received(:call).with(url: RecipeImport::DEFAULT_URL)
   end
 
-  it "sets vector recipe search through the search strategy job" do
-    with_memory_cache do |cache|
-      SetRecipeSearchStrategyJob.perform_now("vector")
 
-      expect(cache.read("search_strategy")).to eq("vector")
-    end
-  end
-
-  it "clears recipe search strategy through the search strategy job" do
-    with_memory_cache do |cache|
-      cache.write("search_strategy", "vector")
-
-      SetRecipeSearchStrategyJob.perform_now("overlap")
-
-      expect(cache.read("search_strategy")).to eq("overlap")
-    end
-  end
-
-  it "rejects unknown recipe search strategies" do
-    expect { SetRecipeSearchStrategyJob.perform_now("naive_vector_search") }
-      .to raise_error(ArgumentError, "unknown recipe search strategy: naive_vector_search")
-  end
 
   it "indexes a missing recipe vector" do
     create(:ingredient, name: "chicken breast", aliases: [ "chicken breasts" ])

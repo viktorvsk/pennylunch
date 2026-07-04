@@ -58,6 +58,31 @@ RSpec.describe Recipe do
     end
   end
 
+  describe "#catalog_ingredients" do
+    it "resolves matched catalog ingredients only" do
+      create(:ingredient, name: "banana", aliases: [ "banana", "overripe bananas" ])
+      create(:ingredient, name: "salt", aliases: [ "salt", "kosher salt" ], optional: true)
+      recipe = build(:recipe, ingredient_names: [ "overripe bananas", "kosher salt", "unknown" ])
+
+      expect(recipe.catalog_ingredients.map(&:name)).to eq([ "banana", "salt" ])
+      expect(recipe.catalog_ingredients.map(&:optional)).to eq([ false, true ])
+    end
+  end
+
+  describe "#recipe_ingredients_data" do
+    it "maps all raw ingredient names to their catalog canonical name, with nil for unmatched" do
+      create(:ingredient, name: "banana", aliases: [ "banana", "overripe bananas" ])
+      create(:ingredient, name: "salt", aliases: [ "salt", "kosher salt" ], optional: true)
+      recipe = build(:recipe, ingredient_names: [ "overripe bananas", "kosher salt", "unknown" ])
+
+      expect(recipe.recipe_ingredients_data).to eq([
+        { name: "overripe bananas", matchName: "banana" },
+        { name: "kosher salt", matchName: "salt" },
+        { name: "unknown", matchName: nil }
+      ])
+    end
+  end
+
   describe "validations" do
     it "leaves parser data alignment to import and indexing workflows" do
       recipe = build(:recipe, ingredients: [ "1 cup flour", "1 egg" ], ingredient_parse_data: [ { "input" => "1 cup flour" } ])

@@ -45,6 +45,15 @@ class Recipe < ApplicationRecord
     image
   end
 
+  def catalog_ingredients
+    ingredient_names.filter_map { |name| IngredientCatalogMetadata.call[name] }
+  end
+
+  def recipe_ingredients_data
+    metadata = IngredientCatalogMetadata.call
+    ingredient_names.map { |name| { name:, matchName: metadata[name]&.name } }
+  end
+
   private
 
   def derive_fields

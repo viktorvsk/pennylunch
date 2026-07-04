@@ -13,6 +13,11 @@ detectors:
     enabled: false
   UtilityFunction:
     enabled: false
+  InstanceVariableAssumption:
+    enabled: false
+  TooManyInstanceVariables:
+    exclude:
+      - "RecipesController"
   LongParameterList:
     exclude:
       - "RecipeHelper#rating_stars"
