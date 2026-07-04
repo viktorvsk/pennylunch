@@ -20,13 +20,14 @@ export default class extends Controller {
   refresh() {
     const activeKeys = activeIngredientKeys()
     const basketKeys = basketIngredientKeys()
+    const displayKeys = [...new Set([...activeKeys, ...basketKeys])]
 
     this.summaryTargets.forEach((element) => {
-      renderRecipeIngredientSummary(element, activeKeys)
+      renderRecipeIngredientSummary(element, displayKeys)
     })
 
     this.readinessTargets.forEach((element) => {
-      renderRecipeMatchReadiness(element, activeKeys)
+      renderRecipeMatchReadiness(element, displayKeys)
     })
 
     this.nameTargets.forEach((element) => {
@@ -39,8 +40,12 @@ export default class extends Controller {
       }
 
       const row = element.closest("[data-recipe-ingredient-row]")
-      const entry = { matchName: element.dataset.ingredientMatchName || element.dataset.ingredientName || element.textContent, matchNames }
-      const matched = ingredientMatches(entry, row ? basketKeys : activeKeys)
+      const entry = {
+        name: element.dataset.ingredientName || element.textContent,
+        matchName: element.dataset.ingredientMatchName || element.dataset.ingredientName || element.textContent,
+        matchNames
+      }
+      const matched = ingredientMatches(entry, row ? basketKeys : displayKeys)
 
       if (row) {
         row.classList.toggle("recipe-ingredient-row--matched", matched)

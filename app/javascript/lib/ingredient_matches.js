@@ -38,7 +38,15 @@ export const activeIngredientKeys = () => activeIngredientNames().map(normalizeI
 
 export const basketIngredientKeys = () => readBasket().selected.map(normalizeIngredientName)
 
-export const matchNamesFor = (entry) => (Array.isArray(entry.matchNames) && entry.matchNames.length > 0 ? entry.matchNames : [entry.matchName])
+export const matchNamesFor = (entry) => {
+  const names = [
+    ...(Array.isArray(entry.matchNames) ? entry.matchNames : []),
+    entry.matchName,
+    entry.name
+  ].map((name) => name?.toString().trim()).filter(Boolean)
+
+  return [...new Set(names)]
+}
 
 export const ingredientMatches = (entry, selectedKeys) => {
   return matchNamesFor(entry).some((name) => selectedKeys.includes(normalizeIngredientName(name || "")))

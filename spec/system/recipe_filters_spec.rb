@@ -203,29 +203,32 @@ RSpec.describe "Recipe filters", type: :system do
     expect(placeholder.fetch("imageZIndex")).to eq("1")
   end
 
-  it "highlights index card ingredients from the active filter context" do
+  it "highlights index card ingredients from the saved basket even when filtering is off" do
     create(:ingredient, name: "honey")
-    create(:ingredient, name: "cooking spray", optional: true)
-    create(:recipe, title: "E2E Honey Toast", ingredient_names: [ "honey", "cooking spray", "bread" ])
+    create(:ingredient, name: "walnut", aliases: [ "walnuts" ])
+    create(:ingredient, name: "cooking spray", aliases: [ "serving nonstick cooking spray" ], optional: true)
+    create(:recipe, title: "E2E Honey Toast", ingredient_names: [ "honey", "walnuts", "serving nonstick cooking spray", "bread" ])
 
     visit recipes_path
 
     page.execute_script(<<~JS)
-      document.cookie = `pennylunch.ingredients=${encodeURIComponent(JSON.stringify({ selected: ["honey", "cooking spray"], enabled: false }))}; Path=/; SameSite=Lax`;
-      window.dispatchEvent(new CustomEvent("pennylunch:ingredient-basket-change"));
-    JS
-
-    expect(page).to have_no_css(".recipe-card-ingredients .recipe-ingredient-match", text: "honey")
-    expect(page).to have_no_css(".recipe-card-ingredients .recipe-ingredient-match", text: "cooking spray")
-
-    page.execute_script(<<~JS)
-      document.querySelector("[data-auto-submit-target~='ingredients']").value = "honey";
-      document.cookie = `pennylunch.ingredients=${encodeURIComponent(JSON.stringify({ selected: ["honey", "cooking spray"], enabled: true }))}; Path=/; SameSite=Lax`;
+      document.cookie = `pennylunch.ingredients=${encodeURIComponent(JSON.stringify({ selected: ["honey", "walnut", "cooking spray"], enabled: false }))}; Path=/; SameSite=Lax`;
       window.dispatchEvent(new CustomEvent("pennylunch:ingredient-basket-change"));
     JS
 
     expect(page).to have_css(".recipe-card-ingredients .recipe-ingredient-match", text: "honey")
-    expect(page).to have_css(".recipe-card-ingredients .recipe-ingredient-match", text: "cooking spray")
+    expect(page).to have_css(".recipe-card-ingredients .recipe-ingredient-match", text: "walnuts")
+    expect(page).to have_css(".recipe-card-ingredients .recipe-ingredient-match", text: "serving nonstick cooking spray")
+
+    page.execute_script(<<~JS)
+      document.querySelector("[data-auto-submit-target~='ingredients']").value = "honey";
+      document.cookie = `pennylunch.ingredients=${encodeURIComponent(JSON.stringify({ selected: ["honey", "walnut", "cooking spray"], enabled: true }))}; Path=/; SameSite=Lax`;
+      window.dispatchEvent(new CustomEvent("pennylunch:ingredient-basket-change"));
+    JS
+
+    expect(page).to have_css(".recipe-card-ingredients .recipe-ingredient-match", text: "honey")
+    expect(page).to have_css(".recipe-card-ingredients .recipe-ingredient-match", text: "walnuts")
+    expect(page).to have_css(".recipe-card-ingredients .recipe-ingredient-match", text: "serving nonstick cooking spray")
   end
 
   it "wraps the readiness tooltip instead of clipping the explanation" do
