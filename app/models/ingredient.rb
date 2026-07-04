@@ -14,13 +14,17 @@ class Ingredient < ApplicationRecord
       value.to_s.squish.downcase.presence
     end
 
-    def filterable_lookup_map
-      where(optional: false).pluck(:name, :aliases).each_with_object({}) do |(name, aliases), mapping|
+    def lookup_map(scope = all)
+      scope.pluck(:name, :aliases).each_with_object({}) do |(name, aliases), mapping|
         ([ name ] + Array(aliases)).each do |value|
           key = normalize_lookup_key(value)
           mapping[key] = name if key.present?
         end
       end
+    end
+
+    def filterable_lookup_map
+      lookup_map(where(optional: false))
     end
 
     def filterable_canonical_names_for(names)

@@ -123,7 +123,7 @@ class RecipeImport
           record.fetch("cook_time"),
           record.fetch("prep_time"),
           JSON.generate(record.fetch("ingredients")),
-          postgres_text_array(parser_result.ingredient_names),
+          JSON.generate(parser_result.ingredient_names),
           JSON.generate(parser_result.ingredient_parse_data),
           record.fetch("ratings"),
           record.fetch("cuisine"),
@@ -143,14 +143,6 @@ class RecipeImport
     raw_connection.copy_data(COPY_SQL) do
       rows.each { |row| raw_connection.put_copy_data(CSV.generate_line(row)) }
     end
-  end
-
-  def postgres_text_array(values)
-    escaped_values = Array(values).map do |value|
-      escaped = value.to_s.gsub(/[\\"]/) { |character| "\\#{character}" }
-      %("#{escaped}")
-    end
-    "{#{escaped_values.join(",")}}"
   end
 
   def parser_data_count(parse_data)

@@ -1,6 +1,6 @@
 (() => {
   const {
-    STORAGE_KEYS,
+    BASKET_CHANGE_EVENT,
     applyIngredientMatches,
     initBasecoat,
     installAutoSubmit,
@@ -9,21 +9,25 @@
     setTurboLoading
   } = window.PennyLunch;
 
-  const install = () => {
-    initBasecoat();
+  const install = ({ forceBasecoat = false } = {}) => {
+    initBasecoat({ force: forceBasecoat });
     installAutoSubmit();
     installIngredientsFab();
     applyIngredientMatches();
   };
 
   document.addEventListener("DOMContentLoaded", install);
-  document.addEventListener("turbo:load", install);
-  document.addEventListener("turbo:render", () => applyIngredientMatches());
-  document.addEventListener("turbo:frame-render", () => applyIngredientMatches());
-  document.addEventListener("recipes:updated", () => applyIngredientMatches());
-  window.addEventListener("storage", (event) => {
-    if (Object.values(STORAGE_KEYS).includes(event.key)) applyIngredientMatches();
+  document.addEventListener("turbo:load", () => install({ forceBasecoat: true }));
+  document.addEventListener("turbo:render", () => {
+    initBasecoat({ force: true });
+    applyIngredientMatches();
   });
+  document.addEventListener("turbo:frame-render", () => {
+    initBasecoat({ force: true });
+    applyIngredientMatches();
+  });
+  document.addEventListener("recipes:updated", () => applyIngredientMatches());
+  window.addEventListener(BASKET_CHANGE_EVENT, () => applyIngredientMatches());
   document.addEventListener("pointerdown", (event) => {
     document.querySelectorAll("[data-ingredients-fab]").forEach((root) => {
       if (root.contains(event.target)) return;

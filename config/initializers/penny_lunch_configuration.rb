@@ -6,8 +6,6 @@ def penny_lunch_config.add_config(name, value)
   self[name] = ENV.key?(environment_name) ? ENV[environment_name].presence : value
 end
 
-penny_lunch_config.add_config(:ingredients_filter_strategy, "naive_vector_search")
-penny_lunch_config.add_config(:ingredients_candidate_count, "250")
 penny_lunch_config.add_config(:ingredients_max_cosine_distance, "0.7")
 penny_lunch_config.add_config(:ingredient_parser_timeout_seconds, "120")
 penny_lunch_config.add_config(:informers_cache_dir, Rails.root.join("storage", "informers").to_s)

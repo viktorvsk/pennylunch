@@ -11,6 +11,37 @@ RSpec.describe "Maintenance tasks" do
     expect(RecipeImport).to have_received(:call).with(url: "https://example.test/recipes.json.gz")
   end
 
+  it "sets vector recipe search through the search strategy task" do
+    with_memory_cache do |cache|
+      task = Maintenance::SetRecipeSearchStrategyTask.new
+      task.strategy = "vector"
+
+      task.process
+
+      expect(cache.read("search_strategy")).to eq("vector")
+    end
+  end
+
+  it "clears recipe search strategy through the search strategy task" do
+    with_memory_cache do |cache|
+      cache.write("search_strategy", "vector")
+      task = Maintenance::SetRecipeSearchStrategyTask.new
+      task.strategy = "overlap"
+
+      task.process
+
+      expect(cache.read("search_strategy")).to be_nil
+    end
+  end
+
+  it "rejects unknown recipe search strategies" do
+    task = Maintenance::SetRecipeSearchStrategyTask.new
+    task.strategy = "naive_vector_search"
+
+    expect(task).not_to be_valid
+    expect(task.errors[:strategy]).to include("is not included in the list")
+  end
+
   it "backfills a missing recipe vector" do
     create(:ingredient, name: "chicken breast", aliases: [ "chicken breasts" ])
     create(:ingredient, name: "lemon")
@@ -165,5 +196,11 @@ RSpec.describe "Maintenance tasks" do
     yield
   ensure
     path.delete if path&.exist?
+  end
+
+  def with_memory_cache
+    cache = ActiveSupport::Cache::MemoryStore.new
+    allow(Rails).to receive(:cache).and_return(cache)
+    yield cache
   end
 end

@@ -11,6 +11,7 @@
 - Done: parsed ingredient names stored separately from source ingredient text.
 - Done: structured ingredient parser payload stored per source ingredient line.
 - Done: local pgvector ingredient candidate search.
+- Done: explicit best-match relevance sort.
 
 ## Future Work
 
@@ -20,6 +21,5 @@
 - Ingredient match explanations and missing-ingredient display.
 - Ingredient entry UX outside the compact top bar.
 - Ingredient parser confidence review and synonym handling.
-- Explicit relevance sort option.
 - Image caching or proxying for external recipe images.
 - Import history and source-file checksum tracking.

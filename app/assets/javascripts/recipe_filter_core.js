@@ -1,12 +1,19 @@
 (() => {
   const namespace = window.PennyLunch || {};
-  const STORAGE_KEYS = {
+  const BASKET_COOKIE = "pennylunch.ingredients";
+  const BASKET_CHANGE_EVENT = "pennylunch:ingredient-basket-change";
+  const BASKET_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+  const LEGACY_STORAGE_KEYS = {
     enabled: "pennylunch.ingredients.enabled",
     selected: "pennylunch.ingredients.selected",
     text: "pennylunch.ingredients.text"
   };
 
   const present = (value) => value && value.toString().trim() !== "";
+
+  const normalizeIngredientName = (value) => value.toString().trim().replace(/\s+/g, " ").toLowerCase();
+
+  const splitIngredientText = (text) => text.split(/[\n,;]+/).map((name) => name.trim()).filter(Boolean);
 
   const readStorage = (key) => {
     try {
@@ -24,9 +31,85 @@
     }
   };
 
-  const normalizeIngredientName = (value) => value.toString().trim().replace(/\s+/g, " ").toLowerCase();
+  const readCookie = (name) => {
+    try {
+      const prefix = `${name}=`;
+      const entry = document.cookie.split(";").map((value) => value.trim()).find((value) => value.startsWith(prefix));
 
-  const splitIngredientText = (text) => text.split(/[\n,;]+/).map((name) => name.trim()).filter(Boolean);
+      return entry ? decodeURIComponent(entry.slice(prefix.length)) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const writeCookie = (name, value) => {
+    document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${BASKET_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`;
+  };
+
+  const normalizeBasketPayload = (payload = {}) => {
+    const selected = [];
+    const selectedKeys = new Set();
+
+    if (Array.isArray(payload.selected)) {
+      payload.selected.forEach((value) => {
+        const name = value?.toString().trim().replace(/\s+/g, " ");
+        const key = name ? normalizeIngredientName(name) : "";
+        if (!key || selectedKeys.has(key)) return;
+
+        selectedKeys.add(key);
+        selected.push(name);
+      });
+    }
+
+    return { enabled: payload.enabled === true || payload.enabled === "true", selected };
+  };
+
+  const readBasketCookie = () => {
+    const value = readCookie(BASKET_COOKIE);
+    if (!present(value)) return null;
+
+    try {
+      return normalizeBasketPayload(JSON.parse(value));
+    } catch {
+      return null;
+    }
+  };
+
+  const readLegacyBasket = () => {
+    let selected = [];
+
+    try {
+      const parsed = JSON.parse(readStorage(LEGACY_STORAGE_KEYS.selected) || "[]");
+      if (Array.isArray(parsed)) selected = parsed;
+    } catch {
+      selected = [];
+    }
+
+    if (selected.length === 0) selected = splitIngredientText(readStorage(LEGACY_STORAGE_KEYS.text) || "");
+
+    return normalizeBasketPayload({
+      enabled: readStorage(LEGACY_STORAGE_KEYS.enabled) === "true",
+      selected
+    });
+  };
+
+  const writeBasket = (basket) => {
+    const normalized = normalizeBasketPayload(basket);
+    writeCookie(BASKET_COOKIE, JSON.stringify(normalized));
+    window.dispatchEvent(new CustomEvent(BASKET_CHANGE_EVENT, { detail: normalized }));
+
+    return normalized;
+  };
+
+  const readBasket = () => {
+    const cookieBasket = readBasketCookie();
+    if (cookieBasket) return cookieBasket;
+
+    const legacyBasket = readLegacyBasket();
+    if (legacyBasket.enabled || legacyBasket.selected.length > 0) writeBasket(legacyBasket);
+
+    return legacyBasket;
+  };
 
   const recipeUiCatalog = () => {
     const element = document.querySelector("[data-recipe-ui-catalog]");
@@ -71,7 +154,7 @@
     formData.forEach((value, key) => {
       if (key === "category" || key === "page") return;
       if (!present(value)) return;
-      if (key === "sort" && value === "time_asc") return;
+      if (key === "sort" && value === "best_match") return;
 
       url.searchParams.set(key, value);
     });
@@ -99,8 +182,15 @@
     }
   };
 
-  const initBasecoat = () => {
-    if (window.basecoat) window.basecoat.initAll();
+  const initBasecoat = ({ force = false } = {}) => {
+    if (!window.basecoat) return;
+
+    if (force && window.basecoat.stop && window.basecoat.start) {
+      window.basecoat.stop();
+      window.basecoat.start();
+    }
+
+    window.basecoat.initAll({ force });
   };
 
   const setTurboLoading = (loading) => {
@@ -109,9 +199,15 @@
 
   window.PennyLunch = {
     ...namespace,
-    STORAGE_KEYS,
+    BASKET_CHANGE_EVENT,
+    BASKET_COOKIE,
+    LEGACY_STORAGE_KEYS,
     present,
+    readBasket,
+    readCookie,
     readStorage,
+    writeBasket,
+    writeCookie,
     writeStorage,
     normalizeIngredientName,
     splitIngredientText,

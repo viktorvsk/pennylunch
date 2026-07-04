@@ -35,5 +35,17 @@ RSpec.describe RecipeHelper, type: :helper do
         category_tooltip: "Category: Pasta"
       )
     end
+
+    it "defaults to best matching sort" do
+      expect(helper.recipe_toolbar_state(filters: {}, selected_category: nil).current_sort).to eq("best_match")
+      expect(helper.recipe_sort_label(nil)).to eq("Best Match")
+      expect(helper.recipe_sort_options).to include(
+        "best_match" => "Best Match",
+        "time_asc" => "Fastest First",
+        "time_desc" => "Slowest First",
+        "rating_asc" => "Popular Last",
+        "rating_desc" => "Popular First"
+      )
+    end
   end
 end

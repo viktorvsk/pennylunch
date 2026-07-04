@@ -2,12 +2,14 @@ require "rails_helper"
 
 RSpec.describe RecipeSearch do
   around do |example|
-    original_candidate_count = SETTINGS.ingredients_candidate_count
     original_max_distance = SETTINGS.ingredients_max_cosine_distance
     example.run
   ensure
-    SETTINGS.ingredients_candidate_count = original_candidate_count
     SETTINGS.ingredients_max_cosine_distance = original_max_distance
+  end
+
+  before do
+    allow(Rails.cache).to receive(:read).and_call_original
   end
 
   it "returns the relation unchanged when ingredients are blank" do
@@ -18,13 +20,73 @@ RSpec.describe RecipeSearch do
     expect(result).to eq([ recipe ])
   end
 
-  it "narrows the relation to ingredient vector candidates" do
+  it "keeps all exact ingredient overlap candidates without applying match ordering" do
+    create(:ingredient, name: "avocado", aliases: [ "avocado", "avocados", "ripe avocado" ])
+    create(:ingredient, name: "lime")
+    create(:ingredient, name: "rice")
+    simple_avocado = create(:recipe, title: "Simple Avocado", ratings: 4.0, ingredient_names: [ "avocados" ])
+    avocado_rice_bowl = create(:recipe, title: "Avocado Rice Bowl", ratings: 5.0, ingredient_names: [ "avocados", "lime", "rice" ])
+    lime_water = create(:recipe, title: "Lime Water", ratings: 3.0, ingredient_names: [ "lime" ])
+    create(:recipe, title: "Apple Cake", ratings: 5.0, ingredient_names: [ "apple" ])
+    allow(IngredientParser).to receive(:call).and_return([
+      IngredientParser::Result.new([ "ripe avocado", "lime" ], [])
+    ])
+
+    result = described_class.call(
+      relation: Recipe.all,
+      ingredients: "ripe avocado, lime"
+    ).order(ratings: :desc)
+
+    expect(result).to eq([ avocado_rice_bowl, simple_avocado, lime_water ])
+  end
+
+  it "orders a relation by fewest missing required ingredients before fuller partials" do
+    create(:ingredient, name: "avocado", aliases: [ "avocado", "avocados" ])
+    create(:ingredient, name: "lime")
+    create(:ingredient, name: "rice")
+    exact_match = create(:recipe, title: "Avocado Lime Salad", ratings: 4.0, ingredient_names: [ "avocados", "lime" ])
+    fewer_missing_partial = create(:recipe, title: "Avocado Plate", ratings: 5.0, ingredient_names: [ "avocados" ])
+    fuller_match_with_missing = create(:recipe, title: "Avocado Rice Bowl", ratings: 5.0, ingredient_names: [ "avocados", "lime", "rice" ])
+    allow(IngredientParser).to receive(:call).and_return([
+      IngredientParser::Result.new([ "avocados", "lime" ], [])
+    ])
+
+    search = described_class.new(
+      relation: Recipe.all,
+      ingredients: "avocados, lime"
+    )
+    result = search.order_by_best_match(Recipe.all)
+
+    expect(result).to eq([ exact_match, fewer_missing_partial, fuller_match_with_missing ])
+  end
+
+  it "ignores optional ingredients but counts unknown ingredients as missing for best match" do
+    create(:ingredient, name: "avocado", aliases: [ "avocados" ])
+    create(:ingredient, name: "lime")
+    create(:ingredient, name: "salt", optional: true)
+    missing_optional = create(:recipe, title: "Salted Avocado Lime Plate", ingredient_names: [ "avocados", "lime", "salt" ])
+    missing_unknown = create(:recipe, title: "Seasoned Avocado Plate", ingredient_names: [ "avocados", "house seasoning", "secret sauce" ])
+    complete = create(:recipe, title: "Avocado Plate", ingredient_names: [ "avocados" ])
+    allow(IngredientParser).to receive(:call).and_return([
+      IngredientParser::Result.new([ "avocados", "lime" ], [])
+    ])
+
+    search = described_class.new(
+      relation: Recipe.all,
+      ingredients: "avocados, lime"
+    )
+    result = search.order_by_best_match(Recipe.all)
+
+    expect(result).to eq([ missing_optional, complete, missing_unknown ])
+  end
+
+  it "narrows the relation to all ingredient vector candidates within threshold" do
+    use_strategy("vector")
     create(:ingredient, name: "tomato", aliases: [ "tomatoes" ])
     create(:ingredient, name: "pasta")
     tomato_pasta = create(:recipe, title: "Fast Tomato Pasta", ingredient_names: [ "tomatoes", "pasta" ], ingredients_vector: vector(1.0))
     tomato_soup = create(:recipe, title: "Best Tomato Soup", ingredient_names: [ "tomatoes" ], ingredients_vector: vector(0.8, 0.6))
     chicken = create(:recipe, title: "Chicken Dinner", ratings: 5.0, prep_time: 10, cook_time: 15, ingredient_names: [ "chicken" ], ingredients_vector: vector(-1.0))
-    set_candidate_count(2)
     allow(IngredientParser).to receive(:call).and_return([
       IngredientParser::Result.new([ "tomatoes", "pasta" ], [])
     ])
@@ -40,11 +102,11 @@ RSpec.describe RecipeSearch do
   end
 
   it "embeds canonical ingredient names resolved from basket aliases" do
+    use_strategy("vector")
     create(:ingredient, name: "avocado", aliases: [ "ripe avocado", "green avocado" ])
     create(:ingredient, name: "salt", optional: true)
     avocado_recipe = create(:recipe, title: "Avocado Salad", ingredient_names: [ "green avocado" ], ingredients_vector: vector(1.0))
     create(:recipe, title: "Apple Cake", ingredient_names: [ "apple" ], ingredients_vector: vector(-1.0))
-    set_candidate_count(1)
     allow(IngredientParser).to receive(:call).and_return([
       IngredientParser::Result.new([ "green avocado", "salt" ], [])
     ])
@@ -60,10 +122,10 @@ RSpec.describe RecipeSearch do
   end
 
   it "uses only vector distance for ingredient candidates" do
+    use_strategy("vector")
     create(:ingredient, name: "avocado")
     create(:recipe, title: "Avocado Smoothie", ingredient_names: [ "green avocado", "banana" ], ingredients_vector: vector(0.8, 0.6))
     banana_recipe = create(:recipe, title: "Banana Ice Cream", ingredient_names: [ "banana" ], ingredients_vector: vector(1.0))
-    set_candidate_count(2)
     allow(IngredientParser).to receive(:call).and_return([
       IngredientParser::Result.new([ "avocado" ], [])
     ])
@@ -94,7 +156,27 @@ RSpec.describe RecipeSearch do
     expect(result).to eq([ recipe ])
   end
 
+  it "uses ingredient overlap when the cached strategy is not vector" do
+    use_strategy("naive_vector_search")
+    create(:ingredient, name: "avocado")
+    avocado_recipe = create(:recipe, title: "Avocado Toast", ingredient_names: [ "avocado" ], ingredients_vector: vector(-1.0))
+    create(:recipe, title: "Banana Ice Cream", ingredient_names: [ "banana" ], ingredients_vector: vector(1.0))
+    allow(IngredientParser).to receive(:call).and_return([
+      IngredientParser::Result.new([ "avocado" ], [])
+    ])
+    allow(LocalEmbedding).to receive(:call)
+
+    result = described_class.call(
+      relation: Recipe.all,
+      ingredients: "avocado"
+    )
+
+    expect(LocalEmbedding).not_to have_received(:call)
+    expect(result).to eq([ avocado_recipe ])
+  end
+
   it "ranks ingredient matches with the real local embedding model" do
+    use_strategy("vector")
     skip "Set RUN_EMBEDDING_SPECS=1 to run real Informers embedding specs." unless ENV["RUN_EMBEDDING_SPECS"] == "1"
 
     pasta = create(:recipe, title: "Tomato Basil Pasta", ratings: 4.0, ingredients: [
@@ -114,7 +196,6 @@ RSpec.describe RecipeSearch do
       names = recipe.ingredient_names.presence || recipe.ingredients
       recipe.update!(ingredients_vector: LocalEmbedding.call(names.join("\n")))
     end
-    set_candidate_count(1)
 
     result = described_class.call(relation: Recipe.all, ingredients: "tomatoes basil spaghetti garlic")
 
@@ -125,7 +206,7 @@ RSpec.describe RecipeSearch do
     [ first_value, second_value ] + Array.new(382, 0.0)
   end
 
-  def set_candidate_count(value)
-    SETTINGS.ingredients_candidate_count = value
+  def use_strategy(value)
+    allow(Rails.cache).to receive(:read).with("search_strategy").and_return(value)
   end
 end

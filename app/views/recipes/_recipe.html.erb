@@ -1,4 +1,5 @@
 <% ingredient_names = recipe_ingredient_names(recipe) %>
+<% ingredient_catalog_names = recipe_ingredient_catalog_names(recipe) %>
 <% ingredient_summary = ingredient_name_summary(recipe) %>
 
 <article class="recipe-card">
@@ -22,7 +23,7 @@
     </header>
 
     <% if ingredient_names.any? %>
-      <p class="recipe-card-ingredients" data-recipe-ingredients data-ingredient-names="<%= ingredient_names.to_json %>" data-visible-limit="<%= IngredientsHelper::DEFAULT_INGREDIENT_SUMMARY_LIMIT %>"><%= ingredient_summary %></p>
+      <p class="recipe-card-ingredients" data-recipe-ingredients data-ingredient-names="<%= ingredient_names.to_json %>" data-ingredient-catalog-names="<%= ingredient_catalog_names.to_json %>" data-visible-limit="<%= IngredientsHelper::DEFAULT_INGREDIENT_SUMMARY_LIMIT %>"><%= ingredient_summary %></p>
     <% end %>
 
     <footer class="recipe-card-footer">

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_04_122000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_04_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -57,7 +57,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_122000) do
     t.datetime "created_at", null: false
     t.string "cuisine", default: "", null: false
     t.text "image", null: false
-    t.text "ingredient_names", default: [], null: false, array: true
+    t.jsonb "ingredient_names", default: [], null: false
     t.jsonb "ingredient_parse_data", default: [], null: false
     t.jsonb "ingredients", default: [], null: false
     t.vector "ingredients_vector", limit: 384
@@ -75,5 +75,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_122000) do
     t.index ["source_position"], name: "index_recipes_on_source_position", unique: true
     t.index ["title_search_vector"], name: "index_recipes_on_title_search_vector", using: :gin
     t.index ["total_time"], name: "index_recipes_on_total_time"
+    t.check_constraint "jsonb_typeof(ingredient_names) = 'array'::text", name: "recipes_ingredient_names_json_array"
   end
 end

@@ -1,14 +1,13 @@
 (() => {
   const {
-    STORAGE_KEYS,
     applyIngredientMatches,
     normalizeIngredientName,
     present,
     recipeIngredientOptions,
-    readStorage,
+    readBasket,
     splitIngredientText,
     submitFilterForm,
-    writeStorage
+    writeBasket
   } = window.PennyLunch;
   const FIRST_OPTION_INDEX = 0;
   const NO_OPTION_INDEX = -1;
@@ -39,7 +38,10 @@
 
   const installIngredientsFab = () => {
     document.querySelectorAll("[data-ingredients-fab]").forEach((root) => {
-      if (root.ingredientsFabReady) return;
+      if (root.ingredientsFabReady) {
+        root.refreshIngredientsFab?.();
+        return;
+      }
 
       const currentForm = () => document.querySelector("[data-auto-submit-form]");
       const currentHidden = () => currentForm()?.querySelector("[data-ingredients-filter-hidden]");
@@ -73,18 +75,7 @@
       const optionNames = optionRecords.map((option) => option.name);
       const optionByKey = new Map(optionRecords.map((option) => [normalizeIngredientName(option.name), option]));
       const currentIngredients = (root.dataset.currentIngredients || "").trim();
-      const storedSelected = (() => {
-        try {
-          const parsed = JSON.parse(readStorage(STORAGE_KEYS.selected) || "[]");
-          if (Array.isArray(parsed)) return parsed;
-        } catch {
-          return [];
-        }
-
-        return [];
-      })();
-      const storedText = readStorage(STORAGE_KEYS.text) || "";
-      const storedEnabled = readStorage(STORAGE_KEYS.enabled) === "true";
+      const storedBasket = readBasket();
       const selected = [];
       let initialized = false;
       let timeoutId;
@@ -93,6 +84,7 @@
       const optionFor = (value) => optionByKey.get(normalizeIngredientName(value));
       const canonicalName = (value) => optionFor(value)?.name;
       const optionalIngredient = (value) => optionFor(value)?.optional === true;
+      const filterableSelected = () => selected.filter((name) => !optionalIngredient(name));
       const selectedKeys = () => new Set(selected.map(normalizeIngredientName));
       const optionRank = (name, query) => {
         const key = name.toLowerCase();
@@ -114,16 +106,14 @@
         });
       };
 
-      if (storedSelected.length > 0) {
-        seedSelected(storedSelected);
+      if (storedBasket.selected.length > 0) {
+        seedSelected(storedBasket.selected);
       }
       if (present(currentIngredients)) {
         seedSelected(splitIngredientText(currentIngredients));
-      } else if (selected.length === 0) {
-        seedSelected(splitIngredientText(storedText));
       }
 
-      enabledInput.checked = present(currentIngredients) || storedEnabled;
+      enabledInput.checked = present(currentIngredients) || storedBasket.enabled;
 
       const setOpen = (open) => {
         setIngredientsFabOpen(root, open);
@@ -209,7 +199,6 @@
       };
 
       const setStatus = () => {
-        const filterableSelected = selected.filter((name) => !optionalIngredient(name));
         const hasSelected = selected.length > 0;
         const enabled = enabledInput.checked;
         const state = enabled ? "enabled" : "disabled";
@@ -218,8 +207,8 @@
         enabledControl.dataset.state = state;
         enabledText.textContent = enabled ? "On" : "Off";
 
-        if (enabled && filterableSelected.length > 0) {
-          status.textContent = `Filtering with ${filterableSelected.length} selected`;
+        if (enabled && filterableSelected().length > 0) {
+          status.textContent = `Filtering with ${filterableSelected().length} selected`;
         } else if (enabled) {
           status.textContent = "On, add matches";
         } else if (hasSelected) {
@@ -256,14 +245,11 @@
 
       const sync = ({ submit = false, delay = 0 } = {}) => {
         const enabled = enabledInput.checked;
-        const text = selected.join("\n");
         const filterText = selected.filter((name) => !optionalIngredient(name)).join("\n");
         const hidden = currentHidden();
 
         if (hidden) hidden.value = enabled ? filterText : "";
-        writeStorage(STORAGE_KEYS.selected, JSON.stringify(selected));
-        writeStorage(STORAGE_KEYS.text, text);
-        writeStorage(STORAGE_KEYS.enabled, enabled ? "true" : "false");
+        writeBasket({ selected, enabled });
         renderSelected();
         setStatus();
         applyIngredientMatches();
@@ -273,6 +259,12 @@
         window.clearTimeout(timeoutId);
         timeoutId = window.setTimeout(() => submitFilterForm(currentForm(), { frame: "recipe-results-frame" }), delay);
       };
+
+      const refreshPageContext = () => {
+        sync();
+      };
+
+      root.refreshIngredientsFab = refreshPageContext;
 
       function addIngredient(value, { submit = false } = {}) {
         const name = canonicalName(value);
@@ -297,10 +289,6 @@
       sync();
       initialized = true;
       setOpen(false);
-
-      if (!present(currentIngredients) && present(currentHidden()?.value)) {
-        window.setTimeout(() => submitFilterForm(currentForm()), 0);
-      }
 
       trigger.addEventListener("click", () => setOpen(panel.hidden));
       input.addEventListener("input", renderOptions);

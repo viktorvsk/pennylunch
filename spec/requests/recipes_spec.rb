@@ -141,7 +141,7 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body.index(high_rated_quick.title)).to be < response.body.index(low_rated_quick.title)
   end
 
-  it "filters recipes by available ingredients through vector search" do
+  it "filters recipes by available ingredients through ingredient overlap search" do
     create(:ingredient, name: "pasta")
     create(:ingredient, name: "garlic")
     create(:ingredient, name: "olive oil")
@@ -150,7 +150,6 @@ RSpec.describe "Recipes", type: :request do
     allow(IngredientParser).to receive(:call).and_return([
       IngredientParser::Result.new([ "pasta", "garlic", "olive oil" ], [])
     ])
-    allow(LocalEmbedding).to receive(:call).and_return(vector(1.0))
 
     get recipes_path, params: { ingredients: "pasta garlic olive oil", sort: "rating_desc" }
 
@@ -160,6 +159,80 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include(recipe_path(pasta))
     expect(response.body).to include("value=\"pasta garlic olive oil\"")
     expect(response.body).to include("data-current-enabled=\"true\"")
+  end
+
+  it "uses an enabled ingredient basket cookie for the first index render" do
+    create(:ingredient, name: "pasta")
+    create(:ingredient, name: "garlic")
+    pasta = create(:recipe, title: "Cookie Basket Pasta", ingredient_names: [ "pasta", "garlic" ])
+    create(:recipe, title: "Cookie Basket Apple Cake", ingredient_names: [ "apple" ])
+    allow(IngredientParser).to receive(:call).and_return([
+      IngredientParser::Result.new([ "pasta", "garlic" ], [])
+    ])
+
+    get recipes_path, headers: { "Cookie" => ingredient_basket_cookie(enabled: true, selected: [ "pasta", "garlic" ]) }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Cookie Basket Pasta")
+    expect(response.body).not_to include("Cookie Basket Apple Cake")
+    expect(response.body).to include(recipe_path(pasta))
+    expect(response.body).to include("data-current-enabled=\"true\"")
+  end
+
+  it "keeps explicit ingredient params ahead of the ingredient basket cookie" do
+    create(:ingredient, name: "pasta")
+    create(:ingredient, name: "garlic")
+    create(:recipe, title: "Cookie Param Pasta", ingredient_names: [ "pasta" ])
+    garlic = create(:recipe, title: "Cookie Param Garlic", ingredient_names: [ "garlic" ])
+    allow(IngredientParser).to receive(:call).and_return([
+      IngredientParser::Result.new([ "garlic" ], [])
+    ])
+
+    get recipes_path, params: { ingredients: "garlic" }, headers: { "Cookie" => ingredient_basket_cookie(enabled: true, selected: [ "pasta" ]) }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Cookie Param Garlic")
+    expect(response.body).not_to include("Cookie Param Pasta")
+    expect(response.body).to include(recipe_path(garlic))
+  end
+
+  it "defaults ingredient searches to fewest visible missing ingredients order" do
+    create(:ingredient, name: "avocado", aliases: [ "avocados" ])
+    create(:ingredient, name: "lime")
+    create(:ingredient, name: "rice")
+    simple_avocado = create(:recipe, title: "Simple Avocado", ratings: 4.0, ingredient_names: [ "avocados" ])
+    avocado_rice_bowl = create(:recipe, title: "Avocado Rice Bowl", ratings: 5.0, ingredient_names: [ "avocados", "lime", "rice" ])
+    allow(IngredientParser).to receive(:call).and_return([
+      IngredientParser::Result.new([ "avocados", "lime" ], [])
+    ])
+
+    get recipes_path, params: { ingredients: "avocados lime" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body.index(simple_avocado.title)).to be < response.body.index(avocado_rice_bowl.title)
+    expect(response.body).to include("data-tooltip=\"Sort: Best Match\"")
+    expect(response.body).to include(">Best Match<")
+  end
+
+  it "applies best matching order to vector search candidates" do
+    allow(Rails.cache).to receive(:read).and_call_original
+    allow(Rails.cache).to receive(:read).with("search_strategy").and_return("vector")
+    create(:ingredient, name: "avocado", aliases: [ "avocados" ])
+    create(:ingredient, name: "lime")
+    create(:ingredient, name: "rice")
+    simple_avocado = create(:recipe, title: "Simple Avocado", ratings: 4.0, ingredient_names: [ "avocados" ], ingredients_vector: vector(1.0))
+    avocado_rice_bowl = create(:recipe, title: "Avocado Rice Bowl", ratings: 5.0, ingredient_names: [ "avocados", "lime", "rice" ], ingredients_vector: vector(0.9, 0.1))
+    create(:recipe, title: "Apple Cake", ingredient_names: [ "apple" ], ingredients_vector: vector(-1.0))
+    allow(IngredientParser).to receive(:call).and_return([
+      IngredientParser::Result.new([ "avocados", "lime" ], [])
+    ])
+    allow(LocalEmbedding).to receive(:call).and_return(vector(1.0))
+
+    get recipes_path, params: { ingredients: "avocados lime" }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body.index(simple_avocado.title)).to be < response.body.index(avocado_rice_bowl.title)
+    expect(response.body).not_to include("Apple Cake")
   end
 
   it "shows a recipe and its ingredients" do
@@ -231,6 +304,36 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body.index("<h1")).to be < response.body.index("<img")
   end
 
+  it "groups recipe ingredients by optional ingredient metadata" do
+    create(:ingredient, name: "tomato")
+    create(:ingredient, name: "salt", optional: true)
+    recipe = create(
+      :recipe,
+      title: "Tomato Plate",
+      ingredients: [ "1 tomato", "salt to taste", "house seasoning" ],
+      ingredient_names: [ "tomato", "salt", "house seasoning" ],
+      ingredient_parse_data: [
+        { "parser" => { "name" => [ { "text" => "tomato" } ] } },
+        { "parser" => { "name" => [ { "text" => "salt" } ] } },
+        { "parser" => { "name" => [ { "text" => "house seasoning" } ] } }
+      ]
+    )
+
+    get recipe_path(recipe)
+
+    document = Nokogiri::HTML(response.body)
+    groups = document.css(".recipe-ingredient-group").map do |group|
+      [
+        group.at_css("h3").text.squish,
+        group.css(".recipe-ingredient-link").map { |node| node.text.squish }
+      ]
+    end
+    expect(groups).to eq([
+      [ "Main ingredients", [ "tomato", "house seasoning" ] ],
+      [ "Pantry staples", [ "salt" ] ]
+    ])
+  end
+
   it "shows a recipe by trailing id when the friendly slug text is stale" do
     recipe = create(:recipe, title: "Quick Tomato Pasta")
 
@@ -246,5 +349,9 @@ RSpec.describe "Recipes", type: :request do
 
   def recipe_ui_catalog_from(document)
     JSON.parse(document.at_css("script[data-recipe-ui-catalog]").text)
+  end
+
+  def ingredient_basket_cookie(payload)
+    "#{RecipesController::INGREDIENT_BASKET_COOKIE}=#{CGI.escape(payload.to_json)}"
   end
 end

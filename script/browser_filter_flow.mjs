@@ -37,7 +37,6 @@ function seedData() {
           ratings: 4.99,
           ingredients: ["e2e tomato", "e2e pasta"],
           ingredient_names: ["e2e tomato", "e2e pasta"],
-          ingredients_vector_names: ["e2e tomato", "e2e pasta"],
           ingredients_vector: e2e_vector(1.0, 0.0),
           source_position: -10_001
         },
@@ -49,7 +48,6 @@ function seedData() {
           ratings: 4.98,
           ingredients: ["e2e tomato", "e2e pasta"],
           ingredient_names: ["e2e tomato", "e2e pasta"],
-          ingredients_vector_names: ["e2e tomato", "e2e pasta"],
           ingredients_vector: e2e_vector(0.99, 0.01),
           source_position: -10_002
         },
@@ -61,7 +59,6 @@ function seedData() {
           ratings: 4.1,
           ingredients: ["e2e tomato"],
           ingredient_names: ["e2e tomato"],
-          ingredients_vector_names: ["e2e tomato"],
           ingredients_vector: e2e_vector(0.98, 0.02),
           source_position: -10_003
         },
@@ -73,7 +70,6 @@ function seedData() {
           ratings: 4.97,
           ingredients: ["e2e garlic"],
           ingredient_names: ["e2e garlic"],
-          ingredients_vector_names: ["e2e garlic"],
           ingredients_vector: e2e_vector(0.0, 1.0),
           source_position: -10_004
         },
@@ -85,7 +81,6 @@ function seedData() {
           ratings: 4.96,
           ingredients: ["e2e tomato"],
           ingredient_names: ["e2e tomato"],
-          ingredients_vector_names: ["e2e tomato"],
           ingredients_vector: e2e_vector(0.95, 0.05),
           source_position: -10_005
         }
@@ -100,6 +95,8 @@ function seedData() {
         )
       end
     end
+
+    Rails.cache.delete(RecipeHelper::RECIPE_UI_CATALOG_CACHE_KEY)
   `)
 }
 
@@ -109,6 +106,8 @@ function cleanupData() {
       Recipe.where("title LIKE ?", "E2E Turbo Filter%").delete_all
       Ingredient.where(name: ["e2e tomato", "e2e pasta", "e2e garlic"]).delete_all
     end
+
+    Rails.cache.delete(RecipeHelper::RECIPE_UI_CATALOG_CACHE_KEY)
   `)
 }
 
@@ -118,6 +117,75 @@ async function waitForFilteredResults(page) {
     const text = frame?.textContent || ""
     return text.includes(expectedTitle) && excludedTitles.every((title) => !text.includes(title))
   }, { expectedTitle, excludedTitles })
+}
+
+async function selectCategory(page, label, value) {
+  await page.locator("#recipe-category-combobox[data-combobox-initialized='true']").waitFor()
+  await page.locator("button[aria-label='Category']").click()
+  try {
+    await page.waitForFunction(() => document.querySelector("#recipe-category-popover")?.getAttribute("aria-hidden") === "false", null, { timeout: 3_000 })
+  } catch {
+    const state = await page.evaluate(() => ({
+      initialized: document.querySelector("#recipe-category-combobox")?.dataset.comboboxInitialized,
+      component: document.querySelector("#recipe-category-combobox")?.dataset.basecoatComponent,
+      expanded: document.querySelector("button[aria-label='Category']")?.getAttribute("aria-expanded"),
+      hidden: document.querySelector("#recipe-category-popover")?.getAttribute("aria-hidden")
+    }))
+    throw new Error(`Category popover did not open: ${JSON.stringify(state)}`)
+  }
+  await page.locator("#recipe-category-popover input").fill(label)
+  try {
+    await page.waitForFunction((categoryValue) => {
+      const option = document.querySelector(`[role='option'][data-value='${categoryValue}']`)
+      return option?.getAttribute("aria-hidden") === "false"
+    }, value, { timeout: 3_000 })
+  } catch {
+    const state = await page.evaluate((categoryValue) => {
+      const option = document.querySelector(`[role='option'][data-value='${categoryValue}']`)
+      return {
+        exists: Boolean(option),
+        optionHidden: option?.getAttribute("aria-hidden"),
+        inputValue: document.querySelector("#recipe-category-popover input")?.value,
+        visibleOptions: Array.from(document.querySelectorAll("[role='option'][aria-hidden='false']")).slice(0, 10).map((option) => option.textContent?.trim())
+      }
+    }, value)
+    throw new Error(`Category option did not become visible: ${JSON.stringify(state)}`)
+  }
+  await page.locator(`[role='option'][data-value='${value}']`).click()
+}
+
+async function assertToolbarIconControlsOpenAfterTurboRestore(page) {
+  await page.locator(".recipe-card > a[href^='/recipes/']").first().click()
+  await page.waitForURL(/\/recipes\/.+-\d+/)
+  await page.goBack()
+  await page.waitForURL(/\/recipes\/e2e-dinner/)
+  await page.locator("#recipe-results-frame").waitFor()
+
+  await page.locator("button[aria-label='Category']").click()
+  try {
+    await page.waitForFunction(() => document.querySelector("#recipe-category-popover")?.getAttribute("aria-hidden") === "false", null, { timeout: 3_000 })
+  } catch {
+    const state = await page.evaluate(() => ({
+      initialized: document.querySelector("#recipe-category-combobox")?.dataset.comboboxInitialized,
+      component: document.querySelector("#recipe-category-combobox")?.dataset.basecoatComponent,
+      expanded: document.querySelector("button[aria-label='Category']")?.getAttribute("aria-expanded"),
+      hidden: document.querySelector("#recipe-category-popover")?.getAttribute("aria-hidden")
+    }))
+    throw new Error(`Restored category control did not open: ${JSON.stringify(state)}`)
+  }
+
+  await page.locator("button[aria-label='Sort']").click()
+  try {
+    await page.waitForFunction(() => document.querySelector("#recipe-sort-popover")?.getAttribute("aria-hidden") === "false", null, { timeout: 3_000 })
+  } catch {
+    const state = await page.evaluate(() => ({
+      initialized: document.querySelector("#recipe-sort-menu")?.dataset.dropdownMenuInitialized,
+      component: document.querySelector("#recipe-sort-menu")?.dataset.basecoatComponent,
+      expanded: document.querySelector("button[aria-label='Sort']")?.getAttribute("aria-expanded"),
+      hidden: document.querySelector("#recipe-sort-popover")?.getAttribute("aria-hidden")
+    }))
+    throw new Error(`Restored sort control did not open: ${JSON.stringify(state)}`)
+  }
 }
 
 async function main() {
@@ -135,9 +203,7 @@ async function main() {
     await page.locator("input[name='q']").fill("E2E Turbo Filter Tomato")
     await page.waitForURL(/q=E2E\+Turbo\+Filter\+Tomato/)
 
-    await page.locator("button[aria-label='Category']").click()
-    await page.locator("#recipe-category-popover input").fill("E2E Dinner")
-    await page.locator("[role='option'][data-value='e2e dinner']").click()
+    await selectCategory(page, "E2E Dinner", "e2e dinner")
     await page.waitForURL(/\/recipes\/e2e-dinner/)
 
     await page.locator("input[name='quick']").check({ force: true })
@@ -159,6 +225,8 @@ async function main() {
     if (activeToggles < 2) throw new Error("Quick and popular switches were not both active after filtering.")
     if (fabCount !== 1) throw new Error("Ingredients FAB was not preserved during filter navigation.")
     if (currentUrl.pathname !== "/recipes/e2e-dinner") throw new Error(`Expected category slug path, got ${currentUrl.pathname}.`)
+
+    await assertToolbarIconControlsOpenAfterTurboRestore(page)
 
     console.log(JSON.stringify({
       baseUrl,

@@ -5,10 +5,11 @@ module RecipeHelper
   RECIPE_UI_CATALOG_CACHE_EXPIRATION = 5.minutes
   RECIPE_UI_CATALOG_CACHE_KEY = "recipes/ui_catalog/v1"
   SORT_OPTIONS = {
-    "time_asc" => "Time ascending",
-    "time_desc" => "Time descending",
-    "rating_asc" => "Rating ascending",
-    "rating_desc" => "Rating descending"
+    "best_match" => "Best Match",
+    "time_asc" => "Fastest First",
+    "time_desc" => "Slowest First",
+    "rating_asc" => "Popular Last",
+    "rating_desc" => "Popular First"
   }.freeze
 
   def filled_stars(rating)
@@ -104,6 +105,9 @@ module RecipeHelper
   end
 
   def recipe_layout_fab_filters
+    filters = instance_variable_get(:@recipe_layout_fab_filters)
+    return filters if filters
+
     params.slice(:ingredients).permit(:ingredients).to_h
   end
 

@@ -49,7 +49,9 @@ Run these tasks in order:
 6. `Maintenance::ImportRecipesTask` with the recipe source `url`
 7. `Maintenance::BackfillRecipeIngredientVectorsTask`
 
-The first import stores raw parser names in `recipes.ingredient_parse_data` and `recipes.ingredient_names`. The sync task reads `config/ingredient_aliases.yml` and upserts Ingredient records from that reviewed catalog. Optional ingredients are declared in the catalog for low-signal pantry items such as salt, sugar, water, and general cooking oils. Use Avo for small local edits and destructive local resets, but keep repository-owned bulk decisions in the YAML file. The recipe delete action removes only recipes, leaving Ingredients in place. The second import must keep raw parser names in `recipes.ingredient_names`, and the backfill task stores structured `ingredient_parse_data` and generates vectors from non-optional canonical Ingredient names.
+The first import stores raw parser names in `recipes.ingredient_parse_data` and the `recipes.ingredient_names` JSONB array. The sync task reads `config/ingredient_aliases.yml` and upserts Ingredient records from that reviewed catalog. Optional ingredients are declared in the catalog for low-signal pantry items such as salt, sugar, water, and general cooking oils. Use Avo for small local edits and destructive local resets, but keep repository-owned bulk decisions in the YAML file. The recipe delete action removes only recipes, leaving Ingredients in place. The second import must keep raw parser names in `recipes.ingredient_names`, and the backfill task stores structured `ingredient_parse_data` and generates vectors from non-optional canonical Ingredient names.
+
+Ingredient search uses overlap matching unless `Maintenance::SetRecipeSearchStrategyTask` stores `vector` in the runtime cache. Run that task with `strategy` set to `vector` to enable vector search, or `overlap` to delete the cache key and return to overlap search.
 
 In `/avo/resources/ingredients`, `Delete selected ingredients` removes only Ingredient rows. If the catalog should be loaded from a clean slate, delete Ingredients in Avo first, then run `Maintenance::SyncIngredientsFromAliasCatalogTask`.
 
@@ -117,7 +119,7 @@ Run both browser checks with:
 npm run browser:e2e
 ```
 
-The browser checks reuse `http://127.0.0.1:3000` by default and do not start Rails. Set `PENNYLUNCH_BASE_URL` when the active app is on a different port, and `PLAYWRIGHT_CHROME_EXECUTABLE` when Chrome is installed outside the default macOS path. `browser:smoke` covers index-to-show navigation, show-page layout, shared basket FAB rendering, and exact basket-ingredient highlighting on index and show pages. `browser:filter` seeds and cleans up deterministic `E2E Turbo Filter` records, drives title, category, quick, and popular filters through the real browser UI, and verifies the Turbo-updated results include the relevant recipe while excluding irrelevant recipes. If system Chrome is unavailable, run `npm run browser:install` once to install Playwright's Chromium browser.
+The browser checks reuse `http://127.0.0.1:3000` by default and do not start Rails. Set `PENNYLUNCH_BASE_URL` when the active app is on a different port, and `PLAYWRIGHT_CHROME_EXECUTABLE` when Chrome is installed outside the default macOS path. `browser:smoke` covers index-to-show navigation, show-page layout, shared basket FAB rendering, and exact basket-ingredient highlighting on index and show pages. `browser:filter` seeds and cleans up deterministic `E2E Turbo Filter` records, drives title, category, quick, and popular filters through the real browser UI, verifies the Turbo-updated results include the relevant recipe while excluding irrelevant recipes, and checks that Basecoat toolbar icon controls still open after Turbo history restoration. If system Chrome is unavailable, run `npm run browser:install` once to install Playwright's Chromium browser.
 
 ## Environment Variables
 

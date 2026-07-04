@@ -30,14 +30,14 @@ When adding a setting:
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
-| `INGREDIENTS_FILTER_STRATEGY` | `naive_vector_search` | Strategy used by the ingredients textarea. |
-| `INGREDIENTS_CANDIDATE_COUNT` | `250` | Number of vector candidates kept before secondary sorting. |
-| `INGREDIENTS_MAX_COSINE_DISTANCE` | `0.7` | Maximum cosine distance for ingredient vector candidates. |
+| `INGREDIENTS_MAX_COSINE_DISTANCE` | `0.7` | Maximum cosine distance for vector ingredient-search candidates. |
 | `INGREDIENT_PARSER_TIMEOUT_SECONDS` | `120` | Timeout for each parser shell-out batch. |
 | `INFORMERS_CACHE_DIR` | `storage/informers` | Persistent local model cache path. |
 | `EMBEDDING_MODEL_PRELOAD` | `true` | Enables non-blocking model warmup after Rails server boot outside test. |
 | `MAINTENANCE_TASKS_USERNAME` | `pennylunch` | HTTP basic username for `/maintenance_tasks` and `/avo`. |
 | `MAINTENANCE_TASKS_PASSWORD` | `pennylunch` | HTTP basic password for `/maintenance_tasks` and `/avo`. |
+
+Ingredient search strategy is controlled at runtime through the Rails cache key `search_strategy`. `Maintenance::SetRecipeSearchStrategyTask` sets the key to `vector` when its `strategy` parameter is `vector`, and deletes the key when its `strategy` parameter is `overlap`. Missing or non-`vector` cache values use overlap search.
 
 ## Python Runtime Settings
 

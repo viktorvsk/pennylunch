@@ -16,7 +16,21 @@
       <h2>Ingredients</h2>
     </header>
     <div class="recipe-ingredient-list">
-      <%= render partial: "ingredient", collection: recipe_ingredient_rows(recipe) %>
+      <% main_ingredients, pantry_ingredients = recipe_ingredient_groups(recipe) %>
+      <% if pantry_ingredients.any? %>
+        <% if main_ingredients.any? %>
+          <section class="recipe-ingredient-group">
+            <h3>Main ingredients</h3>
+            <%= render partial: "ingredient", collection: main_ingredients %>
+          </section>
+        <% end %>
+        <section class="recipe-ingredient-group">
+          <h3>Pantry staples</h3>
+          <%= render partial: "ingredient", collection: pantry_ingredients %>
+        </section>
+      <% else %>
+        <%= render partial: "ingredient", collection: main_ingredients %>
+      <% end %>
     </div>
   </aside>
 </section>

@@ -84,4 +84,54 @@ RSpec.describe "Recipe filters", type: :system do
     expect(page).to have_css("#recipe-ingredients-fab[data-turbo-permanent]", count: 1)
     expect(page).to have_current_path("/recipes/e2e-dinner", ignore_query: true)
   end
+
+  it "highlights index card ingredients from the active filter context" do
+    create(:ingredient, name: "honey")
+    create(:recipe, title: "E2E Honey Toast", ingredient_names: [ "honey", "bread" ])
+
+    visit recipes_path
+
+    page.execute_script(<<~JS)
+      window.PennyLunch.writeBasket({ selected: ["honey"], enabled: false });
+      window.PennyLunch.applyIngredientMatches();
+    JS
+
+    expect(page).to have_no_css(".recipe-card-ingredients .recipe-ingredient-match", text: "honey")
+
+    page.execute_script(<<~JS)
+      document.querySelector("[data-ingredients-filter-hidden]").value = "honey";
+      window.PennyLunch.applyIngredientMatches();
+    JS
+
+    expect(page).to have_css(".recipe-card-ingredients .recipe-ingredient-match", text: "honey")
+  end
+
+  it "does not resubmit ingredient filters after returning from a show page" do
+    create(:ingredient, name: "honey")
+    matching_recipe = create(:recipe, title: "E2E Cookie Basket Honey Toast", ingredient_names: [ "honey" ])
+    create(:recipe, title: "E2E Cookie Basket Apple Cake", ingredient_names: [ "apple" ])
+    allow(IngredientParser).to receive(:call).and_return([
+      IngredientParser::Result.new([ "honey" ], [])
+    ])
+
+    visit recipe_path(matching_recipe)
+
+    page.execute_script(<<~JS)
+      window.__pennylunchFetches = [];
+      document.addEventListener("turbo:before-fetch-request", (event) => {
+        window.__pennylunchFetches.push(event.detail.url.toString());
+      });
+      window.PennyLunch.writeBasket({ selected: ["honey"], enabled: true });
+    JS
+
+    click_link "PennyLunch"
+
+    expect(page).to have_current_path("/")
+    expect(page).to have_text("E2E Cookie Basket Honey Toast")
+    expect(page).to have_no_text("E2E Cookie Basket Apple Cake")
+
+    page.driver.browser.execute_async_script("const done = arguments[arguments.length - 1]; setTimeout(done, 300);")
+
+    expect(page.evaluate_script("window.__pennylunchFetches").count).to eq(1)
+  end
 end

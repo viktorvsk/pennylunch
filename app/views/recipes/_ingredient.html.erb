@@ -1,10 +1,15 @@
-<div class="recipe-ingredient-row">
-  <span class="recipe-ingredient-leading">
-    <code><%= ingredient[:size] %></code>
-    <% if ingredient[:unit].present? %>
-      <b><%= ingredient[:unit].humanize.downcase %></b> of
-    <% end %>
-    <i><%= ingredient[:state] %></i>
+<div class="recipe-ingredient-row" data-recipe-ingredient-row>
+  <span class="recipe-ingredient-match-icon" aria-hidden="true">
+    <%= icon_svg(:check, class_name: "recipe-ingredient-match-icon-svg") %>
   </span>
-  <%= link_to ingredient[:name], ingredient_reference_url(ingredient[:name]), class: "recipe-ingredient-link", data: { ingredient_name: ingredient[:name] }, target: "_blank", rel: "noopener" %>
+  <span class="recipe-ingredient-content">
+    <span class="recipe-ingredient-leading">
+      <code><%= ingredient[:size] %></code>
+      <% if ingredient[:unit].present? %>
+        <b><%= ingredient[:unit].humanize.downcase %></b> of
+      <% end %>
+      <i><%= ingredient[:state] %></i>
+    </span>
+    <%= link_to ingredient[:name], ingredient_reference_url(ingredient[:name]), class: "recipe-ingredient-link", data: { ingredient_name: ingredient[:name], ingredient_match_name: ingredient[:catalog_name].presence || ingredient[:name], ingredient_match_names: ingredient[:catalog_names].presence&.to_json }, target: "_blank", rel: "noopener" %>
+  </span>
 </div>
