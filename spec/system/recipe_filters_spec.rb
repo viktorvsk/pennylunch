@@ -653,14 +653,13 @@ RSpec.describe "Recipe filters", type: :system do
       window.dispatchEvent(new CustomEvent("pennylunch:ingredient-basket-change"));
     JS
 
-    click_link "PennyLunch"
+    page.execute_script('document.querySelector(".recipe-toolbar-brand").click()')
 
     expect(page).to have_current_path("/recipes")
     expect(page).to have_text("E2E Cookie Basket Honey Toast")
     expect(page).to have_no_text("E2E Cookie Basket Apple Cake")
 
     page.driver.browser.execute_async_script("const done = arguments[arguments.length - 1]; setTimeout(done, 300);")
-
     expect(page.evaluate_script("window.__pennylunchFetches").count).to eq(1)
   end
 

@@ -13,7 +13,7 @@ async function main() {
     }
 
     const indexTarget = await page.locator(".recipe-card").evaluateAll((cards) => {
-      const catalog = JSON.parse(document.querySelector("[data-recipe-ui-catalog]")?.textContent || "{}")
+      const catalog = JSON.parse(document.querySelector("[data-recipe-catalog]")?.textContent || "{}")
       const options = new Set((catalog.ingredientOptions || []).map((option) => typeof option === "string" ? option : option.name))
 
       for (const card of cards) {
@@ -22,8 +22,8 @@ async function main() {
         const timeTooltip = card.querySelector(".recipe-card-footer .recipe-meta-item[data-tooltip]")
         if (!link || !summary || !timeTooltip) continue
 
-        const names = JSON.parse(summary.dataset.ingredientNames || "[]")
-        const match = names.find((name) => options.has(name))
+        const entries = JSON.parse(summary.dataset.recipeIngredients || "[]")
+        const match = entries.map((entry) => entry.matchName || entry.name).find((name) => options.has(name))
         if (match) return { ingredient: match, href: link.getAttribute("href") }
       }
 
@@ -39,8 +39,12 @@ async function main() {
     await page.reload({ waitUntil: "networkidle" })
 
     const disabledIndexMatches = await page.locator(".recipe-card-ingredients .recipe-ingredient-match").count()
-    if (disabledIndexMatches !== 0) {
-      throw new Error(`Disabled basket highlighted ${disabledIndexMatches} index ingredients.`)
+    if (disabledIndexMatches === 0) {
+      throw new Error(`Disabled basket did not highlight any index ingredients.`)
+    }
+    const disabledIndexMatchedIngredient = (await page.locator(".recipe-card-ingredients .recipe-ingredient-match").first().innerText()).trim()
+    if (disabledIndexMatchedIngredient !== exactIndexIngredient) {
+      throw new Error(`Index basket highlight mismatch (disabled): expected ${exactIndexIngredient}, got ${disabledIndexMatchedIngredient}.`)
     }
 
     await page.evaluate((name) => {
@@ -56,7 +60,7 @@ async function main() {
     await page.goto(new URL(indexTarget.href, baseUrl).toString(), { waitUntil: "networkidle" })
 
     const showIngredientName = await page.locator(".recipe-ingredient-link[data-ingredient-name]").evaluateAll((elements) => {
-      const catalog = JSON.parse(document.querySelector("[data-recipe-ui-catalog]")?.textContent || "{}")
+      const catalog = JSON.parse(document.querySelector("[data-recipe-catalog]")?.textContent || "{}")
       const options = new Set((catalog.ingredientOptions || []).map((option) => typeof option === "string" ? option : option.name))
 
       for (const element of elements) {

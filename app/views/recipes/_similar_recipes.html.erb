@@ -1,6 +1,6 @@
 <% if similar_recipes.any? %>
   <section class="recipe-section">
-    <h2>Similar recipes</h2>
+    <h2>Others also view</h2>
     <div class="recipe-similar-grid">
       <%= render partial: "recipes/recipe", collection: similar_recipes, as: :recipe %>
     </div>

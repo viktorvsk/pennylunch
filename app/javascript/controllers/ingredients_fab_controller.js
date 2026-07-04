@@ -512,7 +512,6 @@ export default class extends Controller {
     }
 
     this.triggerTarget.setAttribute("aria-label", `Ingredients: ${this.statusTarget.textContent.toLowerCase()}`)
-    this.triggerTarget.dataset.tooltip = `Ingredients: ${this.statusTarget.textContent.toLowerCase()}`
   }
 
   renderSelected() {

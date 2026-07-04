@@ -1,5 +1,5 @@
 <div id="recipe-category-combobox" class="combobox" data-auto-highlight="true" data-auto-submit-on-change="true">
-  <button type="button" class="btn recipe-toolbar-category recipe-toolbar-control" data-state="<%= toolbar.selected_category.present? ? "active" : "inactive" %>" data-variant="outline" data-size="icon" data-tooltip="<%= toolbar.category_tooltip %>" data-side="bottom" data-align="end" aria-label="Category" aria-haspopup="listbox" aria-expanded="false" aria-controls="recipe-category-listbox">
+  <button type="button" class="btn recipe-toolbar-category recipe-toolbar-control" data-state="<%= toolbar.selected_category.present? ? "active" : "inactive" %>" data-variant="outline" data-size="icon" data-tooltip="<%= toolbar.category_tooltip %>" data-side="left" data-align="end" aria-label="Category" aria-haspopup="listbox" aria-expanded="false" aria-controls="recipe-category-listbox">
     <span class="sr-only" data-value data-placeholder="All categories"><%= toolbar.selected_category_label.presence || "All categories" %></span>
     <%= icon_svg(:category) %>
   </button>

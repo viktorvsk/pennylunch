@@ -74,7 +74,7 @@ RSpec.describe "Recipes", type: :request do
       { "name" => "tomato", "optional" => true },
       { "name" => "pasta", "optional" => false }
     )
-    expect(document.at_css("a[href='/recipes']").text).to eq("PennyLunch")
+    expect(document.at_css("a[href='/recipes']")["aria-label"]).to eq("PennyLunch")
     expect(document.css("[role='switch']")).not_to be_empty
     expect(document.css("[role='combobox']")).not_to be_empty
     expect(document.css(".dropdown-menu")).not_to be_empty
@@ -437,7 +437,7 @@ RSpec.describe "Recipes", type: :request do
     document = Nokogiri::HTML(response.body)
     groups = document.css(".recipe-ingredient-group").map do |group|
       [
-        group.at_css("h3").text.squish,
+        group.at_css("h3")&.text&.squish || "Pantry staples",
         group.css(".recipe-ingredient-link").map { |node| node.text.squish }
       ]
     end

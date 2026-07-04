@@ -34,7 +34,7 @@
       <div class="recipe-ingredients-field">
         <div class="recipe-ingredients-input-group">
           <input id="recipe-ingredients-input" class="input" type="text" placeholder="Tomato, eggs, parsley..." autocomplete="off" role="combobox" aria-label="Ingredient name" aria-autocomplete="list" aria-expanded="false" aria-controls="recipe-ingredients-options" data-ingredients-fab-target="input" data-action="input->ingredients-fab#search keydown->ingredients-fab#keydown blur->ingredients-fab#blur">
-          <button type="button" class="btn recipe-ingredients-photo-trigger" data-variant="outline" data-ingredients-fab-target="imageTrigger" data-action="click->ingredients-fab#openImageDialog" data-tooltip="Scan photo or image URL" data-side="top" data-align="end" aria-label="Scan photo or image URL" aria-controls="recipe-ingredients-image-dialog">
+          <button type="button" class="btn recipe-ingredients-photo-trigger" data-variant="outline" data-ingredients-fab-target="imageTrigger" data-action="click->ingredients-fab#openImageDialog" aria-label="Scan photo or image URL" aria-controls="recipe-ingredients-image-dialog">
             <span class="recipe-ingredients-photo-icons" aria-hidden="true">
               <%= icon_svg(:sparkles, class_name: "recipe-ingredients-photo-sparkles") %>
               <%= icon_svg(:camera, class_name: "recipe-ingredients-photo-camera") %>
@@ -50,8 +50,7 @@
     <%= form_with scope: :image, url: ingredient_image_path, multipart: true, html: { class: "recipe-ingredients-image-form", data: { ingredients_fab_target: "imageForm", action: "submit->ingredients-fab#submitImage" } } do |form| %>
       <header class="recipe-ingredients-image-header">
         <div>
-          <h2>Fill from photo</h2>
-          <p>Pen can fill your basket from a photo. You can also paste an image URL.</p>
+          <h2>Fill ingredients from photo</h2>
         </div>
         <button type="button" class="recipe-ingredients-image-close" data-action="click->ingredients-fab#closeImageDialog" aria-label="Close">
           <span aria-hidden="true"></span>
@@ -66,7 +65,6 @@
             <%= icon_svg(:camera, class_name: "recipe-ingredients-image-drop-camera") %>
           </span>
           <strong>Drop a photo here</strong>
-          <span>or click to choose one</span>
         </div>
 
         <div class="recipe-ingredients-image-divider"><span>or paste an image URL</span></div>
@@ -97,7 +95,7 @@
     <% end %>
   </dialog>
 
-  <button type="button" class="btn recipe-ingredients-fab-button" data-variant="outline" data-ingredients-fab-target="trigger" data-action="click->ingredients-fab#toggle" data-state="disabled" data-tooltip="Ingredients: add what you have" data-side="left" data-align="center" aria-label="Ingredients: add what you have" aria-controls="recipe-ingredients-panel" aria-expanded="false">
+  <button type="button" class="btn recipe-ingredients-fab-button" data-variant="outline" data-ingredients-fab-target="trigger" data-action="click->ingredients-fab#toggle" data-state="disabled" aria-label="Ingredients: add what you have" aria-controls="recipe-ingredients-panel" aria-expanded="false">
     <%= icon_svg(:ingredients, class_name: "recipe-ingredients-fab-icon") %>
     <span class="sr-only" data-ingredients-fab-target="status">Add what you have</span>
   </button>

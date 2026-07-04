@@ -212,6 +212,7 @@
   text-align: left;
   text-overflow: clip;
   white-space: normal;
+  width: max-content;
 }
 
 .recipe-card a:hover .recipe-card-image img,
