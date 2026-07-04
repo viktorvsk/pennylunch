@@ -23,6 +23,5 @@ FactoryBot.define do
     image { "https://example.com/recipe.jpg" }
     total_time { prep_time + cook_time }
     sequence(:source_position)
-    source_key { Recipe.source_key_for(title:, category:, author:) }
   end
 end

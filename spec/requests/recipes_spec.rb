@@ -36,7 +36,7 @@ RSpec.describe "Recipes", type: :request do
     expect(document.css("a[href='/recipes/pasta'][data-turbo-frame='_top']")).not_to be_empty
     expect(document.at_css("div[role='option'][data-value='air fryer main dish recipes'][data-label='Air Fryer Main Dish Recipes']").text).to eq("Air Fryer Main Dish Recipes")
     expect(response.body).to include("data-tooltip=\"Rating: 4.95 out of 5\"")
-    expect(response.body).to include("data-tooltip=\"Prep: 10 min, cook: 20 min\"")
+    expect(response.body).to include("data-tooltip=\"Prepare for 10 minutes then cook for 20 minutes\"")
     expect(response.body).to include("href=\"/recipes/pasta\"")
     expect(response.body).to include("tomato, pasta, garlic")
     ingredient_summary = document.at_css("[data-recipe-ingredients]")

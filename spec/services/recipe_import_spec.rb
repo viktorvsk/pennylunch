@@ -111,6 +111,21 @@ RSpec.describe RecipeImport do
     expect(Recipe.count).to eq(0)
   end
 
+  it "rejects parser data that does not match source ingredients before writing" do
+    ingredient_parser = lambda do |ingredient_lists|
+      ingredient_lists.map.with_index do |ingredients, index|
+        IngredientParser::Result.new(
+          [ "ingredient-#{index}" ],
+          ingredients.first(1).map { |ingredient| { "input" => ingredient } }
+        )
+      end
+    end
+
+    expect { described_class.call(url: "https://example.test/recipes.json.gz", downloader:, ingredient_parser:) }
+      .to raise_error(RecipeImport::Error, /parser returned 1 data entries for 3 ingredients in source record 0/)
+    expect(Recipe.count).to eq(0)
+  end
+
   it "requires an explicit source URL" do
     expect { described_class.call(downloader:, ingredient_parser:) }.to raise_error(ArgumentError, /missing keyword: :url/)
   end

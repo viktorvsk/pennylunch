@@ -3,7 +3,7 @@
   <span class="recipe-meta-text"><%= recipe.author.presence || "Unknown author" %></span>
 </span>
 
-<% if recipe.total_time_known? %>
+<% if recipe.total_time.to_i.positive? %>
   <span class="recipe-meta-item" data-tooltip="<%= recipe_time_tooltip(recipe) %>" data-side="<%= tooltip_side %>" data-align="center">
     <%= icon_svg(:clock, class_name: "size-3.5") %>
     <span><%= recipe.total_time %> min</span>

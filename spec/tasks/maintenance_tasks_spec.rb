@@ -84,6 +84,20 @@ RSpec.describe "Maintenance tasks" do
     expect(LocalEmbedding).to have_received(:call).with([ "lemon\nchicken breast\nsalt" ])
   end
 
+  it "rejects parser data that does not match recipe ingredients before backfilling" do
+    recipe = create(:recipe, ingredients_vector: nil)
+    original_parse_data = recipe.ingredient_parse_data
+    allow(IngredientParser).to receive(:call).and_return([
+      IngredientParser::Result.new([ "lemon" ], [ { "input" => recipe.ingredients.first } ])
+    ])
+    allow(LocalEmbedding).to receive(:call)
+
+    expect { Maintenance::BackfillRecipeIngredientVectorsTask.new.process(recipe) }
+      .to raise_error(Maintenance::BackfillRecipeIngredientVectorsTask::InvalidParserResultError, /parser returned 1 data entries for 3 ingredients in recipe #{recipe.id}/)
+    expect(recipe.reload.ingredient_parse_data).to eq(original_parse_data)
+    expect(LocalEmbedding).not_to have_received(:call)
+  end
+
   it "upserts ingredients from the manual alias catalog" do
     avocado = create(:ingredient, name: "avocado", aliases: [ "old avocado" ])
     retained = create(:ingredient, name: "turmeric", aliases: [ "turmeric" ])

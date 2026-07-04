@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_04_121000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_04_122000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -63,7 +63,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_121000) do
     t.vector "ingredients_vector", limit: 384
     t.integer "prep_time", null: false
     t.decimal "ratings", precision: 4, scale: 2, null: false
-    t.string "source_key", null: false
     t.integer "source_position", null: false
     t.string "title", null: false
     t.virtual "title_search_vector", type: :tsvector, as: "to_tsvector('english'::regconfig, (COALESCE(title, ''::character varying))::text)", stored: true
@@ -73,7 +72,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_121000) do
     t.index ["ingredient_names"], name: "index_recipes_on_ingredient_names", using: :gin
     t.index ["ingredients_vector"], name: "index_recipes_on_ingredients_vector", opclass: :vector_cosine_ops, where: "(ingredients_vector IS NOT NULL)", using: :hnsw
     t.index ["ratings"], name: "index_recipes_on_ratings"
-    t.index ["source_key"], name: "index_recipes_on_source_key", unique: true
     t.index ["source_position"], name: "index_recipes_on_source_position", unique: true
     t.index ["title_search_vector"], name: "index_recipes_on_title_search_vector", using: :gin
     t.index ["total_time"], name: "index_recipes_on_total_time"

@@ -23,6 +23,10 @@ RSpec.describe Recipe do
     it "does not persist friendly URL slugs" do
       expect(described_class.column_names).not_to include("slug")
     end
+
+    it "does not persist source identity keys" do
+      expect(described_class.column_names).not_to include("source_key")
+    end
   end
 
   describe ".slug_for" do
@@ -38,28 +42,24 @@ RSpec.describe Recipe do
     end
   end
 
-  describe ".display_image_url_for" do
+  describe "#display_image_url" do
     it "extracts direct Allrecipes image URLs from Meredith proxy URLs" do
-      url = "https://imagesvc.meredithcorp.io/v3/mm/image?url=https%3A%2F%2Fimages.media-allrecipes.com%2Fuserphotos%2F8263243.jpg"
+      recipe = described_class.new(image: "https://imagesvc.meredithcorp.io/v3/mm/image?url=https%3A%2F%2Fimages.media-allrecipes.com%2Fuserphotos%2F8263243.jpg")
 
-      expect(described_class.display_image_url_for(url)).to eq("https://images.media-allrecipes.com/userphotos/8263243.jpg")
+      expect(recipe.display_image_url).to eq("https://images.media-allrecipes.com/userphotos/8263243.jpg")
     end
 
     it "keeps non-proxy image URLs unchanged" do
-      url = "https://example.com/recipe.jpg"
+      recipe = described_class.new(image: "https://example.com/recipe.jpg")
 
-      expect(described_class.display_image_url_for(url)).to eq(url)
+      expect(recipe.display_image_url).to eq("https://example.com/recipe.jpg")
     end
   end
 
   describe "validations" do
-    it "allows empty parser data but rejects parser data that does not match source ingredients" do
+    it "leaves parser data alignment to import and backfill workflows" do
       recipe = build(:recipe, ingredients: [ "1 cup flour", "1 egg" ], ingredient_parse_data: [ { "input" => "1 cup flour" } ])
 
-      expect(recipe).not_to be_valid
-      expect(recipe.errors[:ingredient_parse_data]).to include("must match ingredients")
-
-      recipe.ingredient_parse_data = []
       expect(recipe).to be_valid
     end
   end

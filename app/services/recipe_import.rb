@@ -32,7 +32,7 @@ class RecipeImport
         parser_result.ingredient_parse_data
       )
     end
-    raise Error, "ingredient parser returned #{parser_results.size} lists for #{records.size} source records" unless parser_results.size == records.size
+    validate_parser_results(records, parser_results)
 
     Recipe.transaction do
       Recipes::ImportCopyQuery.lock_table
@@ -58,12 +58,12 @@ class RecipeImport
   def validate_records(records)
     raise InvalidSourceError, "source payload must be a JSON array" unless records.is_a?(Array)
 
-    source_keys = records.map.with_index do |record, index|
+    source_identities = records.map.with_index do |record, index|
       validate_record(record, index)
-      Recipe.source_key_for(title: record.fetch("title"), category: record.fetch("category"), author: record.fetch("author"))
+      source_identity_for(record)
     end
 
-    duplicates = source_keys.tally.select { |_key, count| count > 1 }
+    duplicates = source_identities.tally.select { |_identity, count| count > 1 }
     raise DuplicateSourceIdentityError, "source contains duplicate title/category/author identities" if duplicates.any?
   end
 
@@ -76,6 +76,18 @@ class RecipeImport
   def parse_ingredients(records)
     records.each_slice(PARSER_BATCH_SIZE).flat_map do |records_slice|
       ingredient_parser.call(records_slice.map { |record| record.fetch("ingredients") })
+    end
+  end
+
+  def validate_parser_results(records, parser_results)
+    raise Error, "ingredient parser returned #{parser_results.size} lists for #{records.size} source records" unless parser_results.size == records.size
+
+    records.zip(parser_results).each_with_index do |(record, parser_result), index|
+      ingredients = record.fetch("ingredients")
+      parse_data = parser_result.ingredient_parse_data
+      next if parse_data.is_a?(Array) && parse_data.size == ingredients.size
+
+      raise Error, "ingredient parser returned #{parser_data_count(parse_data)} data entries for #{ingredients.size} ingredients in source record #{index}"
     end
   end
 
@@ -99,7 +111,6 @@ class RecipeImport
           record.fetch("author"),
           record.fetch("image"),
           total_time,
-          Recipe.source_key_for(title: record.fetch("title"), category: record.fetch("category"), author: record.fetch("author")),
           index,
           now,
           now
@@ -115,5 +126,17 @@ class RecipeImport
       %("#{escaped}")
     end
     "{#{escaped_values.join(",")}}"
+  end
+
+  def parser_data_count(parse_data)
+    parse_data.is_a?(Array) ? parse_data.size : "non-array"
+  end
+
+  def source_identity_for(record)
+    [
+      record.fetch("title").to_s.strip.downcase,
+      record.fetch("category").to_s.strip.downcase,
+      record.fetch("author").to_s.strip.downcase
+    ]
   end
 end

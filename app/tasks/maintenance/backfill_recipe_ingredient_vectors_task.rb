@@ -17,6 +17,7 @@ module Maintenance
   # and writes the derived fields back to each recipe.
   class BackfillRecipeIngredientVectorsTask < MaintenanceTasks::Task
     BATCH_SIZE = 128
+    class InvalidParserResultError < StandardError; end
 
     def collection
       Recipe.in_batches(of: BATCH_SIZE)
@@ -25,7 +26,7 @@ module Maintenance
     def process(records)
       recipes = records.is_a?(Recipe) ? [ records ] : records.to_a
       vector_ingredient_lookup = Ingredient.filterable_lookup_map
-      parser_results = IngredientParser.call(recipes.map(&:ingredients)).map { |parser_result| canonical_parser_result(parser_result, vector_ingredient_lookup) }
+      parser_results = parser_results_for(recipes, vector_ingredient_lookup)
       vectors = vectors_for(recipes.zip(parser_results))
 
       recipes.zip(parser_results).each do |recipe, parser_result|
@@ -38,6 +39,24 @@ module Maintenance
     end
 
     private
+
+    def parser_results_for(recipes, vector_ingredient_lookup)
+      parser_results = IngredientParser.call(recipes.map(&:ingredients))
+      raise InvalidParserResultError, "ingredient parser returned #{parser_results.size} results for #{recipes.size} recipes" unless parser_results.size == recipes.size
+
+      parser_results.map.with_index do |parser_result, index|
+        recipe = recipes.fetch(index)
+        validate_parser_result!(recipe, parser_result)
+        canonical_parser_result(parser_result, vector_ingredient_lookup)
+      end
+    end
+
+    def validate_parser_result!(recipe, parser_result)
+      parse_data = parser_result.ingredient_parse_data
+      return if parse_data.is_a?(Array) && parse_data.size == recipe.ingredients.size
+
+      raise InvalidParserResultError, "ingredient parser returned #{parser_data_count(parse_data)} data entries for #{recipe.ingredients.size} ingredients in recipe #{recipe.id}"
+    end
 
     def canonical_parser_result(parser_result, vector_ingredient_lookup)
       {
@@ -57,6 +76,10 @@ module Maintenance
       empty_vectors = (recipes_with_parser_results - recipes_with_names).to_h { |(recipe, _parser_result)| [ recipe.id, nil ] }
       embedded_vectors = recipes_with_names.zip(vectors).to_h { |(recipe, _parser_result), vector| [ recipe.id, vector ] }
       empty_vectors.merge(embedded_vectors)
+    end
+
+    def parser_data_count(parse_data)
+      parse_data.is_a?(Array) ? parse_data.size : "non-array"
     end
   end
 end

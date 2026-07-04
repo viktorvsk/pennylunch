@@ -16,7 +16,6 @@ module Recipes
       author
       image
       total_time
-      source_key
       source_position
       created_at
       updated_at

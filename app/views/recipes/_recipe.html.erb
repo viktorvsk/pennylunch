@@ -22,7 +22,7 @@
     </header>
 
     <% if ingredient_names.any? %>
-      <p class="recipe-card-ingredients" data-recipe-ingredients data-ingredient-names="<%= ingredient_names.to_json %>" data-visible-limit="<%= ApplicationHelper::DEFAULT_INGREDIENT_SUMMARY_LIMIT %>"><%= ingredient_summary %></p>
+      <p class="recipe-card-ingredients" data-recipe-ingredients data-ingredient-names="<%= ingredient_names.to_json %>" data-visible-limit="<%= IngredientsHelper::DEFAULT_INGREDIENT_SUMMARY_LIMIT %>"><%= ingredient_summary %></p>
     <% end %>
 
     <footer class="recipe-card-footer">

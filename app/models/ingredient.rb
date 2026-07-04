@@ -9,26 +9,28 @@ class Ingredient < ApplicationRecord
   validate :name_must_not_match_another_alias
   validate :name_must_be_canonical
 
-  def self.normalize_lookup_key(value)
-    value.to_s.squish.downcase.presence
-  end
+  class << self
+    def normalize_lookup_key(value)
+      value.to_s.squish.downcase.presence
+    end
 
-  def self.filterable_lookup_map
-    where(optional: false).pluck(:name, :aliases).each_with_object({}) do |(name, aliases), mapping|
-      ([ name ] + Array(aliases)).each do |value|
-        key = normalize_lookup_key(value)
-        mapping[key] = name if key.present?
+    def filterable_lookup_map
+      where(optional: false).pluck(:name, :aliases).each_with_object({}) do |(name, aliases), mapping|
+        ([ name ] + Array(aliases)).each do |value|
+          key = normalize_lookup_key(value)
+          mapping[key] = name if key.present?
+        end
       end
     end
-  end
 
-  def self.filterable_canonical_names_for(names)
-    mapping = filterable_lookup_map
-    Array(names).filter_map { |name| mapping[normalize_lookup_key(name)] }.uniq
-  end
+    def filterable_canonical_names_for(names)
+      mapping = filterable_lookup_map
+      Array(names).filter_map { |name| mapping[normalize_lookup_key(name)] }.uniq
+    end
 
-  def self.filter_options
-    order(:name).pluck(:name, :optional).map { |name, optional| { name:, optional: } }
+    def filter_options
+      order(:name).pluck(:name, :optional).map { |name, optional| { name:, optional: } }
+    end
   end
 
   private
