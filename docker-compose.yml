@@ -14,7 +14,7 @@ services:
       fibe.gg/production: "false"
       fibe.gg/repo_url: https://github.com/viktorvsk/pennylunch.git
       fibe.gg/source_mount: /rails
-      fibe.gg/start_command: "bin/setup --skip-server && bin/dev"
+      fibe.gg/start_command: "bin/setup --skip-server && rm -f tmp/pids/server.pid && bin/dev"
       fibe.gg/subdomain: "@"
       fibe.gg/visibility: external
     init: true

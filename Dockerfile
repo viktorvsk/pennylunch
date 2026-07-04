@@ -55,7 +55,7 @@ COPY . .
 
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 EXPOSE 3000
-CMD ["bash", "-lc", "bin/setup --skip-server && bin/dev"]
+CMD ["bash", "-lc", "bin/setup --skip-server && rm -f tmp/pids/server.pid && bin/dev"]
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
