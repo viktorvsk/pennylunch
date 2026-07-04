@@ -10,7 +10,11 @@ RSpec.describe RecipeIngredientRecomputeQuery do
     create(:recipe_ingredient, recipe:, ingredient: stale)
     create(:recipe_ingredient, recipe: untouched_recipe, ingredient: stale)
 
-    Recipe.connection.exec_query(described_class.call(recipe_ids: [ recipe.id ]), described_class.name)
+    query = described_class.call(recipe_ids: [ recipe.id ])
+
+    expect(recipe.resolved_ingredients.pluck(:id)).to eq([ stale.id ])
+
+    Recipe.connection.exec_query(query, described_class.name)
 
     expect(recipe.resolved_ingredients.order(:name).pluck(:name)).to eq([ "pasta", "tomato" ])
     expect(untouched_recipe.resolved_ingredients.pluck(:id)).to eq([ stale.id ])

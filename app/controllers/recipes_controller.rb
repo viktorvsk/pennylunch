@@ -5,10 +5,6 @@ class RecipesController < ApplicationController
   MAX_INGREDIENT_BASKET_ITEMS = 100
   DEFAULT_PAGE = 1
   PER_PAGE = 24
-  DEFAULT_SORT = "best_match"
-  QUICK_TOTAL_TIME_LIMIT = 30
-  POPULAR_RATING_THRESHOLD = 4.8
-  UNKNOWN_TIME_LAST_SQL = "CASE WHEN total_time = 0 THEN 1 ELSE 0 END DESC"
 
   def index
     if turbo_frame_request?
@@ -42,27 +38,8 @@ class RecipesController < ApplicationController
   end
 
   def recipe_scope
-    boolean = ActiveModel::Type::Boolean.new
-    category = Recipe.normalize_category(recipe_params["category"])
-
-    relation = TitleSearchQuery.call(relation: Recipe.all, query: recipe_params["q"])
-    relation = relation.where(category_normalized: category) if category.present?
-    relation = relation.where("total_time > 0 AND total_time < ?", QUICK_TOTAL_TIME_LIMIT) if boolean.cast(recipe_params["quick"])
-    relation = relation.where("ratings > ?", POPULAR_RATING_THRESHOLD) if boolean.cast(recipe_params["popular"])
-    relation = RecipeSearch.call(relation:, ingredients: recipe_params["ingredients"])
-
-    case recipe_params["sort"].presence || DEFAULT_SORT
-    when "time_desc"
-      relation.reorder(Arel.sql(UNKNOWN_TIME_LAST_SQL), total_time: :desc, id: :asc)
-    when "time_asc"
-      relation.reorder(Arel.sql(UNKNOWN_TIME_LAST_SQL), total_time: :asc, id: :asc)
-    when "rating_asc"
-      relation.reorder(ratings: :asc, id: :asc)
-    when "rating_desc"
-      relation.reorder(ratings: :desc, id: :asc)
-    else
-      RecipeSearch.order_by_best_match(relation, ingredients: recipe_params["ingredients"]).order(ratings: :desc, total_time: :asc, id: :asc)
-    end
+    relation = RecipeFilterQuery.call(filters: recipe_params)
+    RecipeSortQuery.call(relation:, sort: recipe_params["sort"], ingredients: recipe_params["ingredients"])
   end
 
   def recipe_params

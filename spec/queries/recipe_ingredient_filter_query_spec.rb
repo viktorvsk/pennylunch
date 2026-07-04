@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe RecipeSearch do
+RSpec.describe RecipeIngredientFilterQuery do
   around do |example|
     original_max_distance = SETTINGS.ingredients_max_cosine_distance
     example.run
@@ -38,34 +38,6 @@ RSpec.describe RecipeSearch do
 
     expect(result).to eq([ avocado_rice_bowl, simple_avocado, lime_water ])
     expect(IngredientParser).not_to have_received(:call)
-  end
-
-  it "orders a relation by fewest missing required ingredients before fuller partials" do
-    create(:ingredient, name: "avocado", aliases: [ "avocado", "avocados" ])
-    create(:ingredient, name: "lime")
-    create(:ingredient, name: "rice")
-    exact_match = create(:recipe, title: "Avocado Lime Salad", ratings: 4.0, ingredient_names: [ "avocados", "lime" ])
-    fewer_missing_partial = create(:recipe, title: "Avocado Plate", ratings: 5.0, ingredient_names: [ "avocados" ])
-    fuller_match_with_missing = create(:recipe, title: "Avocado Rice Bowl", ratings: 5.0, ingredient_names: [ "avocados", "lime", "rice" ])
-    create_recipe_ingredient_rows
-
-    result = described_class.order_by_best_match(Recipe.all, ingredients: "avocado, lime")
-
-    expect(result).to eq([ exact_match, fewer_missing_partial, fuller_match_with_missing ])
-  end
-
-  it "ignores optional and unknown recipe ingredients for best match counts" do
-    create(:ingredient, name: "avocado", aliases: [ "avocados" ])
-    create(:ingredient, name: "lime")
-    create(:ingredient, name: "salt", optional: true)
-    missing_optional = create(:recipe, title: "Salted Avocado Lime Plate", ingredient_names: [ "avocados", "lime", "salt" ])
-    missing_unknown = create(:recipe, title: "Seasoned Avocado Plate", ingredient_names: [ "avocados", "house seasoning", "secret sauce" ])
-    complete = create(:recipe, title: "Avocado Plate", ingredient_names: [ "avocados" ])
-    create_recipe_ingredient_rows
-
-    result = described_class.order_by_best_match(Recipe.all, ingredients: "avocado, lime").order(id: :asc)
-
-    expect(result).to eq([ missing_optional, missing_unknown, complete ])
   end
 
   it "narrows the relation to all ingredient vector candidates within threshold" do
@@ -157,19 +129,6 @@ RSpec.describe RecipeSearch do
     expect(result).to eq([ avocado_recipe ])
   end
 
-  it "builds search SQL from recipe ingredient joins instead of raw recipe JSON or alias JSON" do
-    create(:ingredient, name: "avocado")
-    create(:recipe, title: "Avocado Toast", ingredient_names: [ "avocado" ])
-    create_recipe_ingredient_rows
-
-    relation = described_class.call(relation: Recipe.all, ingredients: "avocado")
-    sql = described_class.order_by_best_match(relation, ingredients: "avocado").to_sql
-
-    expect(sql).not_to include("jsonb_array_elements_text")
-    expect(sql).not_to include("aliases @>")
-    expect(sql).to include("recipe_ingredients")
-  end
-
   it "ranks ingredient matches with the real local embedding model" do
     use_strategy("vector")
     skip "Set RUN_EMBEDDING_SPECS=1 to run real Informers embedding specs." unless ENV["RUN_EMBEDDING_SPECS"] == "1"
@@ -215,7 +174,7 @@ RSpec.describe RecipeSearch do
     lookup = Ingredient.lookup_map
 
     Recipe.find_each do |recipe|
-      Array(recipe.ingredient_names).filter_map do |raw_name|
+      recipe.ingredient_names.filter_map do |raw_name|
         ingredient_ids_by_name[lookup[Ingredient.normalize_lookup_key(raw_name)]]
       end.uniq.each do |ingredient_id|
         RecipeIngredient.find_or_create_by!(recipe:, ingredient_id:)

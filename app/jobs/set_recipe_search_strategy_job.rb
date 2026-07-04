@@ -10,10 +10,10 @@ class SetRecipeSearchStrategyJob < ApplicationJob
       raise InvalidStrategyError, "unknown recipe search strategy: #{normalized_strategy}"
     end
 
-    if normalized_strategy == RecipeSearch::VECTOR_SEARCH_STRATEGY
-      Rails.cache.write(RecipeSearch::SEARCH_STRATEGY_CACHE_KEY, RecipeSearch::VECTOR_SEARCH_STRATEGY)
+    if normalized_strategy == RecipeIngredientFilterQuery::VECTOR_SEARCH_STRATEGY
+      Rails.cache.write(RecipeIngredientFilterQuery::SEARCH_STRATEGY_CACHE_KEY, RecipeIngredientFilterQuery::VECTOR_SEARCH_STRATEGY)
     else
-      Rails.cache.delete(RecipeSearch::SEARCH_STRATEGY_CACHE_KEY)
+      Rails.cache.delete(RecipeIngredientFilterQuery::SEARCH_STRATEGY_CACHE_KEY)
     end
   end
 end

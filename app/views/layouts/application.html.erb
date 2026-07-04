@@ -23,19 +23,13 @@
     <%= stylesheet_link_tag "recipe_cards", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "recipe_toolbar", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "recipe_ingredients_fab", "data-turbo-track": "reload" %>
-    <%= javascript_include_tag "turbo.min", type: "module", "data-turbo-track": "reload" %>
     <%= javascript_include_tag "basecoat/basecoat-1.0.1.min", defer: true, "data-turbo-track": "reload" %>
     <%= javascript_include_tag "basecoat/combobox-1.0.1.min", defer: true, "data-turbo-track": "reload" %>
     <%= javascript_include_tag "basecoat/dropdown-menu-1.0.1.min", defer: true, "data-turbo-track": "reload" %>
-    <%= javascript_include_tag "infinite_scroll", defer: true, "data-turbo-track": "reload" %>
-    <%= javascript_include_tag "recipe_filter_core", defer: true, "data-turbo-track": "reload" %>
-    <%= javascript_include_tag "recipe_ingredient_matches", defer: true, "data-turbo-track": "reload" %>
-    <%= javascript_include_tag "recipe_auto_submit", defer: true, "data-turbo-track": "reload" %>
-    <%= javascript_include_tag "recipe_ingredients_fab", defer: true, "data-turbo-track": "reload" %>
-    <%= javascript_include_tag "recipe_filters", defer: true, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
   </head>
 
-  <body class="min-h-[100dvh] bg-background text-foreground">
+  <body class="min-h-[100dvh] bg-background text-foreground" data-controller="recipe-ui ingredient-matches" data-action="turbo:visit@document->recipe-ui#startLoading turbo:before-render@document->recipe-ui#stopLoading turbo:load@document->recipe-ui#turboLoad turbo:render@document->recipe-ui#turboRender turbo:frame-render@document->recipe-ui#turboFrameRender turbo:fetch-request-error@document->recipe-ui#stopLoading recipes:updated@document->recipe-ui#recipesUpdated recipes:updated@document->ingredient-matches#refresh turbo:frame-render@document->ingredient-matches#refresh pennylunch:ingredient-basket-change@window->ingredient-matches#refresh">
     <script type="application/json" id="recipe-ui-catalog" data-recipe-ui-catalog><%== json_escape(recipe_ui_catalog_json) %></script>
     <%= yield %>
     <%= render "recipes/ingredients_fab", filters: recipe_layout_fab_filters %>

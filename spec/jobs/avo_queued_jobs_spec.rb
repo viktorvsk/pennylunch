@@ -67,8 +67,7 @@ RSpec.describe "Avo-queued jobs", type: :job do
     expect(LocalEmbedding).to have_received(:call).with("lemon\nchicken breast")
   end
 
-  it "indexes recipe batches with one recipe update and one ingredient recompute per batch" do
-    stub_const("IndexRecipeJob::BATCH_SIZE", 2)
+  it "indexes selected recipes with one recipe update and one ingredient recompute" do
     create(:ingredient, name: "tomato", aliases: [ "tomatoes" ])
     create(:ingredient, name: "basil", optional: true)
     create(:ingredient, name: "chicken")
@@ -226,8 +225,8 @@ RSpec.describe "Avo-queued jobs", type: :job do
   end
 
   it "uses normalized names, aliases, and boolean optional values in the real alias catalog" do
-    ingredients = YAML.safe_load_file(BootstrapIngredients::CATALOG_PATH.to_s).fetch("ingredients")
-    optional_values = ingredients.values.map { |attributes| { "optional" => false }.merge(attributes)["optional"] }.uniq
+    ingredients = YAML.safe_load_file(BootstrapIngredients::CATALOG_PATH.to_s)["ingredients"]
+    optional_values = ingredients.values.map { |attributes| attributes["optional"] || false }.uniq
     invalid_names = ingredients.keys.reject { |name| name == Ingredient.normalize_lookup_key(name) }
     invalid_aliases = ingredients.values.flat_map { |attributes| attributes["aliases"] }.reject { |name| name == Ingredient.normalize_lookup_key(name) }
 

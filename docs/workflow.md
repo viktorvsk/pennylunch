@@ -44,16 +44,16 @@ Run these Avo actions in order:
 1. In `/avo/resources/recipes`, select all recipes and run `Delete selected recipes`; then in `/avo/resources/ingredients`, select all ingredients and run `Delete selected ingredients`.
 2. In `/avo/resources/recipes`, run standalone `Import recipes` with the recipe source `url`.
 3. Review and complete `config/ingredient_aliases.yml`.
-4. In `/avo/resources/ingredients`, run standalone `Sync ingredients from alias catalog`.
+4. In `/avo/resources/ingredients`, run standalone `Bootstrap ingredients`.
 5. In `/avo/resources/recipes`, select all recipes and run `Index selected recipes`.
 
-The import stores source recipe fields only. It leaves `recipes.ingredient_names`, `recipes.ingredient_parse_data`, and `recipes.ingredients_vector` empty until recipe indexing. The catalog sync reads `config/ingredient_aliases.yml` and upserts Ingredient records from that reviewed catalog. Optional ingredients are declared in the catalog for low-signal pantry items such as salt, sugar, water, and general cooking oils. Use Avo for small local edits and destructive local resets, but keep repository-owned bulk decisions in the YAML file. The recipe index job parses source ingredient lines, stores raw parser names in `recipes.ingredient_names`, stores structured parser output in `recipes.ingredient_parse_data`, generates vectors from non-optional canonical Ingredient names, and recomputes `RecipeIngredient` associations in the same database transaction as the indexed recipe writes. After catalog-only changes, run `Index selected recipes` for affected or all recipes when `RecipeIngredient` rows and vectors must reflect the new catalog.
+The import stores source recipe fields only. It leaves `recipes.ingredient_names`, `recipes.ingredient_parse_data`, and `recipes.ingredients_vector` empty until recipe indexing. The catalog bootstrap reads `config/ingredient_aliases.yml` and upserts Ingredient records from that reviewed catalog. Optional ingredients are declared in the catalog for low-signal pantry items such as salt, sugar, water, and general cooking oils. Use Avo for small local edits and destructive local resets, but keep repository-owned bulk decisions in the YAML file. The recipe index job parses source ingredient lines, stores raw parser names in `recipes.ingredient_names`, stores structured parser output in `recipes.ingredient_parse_data`, generates vectors from non-optional canonical Ingredient names, and recomputes `RecipeIngredient` associations in the same database transaction as the indexed recipe writes. After catalog-only changes, run `Index selected recipes` for affected or all recipes when `RecipeIngredient` rows and vectors must reflect the new catalog.
 
-All import, indexing, catalog sync, and search-strategy actions enqueue Solid Queue jobs. Keep the `jobs` process running with `bin/dev`, or run `bin/jobs`, before using those actions.
+All import, indexing, catalog bootstrap, and search-strategy actions enqueue Solid Queue jobs. Keep the `jobs` process running with `bin/dev`, or run `bin/jobs`, before using those actions.
 
 Ingredient search uses overlap matching unless `Set recipe search strategy` stores `vector` in the runtime cache. Run that action with `strategy` set to `vector` to enable vector search, or `overlap` to delete the cache key and return to overlap search.
 
-In `/avo/resources/ingredients`, `Delete selected ingredients` removes Ingredient rows and their `RecipeIngredient` associations. If the catalog should be loaded from a clean slate, delete Ingredients in Avo first, then run `Sync ingredients from alias catalog` and `Index selected recipes` for affected or all recipes.
+In `/avo/resources/ingredients`, `Delete selected ingredients` removes Ingredient rows and their `RecipeIngredient` associations. If the catalog should be loaded from a clean slate, delete Ingredients in Avo first, then run `Bootstrap ingredients` and `Index selected recipes` for affected or all recipes.
 
 The import action only queues when the `recipes` table is empty. Use the Avo recipe delete action locally if you need to repeat the MVP import before staging upsert support exists. When catalog logic changed and both tables should be rebuilt, delete recipes first and ingredients second in Avo.
 
@@ -70,7 +70,7 @@ Coverage is enabled by the coverage linter, not by default test runs.
 Run real Informers relevance smoke specs explicitly when needed:
 
 ```bash
-RUN_EMBEDDING_SPECS=1 bin/rspec spec/services/recipe_search_spec.rb
+RUN_EMBEDDING_SPECS=1 bin/rspec spec/queries/recipe_ingredient_filter_query_spec.rb
 ```
 
 ## Checks
@@ -120,6 +120,10 @@ npm run browser:e2e
 ```
 
 The browser checks reuse `http://127.0.0.1:3000` by default and do not start Rails. Set `PENNYLUNCH_BASE_URL` when the active app is on a different port, and `PLAYWRIGHT_CHROME_EXECUTABLE` when Chrome is installed outside the default macOS path. `browser:smoke` covers index-to-show navigation, show-page layout, shared basket FAB rendering, and exact basket-ingredient highlighting on index and show pages. `browser:filter` seeds and cleans up deterministic `E2E Turbo Filter` records, drives title, category, quick, and popular filters through the real browser UI, verifies the Turbo-updated results include the relevant recipe while excluding irrelevant recipes, and checks that Basecoat toolbar icon controls still open after Turbo history restoration. If system Chrome is unavailable, run `npm run browser:install` once to install Playwright's Chromium browser.
+
+## JavaScript
+
+PennyLunch loads application JavaScript through Rails importmap. Stimulus controllers live under `app/javascript/controllers`, shared UI modules live under `app/javascript/lib`, and `config/importmap.rb` pins both directories. Custom app behavior should not be added under `app/assets/javascripts`; that path is reserved for vendored assets when needed.
 
 ## Environment Variables
 

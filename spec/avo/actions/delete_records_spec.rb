@@ -127,12 +127,12 @@ RSpec.describe "Avo record actions" do
     expect(action.response[:messages]).to include(hash_including(type: :error, body: "Unknown recipe search strategy."))
   end
 
-  it "queues ingredient alias catalog sync" do
-    action = run_action(Avo::Actions::SyncIngredientsFromAliasCatalog, [])
+  it "queues ingredient catalog bootstrap" do
+    action = run_action(Avo::Actions::BootstrapIngredients, [])
 
     expect(enqueued_jobs.first[:job]).to eq(BootstrapIngredients)
     expect(enqueued_jobs.first[:args]).to eq([])
-    expect(action.response[:messages]).to include(hash_including(type: :success, body: "Queued ingredient alias catalog sync."))
+    expect(action.response[:messages]).to include(hash_including(type: :success, body: "Queued ingredient catalog bootstrap."))
   end
 
   def run_action(action_class, query, fields: {})

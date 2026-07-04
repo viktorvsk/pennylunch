@@ -1,8 +1,6 @@
 class RecipeIngredientRecomputeQuery
   class << self
     def call(recipe_ids:)
-      return if recipe_ids.empty?
-
       <<~SQL.squish
         WITH target_recipes AS (
           #{Recipe.where(id: recipe_ids).select(:id).to_sql}

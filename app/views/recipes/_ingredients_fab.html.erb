@@ -1,7 +1,7 @@
 <% fab_filters = (local_assigns[:filters] || {}).to_h.with_indifferent_access %>
 
-<section id="recipe-ingredients-fab" class="recipe-ingredients-fab" data-turbo-permanent data-ingredients-fab data-current-ingredients="<%= fab_filters["ingredients"].to_s %>" data-current-enabled="<%= fab_filters["ingredients"].present? ? "true" : "false" %>">
-  <div id="recipe-ingredients-panel" class="recipe-ingredients-panel" data-ingredients-filter-panel hidden>
+<section id="recipe-ingredients-fab" class="recipe-ingredients-fab" data-turbo-permanent data-controller="ingredients-fab" data-ingredients-fab-current-ingredients-value="<%= fab_filters["ingredients"].to_s %>" data-action="keydown->ingredients-fab#escape pointerdown@document->ingredients-fab#closeFromOutside turbo:visit@document->ingredients-fab#close turbo:load@document->ingredients-fab#refreshPageContext">
+  <div id="recipe-ingredients-panel" class="recipe-ingredients-panel" data-ingredients-fab-target="panel" hidden>
     <header>
       <div class="recipe-ingredients-panel-header">
         <div class="recipe-ingredients-panel-copy">
@@ -9,32 +9,31 @@
           <p class="recipe-ingredients-panel-description">Pick matching ingredients. Enable to include them in filters.</p>
         </div>
         <label class="recipe-ingredients-switch" data-state="disabled">
-          <%= tag.input type: "checkbox", class: "sr-only", role: "switch", aria: { label: "Use ingredients in filters" }, data: { ingredients_filter_enabled: true } %>
+          <%= tag.input type: "checkbox", class: "sr-only", role: "switch", aria: { label: "Use ingredients in filters" }, data: { ingredients_fab_target: "enabledInput", action: "change->ingredients-fab#changeEnabled" } %>
           <span class="recipe-ingredients-switch-track" aria-hidden="true">
             <span class="recipe-ingredients-switch-thumb"></span>
           </span>
-          <span class="recipe-ingredients-switch-text" data-ingredients-enable-text>Off</span>
+          <span class="recipe-ingredients-switch-text" data-ingredients-fab-target="enabledText">Off</span>
         </label>
       </div>
     </header>
 
     <section class="recipe-ingredients-picker">
       <div class="recipe-ingredients-selected">
-        <div class="recipe-ingredients-selected-list" data-empty-text="No ingredients selected yet." data-ingredients-selected-list></div>
+        <div class="recipe-ingredients-selected-list" data-empty-text="No ingredients selected yet." data-ingredients-fab-target="selectedList"></div>
       </div>
 
       <div class="recipe-ingredients-field">
         <div class="recipe-ingredients-input-group">
-          <input id="recipe-ingredients-input" class="input" type="text" placeholder="Start typing, then choose a match" autocomplete="off" role="combobox" aria-label="Ingredient name" aria-autocomplete="list" aria-expanded="false" aria-controls="recipe-ingredients-options" data-ingredients-filter-input>
-          <button type="button" class="btn recipe-ingredients-add-button" data-ingredients-add-button disabled>Add Ingredient</button>
+          <input id="recipe-ingredients-input" class="input" type="text" placeholder="Start typing, then choose a match" autocomplete="off" role="combobox" aria-label="Ingredient name" aria-autocomplete="list" aria-expanded="false" aria-controls="recipe-ingredients-options" data-ingredients-fab-target="input" data-action="input->ingredients-fab#search keydown->ingredients-fab#keydown blur->ingredients-fab#blur">
         </div>
-        <div id="recipe-ingredients-options" class="recipe-ingredients-options" role="listbox" data-ingredients-filter-options hidden></div>
+        <div id="recipe-ingredients-options" class="recipe-ingredients-options" role="listbox" data-ingredients-fab-target="options" hidden></div>
       </div>
     </section>
   </div>
 
-  <button type="button" class="btn recipe-ingredients-fab-button" data-variant="outline" data-ingredients-fab-trigger data-state="disabled" data-tooltip="Ingredients: add what you have" data-side="left" data-align="center" aria-label="Ingredients: add what you have" aria-controls="recipe-ingredients-panel" aria-expanded="false">
+  <button type="button" class="btn recipe-ingredients-fab-button" data-variant="outline" data-ingredients-fab-target="trigger" data-action="click->ingredients-fab#toggle" data-state="disabled" data-tooltip="Ingredients: add what you have" data-side="left" data-align="center" aria-label="Ingredients: add what you have" aria-controls="recipe-ingredients-panel" aria-expanded="false">
     <%= icon_svg(:ingredients, class_name: "recipe-ingredients-fab-icon") %>
-    <span class="sr-only" data-ingredients-fab-status>Add what you have</span>
+    <span class="sr-only" data-ingredients-fab-target="status">Add what you have</span>
   </button>
 </section>

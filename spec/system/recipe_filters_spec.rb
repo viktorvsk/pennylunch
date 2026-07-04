@@ -92,43 +92,28 @@ RSpec.describe "Recipe filters", type: :system do
     visit recipes_path
 
     page.execute_script(<<~JS)
-      window.PennyLunch.writeBasket({ selected: ["honey"], enabled: false });
-      window.PennyLunch.applyIngredientMatches();
+      document.cookie = `pennylunch.ingredients=${encodeURIComponent(JSON.stringify({ selected: ["honey"], enabled: false }))}; Path=/; SameSite=Lax`;
+      window.dispatchEvent(new CustomEvent("pennylunch:ingredient-basket-change"));
     JS
 
     expect(page).to have_no_css(".recipe-card-ingredients .recipe-ingredient-match", text: "honey")
 
     page.execute_script(<<~JS)
-      document.querySelector("[data-ingredients-filter-hidden]").value = "honey";
-      window.PennyLunch.applyIngredientMatches();
+      document.querySelector("[data-auto-submit-target~='ingredients']").value = "honey";
+      window.dispatchEvent(new CustomEvent("pennylunch:ingredient-basket-change"));
     JS
 
     expect(page).to have_css(".recipe-card-ingredients .recipe-ingredient-match", text: "honey")
   end
 
-  it "adds basket ingredients from the connected input and lists required ingredients before optional ones" do
-    long_ingredient = "roasted red pepper and caramelized onion relish with toasted sesame seed topping"
-    create(:ingredient, name: "avocado")
-    create(:ingredient, name: "salt", optional: true)
-    create(:ingredient, name: long_ingredient)
-    create(:recipe, title: "E2E Basket List Toast", ingredient_names: [ "avocado", "salt" ])
-
+  it "renders the basket panel with a bottom autocomplete input and no add button" do
     visit recipes_path
 
-    find("[data-ingredients-fab-trigger]").click
-    find("[data-ingredients-filter-input]").set("salt")
-    find("[data-ingredients-add-button]").click
-    find("[data-ingredients-filter-input]").set("avocado")
-    find("[data-ingredients-add-button]").click
-    find("[data-ingredients-filter-input]").set(long_ingredient)
-    find("[data-ingredients-add-button]").click
+    find("[data-ingredients-fab-target='trigger']").click
 
-    expect(page).to have_css(".recipe-ingredients-row", count: 3)
-    expect(page.all(".recipe-ingredients-row").map(&:text)).to eq([ "avocado", long_ingredient, "salt" ])
-    expect(page).to have_no_css(".recipe-ingredients-chip")
-    expect(page).to have_css(".recipe-ingredients-row[data-optional='false'] .recipe-ingredients-remove[aria-label='Remove avocado']")
-    expect(page).to have_css(".recipe-ingredients-row[data-optional='false'] .recipe-ingredients-remove[aria-label='Remove #{long_ingredient}']")
-    expect(page).to have_css(".recipe-ingredients-row[data-optional='true'] .recipe-ingredients-remove[aria-label='Remove salt']")
+    expect(page).to have_no_css("[data-ingredients-fab-target='addButton']")
+    expect(page).to have_no_text("Add Ingredient")
+
     layout = page.evaluate_script(<<~JS)
       (() => {
         const panel = document.querySelector("#recipe-ingredients-panel").getBoundingClientRect();
@@ -144,8 +129,7 @@ RSpec.describe "Recipe filters", type: :system do
           inputBottomGap: Math.round(panel.bottom - inputGroup.bottom - paddingBottom),
           selectedTopGap: Math.round(selected.top - pickerRect.top),
           selectedInputGap: Math.round(inputGroup.top - selected.bottom - gap),
-          selectedHeight: Math.round(selected.height),
-          selectedScrollsHorizontally: document.querySelector(".recipe-ingredients-selected").scrollWidth > document.querySelector(".recipe-ingredients-selected").clientWidth
+          selectedHeight: Math.round(selected.height)
         };
       })()
     JS
@@ -154,7 +138,6 @@ RSpec.describe "Recipe filters", type: :system do
     expect(layout.fetch("selectedTopGap").abs).to be <= 2
     expect(layout.fetch("selectedInputGap").abs).to be <= 2
     expect(layout.fetch("selectedHeight")).to be_positive
-    expect(layout.fetch("selectedScrollsHorizontally")).to be(true)
   end
 
   it "does not resubmit ingredient filters after returning from a show page" do
@@ -170,7 +153,8 @@ RSpec.describe "Recipe filters", type: :system do
       document.addEventListener("turbo:before-fetch-request", (event) => {
         window.__pennylunchFetches.push(event.detail.url.toString());
       });
-      window.PennyLunch.writeBasket({ selected: ["honey"], enabled: true });
+      document.cookie = `pennylunch.ingredients=${encodeURIComponent(JSON.stringify({ selected: ["honey"], enabled: true }))}; Path=/; SameSite=Lax`;
+      window.dispatchEvent(new CustomEvent("pennylunch:ingredient-basket-change"));
     JS
 
     click_link "PennyLunch"

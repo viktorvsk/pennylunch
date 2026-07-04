@@ -24,6 +24,8 @@ RSpec.describe RecipeIndexUpdateQuery do
     query = described_class.call(entries:)
 
     expect(query).to start_with("UPDATE \"recipes\"")
+    expect(first.reload.ingredient_names).to eq([ "old lemon" ])
+    expect(second.reload.ingredient_names).to eq([ "old pasta" ])
 
     update_statements = recorded_sql do
       Recipe.connection.execute(query)

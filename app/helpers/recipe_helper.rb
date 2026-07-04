@@ -54,7 +54,7 @@ module RecipeHelper
   end
 
   def recipe_sort_label(sort)
-    SORT_OPTIONS.fetch(sort.presence || RecipesController::DEFAULT_SORT, SORT_OPTIONS.fetch(RecipesController::DEFAULT_SORT))
+    SORT_OPTIONS.fetch(sort.presence || RecipeSortQuery::DEFAULT_SORT, SORT_OPTIONS.fetch(RecipeSortQuery::DEFAULT_SORT))
   end
 
   def recipe_filter_active?(value)
@@ -66,7 +66,7 @@ module RecipeHelper
     selected_category_label = selected_category.present? ? category_labels.fetch(selected_category, category_heading(selected_category)) : nil
 
     RecipeToolbarState.new(
-      current_sort: filters["sort"].presence || RecipesController::DEFAULT_SORT,
+      current_sort: filters["sort"].presence || RecipeSortQuery::DEFAULT_SORT,
       quick_active: recipe_filter_active?(filters["quick"]),
       popular_active: recipe_filter_active?(filters["popular"]),
       category_labels:,
@@ -123,7 +123,7 @@ module RecipeHelper
     values = filters.to_h.with_indifferent_access
     category = Recipe.normalize_category(values.delete(:category))
     values.delete(:page) if values[:page].blank?
-    values.delete(:sort) if values[:sort].blank? || values[:sort] == RecipesController::DEFAULT_SORT
+    values.delete(:sort) if values[:sort].blank? || values[:sort] == RecipeSortQuery::DEFAULT_SORT
     values.compact_blank!
 
     path = category.present? ? "/recipes/#{Recipe.category_slug_for(category)}" : recipes_path

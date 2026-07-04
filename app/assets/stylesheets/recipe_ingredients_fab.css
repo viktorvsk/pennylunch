@@ -154,46 +154,14 @@
 }
 
 .recipe-ingredients-input-group .input {
-  border-end-end-radius: 0;
-  border-start-end-radius: 0;
   flex: 1 1 auto;
   height: 100%;
   min-width: 0;
+  width: 100%;
 }
 
 .recipe-ingredients-input-group .input::placeholder {
   color: color-mix(in oklch, var(--foreground) 58%, transparent);
-}
-
-.recipe-ingredients-add-button {
-  background-color: oklch(0.45 0.12 155);
-  border-color: oklch(0.39 0.12 155);
-  border-end-start-radius: 0;
-  border-start-start-radius: 0;
-  color: white;
-  flex: 0 0 auto;
-  height: 100%;
-  min-width: 7.875rem;
-  padding-inline: 0.875rem;
-}
-
-.recipe-ingredients-add-button:hover {
-  background-color: oklch(0.4 0.12 155);
-  border-color: oklch(0.35 0.11 155);
-  color: white;
-}
-
-.recipe-ingredients-add-button:disabled {
-  background-color: var(--muted);
-  border-color: var(--border);
-  color: var(--muted-foreground);
-  cursor: not-allowed;
-}
-
-.recipe-ingredients-add-button:disabled:hover {
-  background-color: var(--muted);
-  border-color: var(--border);
-  color: var(--muted-foreground);
 }
 
 .recipe-ingredients-options {

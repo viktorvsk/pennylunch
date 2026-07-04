@@ -18,7 +18,7 @@ async function main() {
 
       for (const card of cards) {
         const link = card.querySelector("a[href^='/recipes/']")
-        const summary = card.querySelector("[data-recipe-ingredients]")
+        const summary = card.querySelector("[data-ingredient-matches-target~='summary']")
         const timeTooltip = card.querySelector(".recipe-card-footer .recipe-meta-item[data-tooltip]")
         if (!link || !summary || !timeTooltip) continue
 
@@ -33,7 +33,8 @@ async function main() {
     if (!exactIndexIngredient) throw new Error("No timed recipe card ingredient names found for show-page smoke check.")
 
     await page.evaluate((name) => {
-      window.PennyLunch.writeBasket({ selected: [name], enabled: false })
+      document.cookie = `pennylunch.ingredients=${encodeURIComponent(JSON.stringify({ selected: [name], enabled: false }))}; Path=/; SameSite=Lax`
+      window.dispatchEvent(new CustomEvent("pennylunch:ingredient-basket-change"))
     }, exactIndexIngredient)
     await page.reload({ waitUntil: "networkidle" })
 
@@ -43,8 +44,8 @@ async function main() {
     }
 
     await page.evaluate((name) => {
-      document.querySelector("[data-ingredients-filter-hidden]").value = name
-      window.PennyLunch.applyIngredientMatches()
+      document.querySelector("[data-auto-submit-target~='ingredients']").value = name
+      window.dispatchEvent(new CustomEvent("pennylunch:ingredient-basket-change"))
     }, exactIndexIngredient)
 
     const indexMatchedIngredient = (await page.locator(".recipe-card-ingredients .recipe-ingredient-match").first().innerText()).trim()
@@ -67,7 +68,8 @@ async function main() {
     })
     if (!showIngredientName) throw new Error("No show ingredient names found for basket highlight smoke check.")
     await page.evaluate((name) => {
-      window.PennyLunch.writeBasket({ selected: [name], enabled: true })
+      document.cookie = `pennylunch.ingredients=${encodeURIComponent(JSON.stringify({ selected: [name], enabled: true }))}; Path=/; SameSite=Lax`
+      window.dispatchEvent(new CustomEvent("pennylunch:ingredient-basket-change"))
     }, showIngredientName)
     await page.reload({ waitUntil: "networkidle" })
 

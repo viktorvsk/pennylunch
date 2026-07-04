@@ -10,6 +10,6 @@
       <% end %>
       <i><%= ingredient[:state] %></i>
     </span>
-    <%= link_to ingredient[:name], ingredient_reference_url(ingredient[:name]), class: "recipe-ingredient-link", data: { ingredient_name: ingredient[:name], ingredient_match_name: ingredient[:catalog_name].presence || ingredient[:name], ingredient_match_names: ingredient[:catalog_names].presence&.to_json }, target: "_blank", rel: "noopener" %>
+    <%= link_to ingredient[:name], ingredient_reference_url(ingredient[:name]), class: "recipe-ingredient-link", data: { ingredient_matches_target: "name", ingredient_name: ingredient[:name], ingredient_match_name: ingredient[:catalog_name].presence || ingredient[:name], ingredient_match_names: ingredient[:catalog_names].presence&.to_json }, target: "_blank", rel: "noopener" %>
   </span>
 </div>

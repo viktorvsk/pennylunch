@@ -39,7 +39,7 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("data-tooltip=\"Prepare for 10 minutes then cook for 20 minutes\"")
     expect(response.body).to include("href=\"/recipes/pasta\"")
     expect(response.body).to include("tomato, pasta, garlic")
-    ingredient_summary = document.at_css("[data-recipe-ingredients]")
+    ingredient_summary = document.at_css("[data-ingredient-matches-target='summary']")
     expect(JSON.parse(ingredient_summary["data-ingredient-names"])).to eq([ "tomato", "pasta", "garlic" ])
     expect(recipe_ui_catalog_from(document)).to include(
       "categoryLabels" => hash_including("air fryer main dish recipes" => "Air Fryer Main Dish Recipes"),
@@ -56,22 +56,23 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("data-tooltip=\"Category: Pasta\"")
     expect(document.css(".recipe-toolbar")).not_to be_empty
     expect(response.body).to include("recipe-toolbar-loading")
-    expect(response.body).to include("recipe_filter_core")
-    expect(response.body).to include("recipe_ingredients_fab")
-    expect(response.body).to include("data-ingredients-filter-hidden=\"true\"")
+    expect(response.body).to include("type=\"importmap\"")
+    expect(response.body).to include("data-controller=\"auto-submit\"")
+    expect(response.body).to include("data-auto-submit-target=\"ingredients\"")
     expect(response.body).to include("id=\"recipe-results-frame\"")
     expect(response.body).to include("id=\"recipe-ingredients-fab\"")
     expect(response.body).to include("data-turbo-permanent")
-    expect(response.body).to include("data-ingredients-fab")
+    expect(response.body).to include("data-controller=\"ingredients-fab\"")
     expect(response.body).to include("Ingredients at home")
     expect(response.body).to include("Pick matching ingredients. Enable to include them in filters.")
     expect(document.css("label[for='recipe-ingredients-input']")).to be_empty
     expect(document.css("[data-ingredients-filter-help]")).to be_empty
-    expect(document.at_css("[data-ingredients-add-button]").text).to eq("Add Ingredient")
+    expect(document.css("[data-ingredients-fab-target='addButton']")).to be_empty
+    expect(response.body).not_to include("Add Ingredient")
     expect(response.body).to include("data-recipe-ui-catalog")
     expect(response.body).not_to include("data-ingredient-options")
-    expect(response.body).to include("data-ingredients-filter-input")
-    expect(response.body).to include("data-ingredients-selected-list")
+    expect(response.body).to include("data-ingredients-fab-target=\"input\"")
+    expect(response.body).to include("data-ingredients-fab-target=\"selectedList\"")
     expect(response.body).to include("tomato")
     expect(response.body).not_to include("data-ingredients-filter-textarea")
     expect(document.at_css("h1").text).to eq("Pasta")
@@ -88,8 +89,8 @@ RSpec.describe "Recipes", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("id=\"recipe-results\"")
-    expect(response.body).to include("data-infinite-scroll-sentinel")
-    expect(response.body).to include("data-next-url=\"/recipes?page=2\"")
+    expect(response.body).to include("data-controller=\"infinite-scroll\"")
+    expect(response.body).to include("data-infinite-scroll-next-url-value=\"/recipes?page=2\"")
     expect(response.body).to include("infinite-scroll-spinner")
     expect(response.body).not_to include("#{RecipesController::PER_PAGE + 1} recipes")
     expect(response.body).not_to include(">Next<")
@@ -160,7 +161,7 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).not_to include("Apple Cake")
     expect(response.body).to include(recipe_path(pasta))
     expect(response.body).to include("value=\"pasta, garlic, olive oil\"")
-    expect(response.body).to include("data-current-enabled=\"true\"")
+    expect(response.body).to include("data-ingredients-fab-current-ingredients-value=\"pasta, garlic, olive oil\"")
     expect(IngredientParser).not_to have_received(:call)
   end
 
@@ -177,7 +178,8 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("Cookie Basket Pasta")
     expect(response.body).not_to include("Cookie Basket Apple Cake")
     expect(response.body).to include(recipe_path(pasta))
-    expect(response.body).to include("data-current-enabled=\"true\"")
+    document = Nokogiri::HTML(response.body)
+    expect(document.at_css("#recipe-ingredients-fab")["data-ingredients-fab-current-ingredients-value"]).to eq("pasta\ngarlic")
   end
 
   it "keeps explicit ingredient params ahead of the ingredient basket cookie" do

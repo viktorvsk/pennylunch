@@ -6,14 +6,12 @@ class BootstrapIngredients < ApplicationJob
   CATALOG_PATH = Rails.root.join("config/ingredient_aliases.yml")
 
   def perform(path = CATALOG_PATH.to_s)
-    ingredients = YAML.safe_load_file(path.to_s).fetch("ingredients").transform_values do |attributes|
-      { "optional" => false }.merge(attributes)
-    end
+    ingredients = YAML.safe_load_file(path.to_s)["ingredients"]
     rows = ingredients.map do |name, attributes|
       {
         name:,
         aliases: attributes["aliases"],
-        optional: attributes["optional"]
+        optional: attributes["optional"] || false
       }
     end
 

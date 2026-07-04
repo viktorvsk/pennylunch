@@ -3,8 +3,8 @@
 </section>
 
 <% if next_page_url %>
-  <div class="recipe-results-loading" data-infinite-scroll-sentinel data-next-url="<%= next_page_url %>" aria-live="polite">
-    <span class="recipe-results-loading-status" data-infinite-scroll-status>
+  <div class="recipe-results-loading" data-controller="infinite-scroll" data-infinite-scroll-next-url-value="<%= next_page_url %>" aria-live="polite">
+    <span class="recipe-results-loading-status" data-infinite-scroll-target="status">
       <span class="infinite-scroll-spinner" aria-hidden="true"></span>
       <span>Loading more recipes...</span>
     </span>

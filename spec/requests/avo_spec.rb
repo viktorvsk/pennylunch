@@ -29,16 +29,16 @@ RSpec.describe "Avo", type: :request do
     expect(response.body).to include("Delete the selected ingredients?")
   end
 
-  it "opens ingredient catalog sync actions" do
+  it "opens ingredient catalog bootstrap actions" do
     get "/avo/resources/ingredients/actions",
       params: {
-        action_id: Avo::Actions::SyncIngredientsFromAliasCatalog.to_param,
+        action_id: Avo::Actions::BootstrapIngredients.to_param,
         resource_view: "index"
       },
       headers: basic_auth_headers
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Sync ingredients from alias catalog?")
+    expect(response.body).to include("Bootstrap ingredients from alias catalog?")
   end
 
   it "serves the recipe admin resource" do

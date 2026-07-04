@@ -1,53 +1,33 @@
 class RecipeIndexUpdateQuery
   class << self
     def call(entries:)
-      entries = Array(entries)
-      return if entries.empty?
+      connection = Recipe.connection
+      table = connection.quote_table_name(Recipe.table_name)
+      primary_key = connection.quote_column_name(Recipe.primary_key)
+      id_column = "#{table}.#{primary_key}"
+      ingredient_names_cases = entries.map do |entry|
+        "WHEN #{connection.quote(entry.recipe.id)} THEN #{connection.quote(entry.ingredient_names.to_json)}::jsonb"
+      end.join(" ")
+      ingredient_parse_data_cases = entries.map do |entry|
+        "WHEN #{connection.quote(entry.recipe.id)} THEN #{connection.quote(entry.ingredient_parse_data.to_json)}::jsonb"
+      end.join(" ")
+      vector_cases = entries.map do |entry|
+        vector = entry.ingredients_vector
+        value = vector.nil? ? "NULL" : "#{connection.quote(Recipe.type_for_attribute("ingredients_vector").serialize(vector))}::vector"
 
-      <<~SQL.squish
-        UPDATE #{connection.quote_table_name(Recipe.table_name)}
-        SET #{update_assignments(entries)}
-        WHERE #{connection.quote_table_name(Recipe.table_name)}.#{connection.quote_column_name(Recipe.primary_key)}
-          IN (#{Recipe.where(id: entries.map { |entry| entry.recipe.id }).select(:id).to_sql})
-      SQL
-    end
-
-    private
-
-    def update_assignments(entries)
-      [
-        jsonb_case_assignment("ingredient_names", entries),
-        jsonb_case_assignment("ingredient_parse_data", entries),
-        vector_case_assignment("ingredients_vector", entries),
-        "updated_at = NOW()"
-      ].join(", ")
-    end
-
-    def jsonb_case_assignment(column_name, entries)
-      case_assignment(column_name, entries) do |entry|
-        "#{connection.quote(entry.public_send(column_name).to_json)}::jsonb"
-      end
-    end
-
-    def vector_case_assignment(column_name, entries)
-      case_assignment(column_name, entries) do |entry|
-        vector = entry.public_send(column_name)
-        vector.nil? ? "NULL" : "#{connection.quote(Recipe.type_for_attribute(column_name).serialize(vector))}::vector"
-      end
-    end
-
-    def case_assignment(column_name, entries)
-      quoted_column = connection.quote_column_name(column_name)
-      qualified_id_column = "#{connection.quote_table_name(Recipe.table_name)}.#{connection.quote_column_name(Recipe.primary_key)}"
-      values = entries.map do |entry|
-        "WHEN #{connection.quote(entry.recipe.id)} THEN #{yield(entry)}"
+        "WHEN #{connection.quote(entry.recipe.id)} THEN #{value}"
       end.join(" ")
 
-      "#{quoted_column} = CASE #{qualified_id_column} #{values} ELSE #{quoted_column} END"
-    end
-
-    def connection
-      Recipe.connection
+      <<~SQL.squish
+        UPDATE #{table}
+        SET
+          ingredient_names = CASE #{id_column} #{ingredient_names_cases} ELSE ingredient_names END,
+          ingredient_parse_data = CASE #{id_column} #{ingredient_parse_data_cases} ELSE ingredient_parse_data END,
+          ingredients_vector = CASE #{id_column} #{vector_cases} ELSE ingredients_vector END,
+          updated_at = NOW()
+        WHERE #{id_column}
+          IN (#{Recipe.where(id: entries.map { |entry| entry.recipe.id }).select(:id).to_sql})
+      SQL
     end
   end
 end

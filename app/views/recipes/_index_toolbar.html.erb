@@ -3,13 +3,13 @@
   <div class="recipe-toolbar-inner">
     <%= link_to "PennyLunch", root_path, class: "recipe-toolbar-brand" %>
 
-    <%= form_with url: recipes_path, method: :get, local: true, html: { data: { auto_submit_form: true, filter_root: recipes_path } }, class: "recipe-toolbar-form" do |form| %>
+    <%= form_with url: recipes_path, method: :get, local: true, html: { data: { controller: "auto-submit", action: "submit->auto-submit#submit input->auto-submit#input change->auto-submit#change", auto_submit_filter_root_value: recipes_path } }, class: "recipe-toolbar-form" do |form| %>
       <%= hidden_field_tag :sort, toolbar.current_sort %>
-      <%= hidden_field_tag :ingredients, filters["ingredients"], data: { ingredients_filter_hidden: true } %>
+      <%= hidden_field_tag :ingredients, filters["ingredients"], data: { auto_submit_target: "ingredients" } %>
 
       <div class="recipe-toolbar-search">
         <%= form.label :q, "Title", class: "sr-only" %>
-        <%= form.search_field :q, value: filters["q"], class: "input", placeholder: "Title", autocomplete: "off", data: { auto_submit_debounce: 350 } %>
+        <%= form.search_field :q, value: filters["q"], class: "input", placeholder: "Title", autocomplete: "off", data: { auto_submit_delay: 350 } %>
       </div>
 
       <span class="recipe-toolbar-loading" aria-hidden="true">

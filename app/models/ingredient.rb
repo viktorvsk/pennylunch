@@ -18,7 +18,7 @@ class Ingredient < ApplicationRecord
 
     def lookup_map(scope = all)
       scope.pluck(:name, :aliases).each_with_object({}) do |(name, aliases), mapping|
-        ([ name ] + Array(aliases)).each do |value|
+        ([ name ] + aliases).each do |value|
           key = normalize_lookup_key(value)
           mapping[key] = name if key.present?
         end
@@ -66,7 +66,7 @@ class Ingredient < ApplicationRecord
     normalized_aliases = aliases.filter_map { |alias_name| self.class.normalize_lookup_key(alias_name) }
     other_ingredients = self.class.where.not(id:).pluck(:name, :aliases)
 
-    if other_ingredients.any? { |_other_name, other_aliases| (Array(other_aliases).filter_map { |alias_name| self.class.normalize_lookup_key(alias_name) } & normalized_aliases).any? }
+    if other_ingredients.any? { |_other_name, other_aliases| (other_aliases.filter_map { |alias_name| self.class.normalize_lookup_key(alias_name) } & normalized_aliases).any? }
       errors.add(:aliases, "must be unique across ingredients")
     end
 
@@ -80,7 +80,7 @@ class Ingredient < ApplicationRecord
 
     normalized_name = self.class.normalize_lookup_key(name)
     exists = self.class.where.not(id:).pluck(:aliases).any? do |other_aliases|
-      Array(other_aliases).filter_map { |alias_name| self.class.normalize_lookup_key(alias_name) }.include?(normalized_name)
+      other_aliases.filter_map { |alias_name| self.class.normalize_lookup_key(alias_name) }.include?(normalized_name)
     end
     errors.add(:name, "must not match another ingredient alias") if exists
   end

@@ -4,34 +4,23 @@ class Avo::Actions::IndexSelectedRecipes < Avo::BaseAction
   self.confirm_button_label = "Queue indexing"
 
   def handle(query:, **)
-    selection = recipe_selection_from(query)
-    return error("Select at least one recipe.").keep_modal_open if selection.fetch(:count).zero?
+    recipes = query.is_a?(ActiveRecord::Relation) ? query : Recipe.where(id: query.map(&:id))
+    count = recipes.count
+    return error("Select at least one recipe.").keep_modal_open if count.zero?
 
-    IndexRecipeJob.perform_later(selection.fetch(:job_argument))
-    succeed "Queued recipe indexing for #{selection.fetch(:label)}."
+    if whole_recipe_scope?(recipes)
+      IndexRecipeJob.perform_later("all")
+      succeed "Queued recipe indexing for all recipes."
+    else
+      ids = recipes.pluck(:id).uniq
+      IndexRecipeJob.perform_later(ids)
+      succeed "Queued recipe indexing for #{ids.size} #{"recipe".pluralize(ids.size)}."
+    end
+
     reload
   end
 
   private
-
-  def recipe_selection_from(query)
-    recipes = recipe_scope_from(query)
-    count = recipes.count
-    return { count:, job_argument: [], label: "0 recipes" } if count.zero?
-
-    if whole_recipe_scope?(recipes)
-      { count:, job_argument: "all", label: "all recipes" }
-    else
-      ids = recipes.pluck(:id).uniq
-      { count:, job_argument: ids, label: "#{ids.size} #{"recipe".pluralize(ids.size)}" }
-    end
-  end
-
-  def recipe_scope_from(query)
-    return query if query.is_a?(ActiveRecord::Relation)
-
-    Recipe.where(id: Array(query).map(&:id))
-  end
 
   def whole_recipe_scope?(recipes)
     recipes.is_a?(ActiveRecord::Relation) &&

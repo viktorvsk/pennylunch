@@ -2,9 +2,11 @@ class Avo::Resources::Recipe < Avo::BaseResource
   self.title = :title
   self.icon = "tabler/outline/tools-kitchen-2"
   self.find_record_method = -> {
-    recipe_ids = Array(id).map { |value| model_class.id_from_param(value) }
-
-    id.is_a?(Array) ? query.find(recipe_ids) : query.find(recipe_ids.first)
+    if id.is_a?(Array)
+      query.find(id.map { |value| model_class.id_from_param(value) })
+    else
+      query.find(model_class.id_from_param(id))
+    end
   }
 
   def fields
