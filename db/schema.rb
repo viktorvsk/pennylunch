@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_04_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_04_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -27,26 +27,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_130000) do
     t.check_constraint "jsonb_typeof(aliases) = 'array'::text", name: "ingredients_aliases_json_array"
   end
 
-  create_table "maintenance_tasks_runs", force: :cascade do |t|
-    t.text "arguments"
-    t.text "backtrace"
+  create_table "recipe_ingredients", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.string "cursor"
-    t.boolean "cursor_is_json", default: false, null: false
-    t.datetime "ended_at"
-    t.string "error_class"
-    t.string "error_message"
-    t.string "job_id"
-    t.integer "lock_version", default: 0, null: false
-    t.text "metadata"
-    t.datetime "started_at"
-    t.string "status", default: "enqueued", null: false
-    t.string "task_name", null: false
-    t.bigint "tick_count", default: 0, null: false
-    t.bigint "tick_total"
-    t.float "time_running", default: 0.0, null: false
+    t.bigint "ingredient_id", null: false
+    t.bigint "recipe_id", null: false
     t.datetime "updated_at", null: false
-    t.index ["task_name", "status", "created_at"], name: "index_maintenance_tasks_runs", order: { created_at: :desc }
+    t.index ["ingredient_id", "recipe_id"], name: "index_recipe_ingredients_on_ingredient_id_and_recipe_id"
+    t.index ["recipe_id", "ingredient_id"], name: "index_recipe_ingredients_on_recipe_id_and_ingredient_id", unique: true
   end
 
   create_table "recipes", force: :cascade do |t|
@@ -77,4 +64,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_130000) do
     t.index ["total_time"], name: "index_recipes_on_total_time"
     t.check_constraint "jsonb_typeof(ingredient_names) = 'array'::text", name: "recipes_ingredient_names_json_array"
   end
+
+  add_foreign_key "recipe_ingredients", "ingredients", on_delete: :cascade
+  add_foreign_key "recipe_ingredients", "recipes", on_delete: :cascade
 end

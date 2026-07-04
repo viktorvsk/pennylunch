@@ -1,4 +1,6 @@
 class Ingredient < ApplicationRecord
+  has_many :recipe_ingredients, dependent: :delete_all
+
   before_validation :normalize_name
   before_validation :normalize_aliases
 

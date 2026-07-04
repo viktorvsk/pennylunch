@@ -16,9 +16,26 @@ RSpec.describe RecipeHelper, type: :helper do
       )
       expect(helper.recipe_category_from_slug("pasta")).to eq("pasta")
       expect(Rails.cache).to have_received(:fetch).with(
-        RecipeHelper::RECIPE_UI_CATALOG_CACHE_KEY,
+        [
+          RecipeHelper::RECIPE_UI_CATALOG_CACHE_KEY,
+          Ingredient.all.cache_key_with_version,
+          Recipe.all.cache_key_with_version
+        ],
         expires_in: RecipeHelper::RECIPE_UI_CATALOG_CACHE_EXPIRATION
       ).at_least(:once)
+    end
+
+    it "does not serve a stale empty ingredient catalog after ingredients are created" do
+      cache = ActiveSupport::Cache::MemoryStore.new
+      allow(Rails).to receive(:cache).and_return(cache)
+
+      expect(helper.recipe_ui_catalog.fetch(:ingredient_options)).to eq([])
+
+      create(:ingredient, name: "avocado")
+
+      expect(helper.recipe_ui_catalog.fetch(:ingredient_options)).to eq([
+        { name: "avocado", optional: false }
+      ])
     end
   end
 

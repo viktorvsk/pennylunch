@@ -72,10 +72,10 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("tomato")
     expect(response.body).not_to include("data-ingredients-filter-textarea")
     expect(document.at_css("h1").text).to eq("Pasta")
-    expect(response.body).to include("aria-label=\"Maintenance\"")
+    expect(response.body).to include("aria-label=\"Admin\"")
     expect(response.body).not_to include("Show recipes")
     expect(response.body).not_to include(">Clear<")
-    expect(response.body).not_to include(">Maintenance<")
+    expect(response.body).not_to include(">Admin<")
   end
 
   it "renders infinite scroll instead of totals and pagination links" do
@@ -147,18 +147,18 @@ RSpec.describe "Recipes", type: :request do
     create(:ingredient, name: "olive oil")
     pasta = create(:recipe, title: "Pasta and Garlic", ingredient_names: [ "pasta", "garlic", "olive oil" ], ingredients_vector: vector(1.0))
     create(:recipe, title: "Apple Cake", ingredients_vector: vector(-1.0))
-    allow(IngredientParser).to receive(:call).and_return([
-      IngredientParser::Result.new([ "pasta", "garlic", "olive oil" ], [])
-    ])
+    create_recipe_ingredient_rows
+    allow(IngredientParser).to receive(:call)
 
-    get recipes_path, params: { ingredients: "pasta garlic olive oil", sort: "rating_desc" }
+    get recipes_path, params: { ingredients: "pasta, garlic, olive oil", sort: "rating_desc" }
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Pasta and Garlic")
     expect(response.body).not_to include("Apple Cake")
     expect(response.body).to include(recipe_path(pasta))
-    expect(response.body).to include("value=\"pasta garlic olive oil\"")
+    expect(response.body).to include("value=\"pasta, garlic, olive oil\"")
     expect(response.body).to include("data-current-enabled=\"true\"")
+    expect(IngredientParser).not_to have_received(:call)
   end
 
   it "uses an enabled ingredient basket cookie for the first index render" do
@@ -166,9 +166,7 @@ RSpec.describe "Recipes", type: :request do
     create(:ingredient, name: "garlic")
     pasta = create(:recipe, title: "Cookie Basket Pasta", ingredient_names: [ "pasta", "garlic" ])
     create(:recipe, title: "Cookie Basket Apple Cake", ingredient_names: [ "apple" ])
-    allow(IngredientParser).to receive(:call).and_return([
-      IngredientParser::Result.new([ "pasta", "garlic" ], [])
-    ])
+    create_recipe_ingredient_rows
 
     get recipes_path, headers: { "Cookie" => ingredient_basket_cookie(enabled: true, selected: [ "pasta", "garlic" ]) }
 
@@ -184,9 +182,7 @@ RSpec.describe "Recipes", type: :request do
     create(:ingredient, name: "garlic")
     create(:recipe, title: "Cookie Param Pasta", ingredient_names: [ "pasta" ])
     garlic = create(:recipe, title: "Cookie Param Garlic", ingredient_names: [ "garlic" ])
-    allow(IngredientParser).to receive(:call).and_return([
-      IngredientParser::Result.new([ "garlic" ], [])
-    ])
+    create_recipe_ingredient_rows
 
     get recipes_path, params: { ingredients: "garlic" }, headers: { "Cookie" => ingredient_basket_cookie(enabled: true, selected: [ "pasta" ]) }
 
@@ -202,11 +198,9 @@ RSpec.describe "Recipes", type: :request do
     create(:ingredient, name: "rice")
     simple_avocado = create(:recipe, title: "Simple Avocado", ratings: 4.0, ingredient_names: [ "avocados" ])
     avocado_rice_bowl = create(:recipe, title: "Avocado Rice Bowl", ratings: 5.0, ingredient_names: [ "avocados", "lime", "rice" ])
-    allow(IngredientParser).to receive(:call).and_return([
-      IngredientParser::Result.new([ "avocados", "lime" ], [])
-    ])
+    create_recipe_ingredient_rows
 
-    get recipes_path, params: { ingredients: "avocados lime" }
+    get recipes_path, params: { ingredients: "avocado, lime" }
 
     expect(response).to have_http_status(:ok)
     expect(response.body.index(simple_avocado.title)).to be < response.body.index(avocado_rice_bowl.title)
@@ -223,16 +217,16 @@ RSpec.describe "Recipes", type: :request do
     simple_avocado = create(:recipe, title: "Simple Avocado", ratings: 4.0, ingredient_names: [ "avocados" ], ingredients_vector: vector(1.0))
     avocado_rice_bowl = create(:recipe, title: "Avocado Rice Bowl", ratings: 5.0, ingredient_names: [ "avocados", "lime", "rice" ], ingredients_vector: vector(0.9, 0.1))
     create(:recipe, title: "Apple Cake", ingredient_names: [ "apple" ], ingredients_vector: vector(-1.0))
-    allow(IngredientParser).to receive(:call).and_return([
-      IngredientParser::Result.new([ "avocados", "lime" ], [])
-    ])
+    create_recipe_ingredient_rows
+    allow(IngredientParser).to receive(:call)
     allow(LocalEmbedding).to receive(:call).and_return(vector(1.0))
 
-    get recipes_path, params: { ingredients: "avocados lime" }
+    get recipes_path, params: { ingredients: "avocado, lime" }
 
     expect(response).to have_http_status(:ok)
     expect(response.body.index(simple_avocado.title)).to be < response.body.index(avocado_rice_bowl.title)
     expect(response.body).not_to include("Apple Cake")
+    expect(IngredientParser).not_to have_received(:call)
   end
 
   it "shows a recipe and its ingredients" do
@@ -283,7 +277,7 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("href=\"/\"")
     expect(response.body).to include("href=\"/recipes/pasta\"")
     expect(document.css(".recipe-toolbar")).not_to be_empty
-    expect(response.body).to include("aria-label=\"Maintenance\"")
+    expect(response.body).to include("aria-label=\"Admin\"")
     expect(response.body).to include("recipe-show-card")
     expect(response.body).to include("Ingredients")
     expect(response.body).to include("2")
@@ -353,5 +347,18 @@ RSpec.describe "Recipes", type: :request do
 
   def ingredient_basket_cookie(payload)
     "#{RecipesController::INGREDIENT_BASKET_COOKIE}=#{CGI.escape(payload.to_json)}"
+  end
+
+  def create_recipe_ingredient_rows
+    ingredient_ids_by_name = Ingredient.pluck(:name, :id).to_h
+    lookup = Ingredient.lookup_map
+
+    Recipe.find_each do |recipe|
+      Array(recipe.ingredient_names).filter_map do |raw_name|
+        ingredient_ids_by_name[lookup[Ingredient.normalize_lookup_key(raw_name)]]
+      end.uniq.each do |ingredient_id|
+        RecipeIngredient.find_or_create_by!(recipe:, ingredient_id:)
+      end
+    end
   end
 end

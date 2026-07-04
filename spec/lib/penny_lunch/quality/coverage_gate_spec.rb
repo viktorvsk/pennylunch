@@ -10,7 +10,7 @@ RSpec.describe PennyLunch::Quality::CoverageGate do
       path = Pathname.new(directory).join("coverage.json")
       path.write({ coverage: { "app/example.rb" => { lines: [ 1, 1, 0, nil ] } } }.to_json)
 
-      result = described_class.new(path: path, threshold: 60.0).call
+      result = described_class.call(path: path, threshold: 60.0)
 
       expect(result).to be_success
       expect(result.percent).to be_within(0.01).of(100.0 * 2 / 3)
@@ -22,7 +22,7 @@ RSpec.describe PennyLunch::Quality::CoverageGate do
       path = Pathname.new(directory).join("coverage.json")
       path.write({ coverage: { "app/example.rb" => { lines: [ 1, 0, 0 ] } } }.to_json)
 
-      result = described_class.new(path: path, threshold: 90.0).call
+      result = described_class.call(path: path, threshold: 90.0)
 
       expect(result).not_to be_success
       expect(result.message).to include("below 90")
@@ -30,7 +30,7 @@ RSpec.describe PennyLunch::Quality::CoverageGate do
   end
 
   it "fails when the coverage artifact is missing" do
-    result = described_class.new(path: Pathname.new("/tmp/pennylane-missing-coverage.json")).call
+    result = described_class.call(path: Pathname.new("/tmp/pennylane-missing-coverage.json"))
 
     expect(result).not_to be_success
     expect(result.message).to include("no coverage/coverage.json")

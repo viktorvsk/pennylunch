@@ -3,7 +3,7 @@
 
 require_relative "../../lib/penny_lunch/quality/env_access_scanner"
 
-result = PennyLunch::Quality::EnvAccessScanner.new.call
+result = PennyLunch::Quality::EnvAccessScanner.call
 
 if result.success?
   puts "ENV access check passed."

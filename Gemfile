@@ -29,6 +29,7 @@ gem "solid_queue"
 
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
+gem "csv"
 
 # Add HTTP asset caching/compression and X-Sendfile acceleration to Puma [https://github.com/basecamp/thruster/]
 gem "thruster", require: false
@@ -38,7 +39,6 @@ gem "image_processing", "~> 1.2"
 
 gem "avo", "= 4.0.7"
 gem "informers", "1.3.0"
-gem "maintenance_tasks", "2.17.0"
 gem "neighbor", "1.2.0"
 gem "pgvector", "0.3.3"
 

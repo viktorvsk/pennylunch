@@ -72,7 +72,7 @@ RSpec.describe Recipe do
   end
 
   describe "validations" do
-    it "leaves parser data alignment to import and backfill workflows" do
+    it "leaves parser data alignment to import and indexing workflows" do
       recipe = build(:recipe, ingredients: [ "1 cup flour", "1 egg" ], ingredient_parse_data: [ { "input" => "1 cup flour" } ])
 
       expect(recipe).to be_valid

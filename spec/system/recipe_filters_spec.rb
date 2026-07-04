@@ -107,12 +107,10 @@ RSpec.describe "Recipe filters", type: :system do
   end
 
   it "does not resubmit ingredient filters after returning from a show page" do
-    create(:ingredient, name: "honey")
+    honey = create(:ingredient, name: "honey")
     matching_recipe = create(:recipe, title: "E2E Cookie Basket Honey Toast", ingredient_names: [ "honey" ])
     create(:recipe, title: "E2E Cookie Basket Apple Cake", ingredient_names: [ "apple" ])
-    allow(IngredientParser).to receive(:call).and_return([
-      IngredientParser::Result.new([ "honey" ], [])
-    ])
+    create(:recipe_ingredient, recipe: matching_recipe, ingredient: honey)
 
     visit recipe_path(matching_recipe)
 

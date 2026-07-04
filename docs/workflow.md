@@ -12,7 +12,7 @@ bin/setup --skip-server
 
 Use `bin/setup` without `--skip-server` to prepare the app and start the development processes. Use `bin/setup --reset --skip-server` to reset local databases before preparing them. `--reset` is blocked in production.
 
-Setup installs Ruby gems and the pinned Python ingredient-parser dependencies into `.venv`. It also warms the parser's local NLTK data so the first recipe import or ingredient search does not need a parser bootstrap download.
+Setup installs Ruby gems and the pinned Python ingredient-parser dependencies into `.venv`. It also warms the parser's local NLTK data so the first recipe indexing run does not need a parser bootstrap download.
 
 ## Development
 
@@ -37,25 +37,25 @@ Rails runs on the host in development. PostgreSQL runs in Docker through the sha
 
 ## Recipe Data
 
-Open `/maintenance_tasks` or `/avo` after starting the app. Local defaults are username `pennylunch` and password `pennylunch`.
+Open `/avo` after starting the app. Local defaults are username `pennylunch` and password `pennylunch`.
 
-Run these tasks in order:
+Run these Avo actions in order:
 
 1. In `/avo/resources/recipes`, select all recipes and run `Delete selected recipes`; then in `/avo/resources/ingredients`, select all ingredients and run `Delete selected ingredients`.
-2. `Maintenance::ImportRecipesTask` with the recipe source `url`
+2. In `/avo/resources/recipes`, run standalone `Import recipes` with the recipe source `url`.
 3. Review and complete `config/ingredient_aliases.yml`.
-4. `Maintenance::SyncIngredientsFromAliasCatalogTask`
-5. In `/avo/resources/recipes`, select all recipes and run `Delete selected recipes`.
-6. `Maintenance::ImportRecipesTask` with the recipe source `url`
-7. `Maintenance::BackfillRecipeIngredientVectorsTask`
+4. In `/avo/resources/ingredients`, run standalone `Sync ingredients from alias catalog`.
+5. In `/avo/resources/recipes`, select all recipes and run `Index selected recipes`.
 
-The first import stores raw parser names in `recipes.ingredient_parse_data` and the `recipes.ingredient_names` JSONB array. The sync task reads `config/ingredient_aliases.yml` and upserts Ingredient records from that reviewed catalog. Optional ingredients are declared in the catalog for low-signal pantry items such as salt, sugar, water, and general cooking oils. Use Avo for small local edits and destructive local resets, but keep repository-owned bulk decisions in the YAML file. The recipe delete action removes only recipes, leaving Ingredients in place. The second import must keep raw parser names in `recipes.ingredient_names`, and the backfill task stores structured `ingredient_parse_data` and generates vectors from non-optional canonical Ingredient names.
+The import stores source recipe fields only. It leaves `recipes.ingredient_names`, `recipes.ingredient_parse_data`, and `recipes.ingredients_vector` empty until recipe indexing. The catalog sync reads `config/ingredient_aliases.yml` and upserts Ingredient records from that reviewed catalog. Optional ingredients are declared in the catalog for low-signal pantry items such as salt, sugar, water, and general cooking oils. Use Avo for small local edits and destructive local resets, but keep repository-owned bulk decisions in the YAML file. The recipe index job parses source ingredient lines, stores raw parser names in `recipes.ingredient_names`, stores structured parser output in `recipes.ingredient_parse_data`, generates vectors from non-optional canonical Ingredient names, and recomputes `RecipeIngredient` associations in the same database transaction as the indexed recipe writes. After catalog-only changes, run `Index selected recipes` for affected or all recipes when `RecipeIngredient` rows and vectors must reflect the new catalog.
 
-Ingredient search uses overlap matching unless `Maintenance::SetRecipeSearchStrategyTask` stores `vector` in the runtime cache. Run that task with `strategy` set to `vector` to enable vector search, or `overlap` to delete the cache key and return to overlap search.
+All import, indexing, catalog sync, and search-strategy actions enqueue Solid Queue jobs. Keep the `jobs` process running with `bin/dev`, or run `bin/jobs`, before using those actions.
 
-In `/avo/resources/ingredients`, `Delete selected ingredients` removes only Ingredient rows. If the catalog should be loaded from a clean slate, delete Ingredients in Avo first, then run `Maintenance::SyncIngredientsFromAliasCatalogTask`.
+Ingredient search uses overlap matching unless `Set recipe search strategy` stores `vector` in the runtime cache. Run that action with `strategy` set to `vector` to enable vector search, or `overlap` to delete the cache key and return to overlap search.
 
-The import task only runs when the `recipes` table is empty. Use the Avo recipe delete action locally if you need to repeat the MVP import before staging upsert support exists. When catalog logic changed and both tables should be rebuilt, delete recipes first and ingredients second in Avo.
+In `/avo/resources/ingredients`, `Delete selected ingredients` removes Ingredient rows and their `RecipeIngredient` associations. If the catalog should be loaded from a clean slate, delete Ingredients in Avo first, then run `Sync ingredients from alias catalog` and `Index selected recipes` for affected or all recipes.
+
+The import action only queues when the `recipes` table is empty. Use the Avo recipe delete action locally if you need to repeat the MVP import before staging upsert support exists. When catalog logic changed and both tables should be rebuilt, delete recipes first and ingredients second in Avo.
 
 ## RSpec
 

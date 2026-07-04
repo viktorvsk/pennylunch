@@ -3,7 +3,7 @@
 ## MVP Status
 
 - Done: `Recipe` model with denormalized source fields and derived search fields.
-- Done: direct empty-table gzip import through Maintenance Tasks.
+- Done: direct empty-table gzip import through an Avo-queued Solid Queue job.
 - Done: import specs reconstruct source-shaped JSON from typed columns.
 - Done: recipe index and show pages.
 - Done: title, category, quick, popular, ingredient filters.

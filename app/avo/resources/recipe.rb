@@ -1,6 +1,11 @@
 class Avo::Resources::Recipe < Avo::BaseResource
   self.title = :title
   self.icon = "tabler/outline/tools-kitchen-2"
+  self.find_record_method = -> {
+    recipe_ids = Array(id).map { |value| model_class.id_from_param(value) }
+
+    id.is_a?(Array) ? query.find(recipe_ids) : query.find(recipe_ids.first)
+  }
 
   def fields
     field :id, as: :id
@@ -13,6 +18,9 @@ class Avo::Resources::Recipe < Avo::BaseResource
   end
 
   def actions
+    action Avo::Actions::ImportRecipes, icon: "tabler/outline/download"
+    action Avo::Actions::IndexSelectedRecipes, icon: "tabler/outline/database"
+    action Avo::Actions::SetRecipeSearchStrategy, icon: "tabler/outline/adjustments"
     action Avo::Actions::DeleteSelectedRecipes, icon: "tabler/outline/trash"
   end
 

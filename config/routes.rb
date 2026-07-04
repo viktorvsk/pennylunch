@@ -1,6 +1,5 @@
 Rails.application.routes.draw do
   mount_avo
-  mount MaintenanceTasks::Engine, at: "/maintenance_tasks"
 
   root "recipes#index"
   resources :recipes, only: :index

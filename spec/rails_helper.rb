@@ -21,5 +21,14 @@ RSpec.configure do |config|
   config.fixture_paths = [ Rails.root.join("spec/fixtures") ]
   config.use_transactional_fixtures = true
   config.include FactoryBot::Syntax::Methods
+  config.include ActiveJob::TestHelper
+  config.before do
+    clear_enqueued_jobs
+    clear_performed_jobs
+  end
+  config.after do
+    clear_enqueued_jobs
+    clear_performed_jobs
+  end
   config.filter_rails_from_backtrace!
 end

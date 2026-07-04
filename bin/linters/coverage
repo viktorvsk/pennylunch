@@ -4,4 +4,4 @@ set -euo pipefail
 rm -rf coverage
 COVERAGE=1 COVERAGE_FORMAT=json SILENT_TESTS=1 bin/rspec
 
-bundle exec ruby -Ilib -e 'require "penny_lunch/quality/coverage_gate"; result = PennyLunch::Quality::CoverageGate.new.call; puts result.message; exit(result.success? ? 0 : 1)'
+bundle exec ruby -Ilib -e 'require "penny_lunch/quality/coverage_gate"; result = PennyLunch::Quality::CoverageGate.call; puts result.message; exit(result.success? ? 0 : 1)'

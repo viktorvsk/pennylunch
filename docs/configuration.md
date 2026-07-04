@@ -34,10 +34,10 @@ When adding a setting:
 | `INGREDIENT_PARSER_TIMEOUT_SECONDS` | `120` | Timeout for each parser shell-out batch. |
 | `INFORMERS_CACHE_DIR` | `storage/informers` | Persistent local model cache path. |
 | `EMBEDDING_MODEL_PRELOAD` | `true` | Enables non-blocking model warmup after Rails server boot outside test. |
-| `MAINTENANCE_TASKS_USERNAME` | `pennylunch` | HTTP basic username for `/maintenance_tasks` and `/avo`. |
-| `MAINTENANCE_TASKS_PASSWORD` | `pennylunch` | HTTP basic password for `/maintenance_tasks` and `/avo`. |
+| `AVO_USERNAME` | `pennylunch` | HTTP basic username for `/avo`. |
+| `AVO_PASSWORD` | `pennylunch` | HTTP basic password for `/avo`. |
 
-Ingredient search strategy is controlled at runtime through the Rails cache key `search_strategy`. `Maintenance::SetRecipeSearchStrategyTask` sets the key to `vector` when its `strategy` parameter is `vector`, and deletes the key when its `strategy` parameter is `overlap`. Missing or non-`vector` cache values use overlap search.
+Ingredient search strategy is controlled at runtime through the Rails cache key `search_strategy`. The Avo `Set recipe search strategy` action enqueues `SetRecipeSearchStrategyJob`, which sets the key to `vector` when its `strategy` parameter is `vector`, and deletes the key when its `strategy` parameter is `overlap`. Missing or non-`vector` cache values use overlap search.
 
 ## Python Runtime Settings
 

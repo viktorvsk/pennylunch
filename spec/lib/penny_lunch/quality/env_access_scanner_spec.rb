@@ -15,7 +15,7 @@ RSpec.describe PennyLunch::Quality::EnvAccessScanner do
       root.join("bin/dev").write("export PORT=\"${PORT:-3000}\"\n")
       root.join("env.example").write("PORT=3000\nRAILS_ENV=development\n")
 
-      result = described_class.new(root: root).call
+      result = described_class.call(root: root)
 
       expect(result).to be_success
     end
@@ -28,7 +28,7 @@ RSpec.describe PennyLunch::Quality::EnvAccessScanner do
       root.join("app/models/example.rb").write("ENV.fetch(\"SECRET_TOKEN\")\n")
       root.join("env.example").write("SECRET_TOKEN=\n")
 
-      result = described_class.new(root: root).call
+      result = described_class.call(root: root)
 
       expect(result.direct_access_findings.map(&:path)).to contain_exactly("app/models/example.rb")
     end
@@ -40,7 +40,7 @@ RSpec.describe PennyLunch::Quality::EnvAccessScanner do
       FileUtils.mkdir_p(root.join("app/models"))
       root.join("app/models/example.rb").write("Rails.application.credentials.dig(:recipe, :api_key)\n")
 
-      result = described_class.new(root: root).call
+      result = described_class.call(root: root)
 
       expect(result.credentials_access_findings.map(&:path)).to contain_exactly("app/models/example.rb")
     end
@@ -56,7 +56,7 @@ RSpec.describe PennyLunch::Quality::EnvAccessScanner do
       RUBY
       root.join("env.example").write("RECIPE_API_KEY=\n")
 
-      result = described_class.new(root: root).call
+      result = described_class.call(root: root)
 
       expect(result).to be_success
     end
@@ -69,7 +69,7 @@ RSpec.describe PennyLunch::Quality::EnvAccessScanner do
       root.join("config/initializers/penny_lunch_configuration.rb").write("penny_lunch_config.add_config(:recipe_api_key, nil)\n")
       root.join("env.example").write("")
 
-      result = described_class.new(root: root).call
+      result = described_class.call(root: root)
 
       expect(result.undocumented_names).to contain_exactly("RECIPE_API_KEY")
     end
@@ -81,7 +81,7 @@ RSpec.describe PennyLunch::Quality::EnvAccessScanner do
       FileUtils.mkdir_p(root.join("lib/penny_lunch/quality"))
       root.join("lib/penny_lunch/quality/env_access_scanner.rb").write("DIRECT_ENV_PATTERN = /ENV/\n")
 
-      result = described_class.new(root: root).call
+      result = described_class.call(root: root)
 
       expect(result).to be_success
     end
@@ -94,7 +94,7 @@ RSpec.describe PennyLunch::Quality::EnvAccessScanner do
       root.join("config/puma.rb").write("ENV.fetch(\"PORT\", 3000)\n")
       root.join("env.example").write("")
 
-      result = described_class.new(root: root).call
+      result = described_class.call(root: root)
 
       expect(result.undocumented_names).to contain_exactly("PORT")
     end
@@ -107,7 +107,7 @@ RSpec.describe PennyLunch::Quality::EnvAccessScanner do
       root.join("config/boot.rb").write("ENV[\"PATH\"] = \"/app/bin:\#{ENV[\"PATH\"]}\"\n")
       root.join("env.example").write("")
 
-      result = described_class.new(root: root).call
+      result = described_class.call(root: root)
 
       expect(result).to be_success
     end

@@ -17,7 +17,7 @@ The default stack starts:
 
 Override the public HTTP port with `PENNY_LUNCH_HTTP_PORT`.
 
-The same `db` service is used in development and production. Development defaults are intentionally usable without secrets; production deployments must set `PENNY_LUNCH_DATABASE_PASSWORD`, `SECRET_KEY_BASE`, and maintenance task credentials before starting the full stack.
+The same `db` service is used in development and production. Development defaults are intentionally usable without secrets; production deployments must set `PENNY_LUNCH_DATABASE_PASSWORD`, `SECRET_KEY_BASE`, and Avo credentials before starting the full stack.
 
 The Compose-managed PostgreSQL service uses the application database user as the official Postgres bootstrap user. `POSTGRES_DB` creates the primary production database, and Rails `db:prepare` creates the additional queue and cache databases because that bootstrap user is privileged inside this self-contained Compose stack.
 

@@ -2,29 +2,21 @@ class RecipeSearch
   SEARCH_STRATEGY_CACHE_KEY = "search_strategy"
   VECTOR_SEARCH_STRATEGY = "vector"
 
-  RECIPE_INGREDIENT_NAMES_JOIN_SQL = <<~SQL.squish
-    JOIN LATERAL jsonb_array_elements_text(recipes.ingredient_names) AS recipe_ingredient_names(ingredient_name) ON TRUE
+  RECIPE_INGREDIENTS_JOIN_SQL = <<~SQL.squish
+    LEFT JOIN recipe_ingredients recipe_search_recipe_ingredients
+      ON recipe_search_recipe_ingredients.recipe_id = recipes.id
   SQL
   CATALOG_INGREDIENTS_JOIN_SQL = <<~SQL.squish
     LEFT JOIN ingredients recipe_search_ingredients
-      ON recipe_search_ingredients.name = recipe_ingredient_names.ingredient_name
-      OR recipe_search_ingredients.aliases @> jsonb_build_array(recipe_ingredient_names.ingredient_name)
+      ON recipe_search_ingredients.id = recipe_search_recipe_ingredients.ingredient_id
   SQL
-  REQUIRED_INGREDIENT_KEY_SQL = <<~SQL.squish
+  REQUIRED_INGREDIENT_ID_SQL = <<~SQL.squish
     CASE
-      WHEN recipe_search_ingredients.optional = FALSE THEN recipe_search_ingredients.id::text
-      WHEN recipe_search_ingredients.id IS NULL THEN CONCAT('raw:', recipe_ingredient_names.ingredient_name)
+      WHEN recipe_search_ingredients.optional = FALSE
+      THEN recipe_search_recipe_ingredients.ingredient_id
     END
   SQL
-  TOTAL_INGREDIENT_COUNT_SQL = "COUNT(DISTINCT #{REQUIRED_INGREDIENT_KEY_SQL})"
-  MATCHED_INGREDIENT_COUNT_SQL = "COUNT(DISTINCT recipe_search_user_ingredients.id)"
-  MATCHED_RECIPE_INGREDIENT_COUNT_SQL = <<~SQL.squish
-    COUNT(DISTINCT CASE
-      WHEN recipe_search_user_ingredients.id IS NOT NULL
-      THEN recipe_search_ingredients.id::text
-    END)
-  SQL
-  MISSING_INGREDIENT_COUNT_SQL = "#{TOTAL_INGREDIENT_COUNT_SQL} - #{MATCHED_RECIPE_INGREDIENT_COUNT_SQL}"
+  TOTAL_INGREDIENT_COUNT_SQL = "COUNT(DISTINCT #{REQUIRED_INGREDIENT_ID_SQL})"
   BEST_MATCH_ORDER_SQL = <<~SQL.squish
     CASE WHEN recipe_search_match_stats.matched_ingredients > 0 THEN 0 ELSE 1 END ASC,
     COALESCE(recipe_search_match_stats.missing_ingredients, 2147483647) ASC,
@@ -32,103 +24,104 @@ class RecipeSearch
     COALESCE(recipe_search_match_stats.total_ingredients, 2147483647) ASC
   SQL
 
-  def self.call(relation:, ingredients:)
-    new(relation:, ingredients:).call
-  end
+  class << self
+    def call(relation:, ingredients:)
+      ingredients = ingredients.to_s
+      return relation if ingredients.blank?
 
-  def initialize(relation:, ingredients:)
-    @relation = relation
-    @ingredients = ingredients.to_s
-  end
-
-  def call
-    return relation if ingredients.blank?
-
-    if Rails.cache.read(SEARCH_STRATEGY_CACHE_KEY) == VECTOR_SEARCH_STRATEGY
-      filter_by_ingredient_vector
-    else
-      filter_by_ingredient_overlap
-    end
-  end
-
-  def order_by_best_match(scope)
-    ids = filterable_ingredient_ids
-    return scope if ids.empty?
-
-    match_stats = ingredient_match_stats_relation(scope, ids).to_sql
-    scope
-      .joins("LEFT JOIN (#{match_stats}) recipe_search_match_stats ON recipe_search_match_stats.recipe_id = recipes.id")
-      .reorder(Arel.sql(BEST_MATCH_ORDER_SQL))
-  end
-
-  private
-
-  attr_reader :relation, :ingredients
-
-  def filter_by_ingredient_overlap
-    ids = filterable_ingredient_ids
-    return relation if ids.empty?
-
-    candidate_ids = ingredient_match_stats_relation(relation, ids)
-      .reselect("recipes.id")
-      .having("#{MATCHED_INGREDIENT_COUNT_SQL} > 0")
-
-    relation.where(id: candidate_ids)
-  end
-
-  def filter_by_ingredient_vector
-    query_names = Ingredient.filterable_canonical_names_for(parsed_ingredient_names)
-
-    return relation if query_names.empty?
-
-    vector = LocalEmbedding.call(query_names.join("\n"))
-    threshold = SETTINGS.ingredients_max_cosine_distance.to_f.positive? ? SETTINGS.ingredients_max_cosine_distance.to_f : nil
-    ids = relation
-      .except(:select, :order, :limit, :offset)
-      .where.not(ingredients_vector: nil)
-      .nearest_neighbors(:ingredients_vector, vector, distance: "cosine", threshold:)
-      .reselect(:id)
-      .unscope(:order)
-
-    relation.where(id: ids)
-  end
-
-  def filterable_ingredient_ids
-    names = Ingredient.filterable_canonical_names_for(parsed_ingredient_names)
-    return [] if names.empty?
-
-    Ingredient.where(optional: false, name: names).pluck(:id)
-  end
-
-  def parsed_ingredient_names
-    @parsed_ingredient_names ||= begin
-      lines = ingredients.split(/[\n,;]+/).filter_map { |line| line.squish.presence }
-      if lines.empty?
-        []
+      if Rails.cache.read(SEARCH_STRATEGY_CACHE_KEY) == VECTOR_SEARCH_STRATEGY
+        filter_by_ingredient_vector(relation:, ingredients:)
       else
-        parser_result = IngredientParser.call([ lines ]).first
-        lines + parser_result.ingredient_names
+        filter_by_ingredient_overlap(relation:, ingredients:)
       end
     end
-  end
 
-  def user_ingredients_join_sql(ids)
-    user_ingredients_sql = Ingredient.where(optional: false, id: ids).select(:id).to_sql
-    "LEFT JOIN (#{user_ingredients_sql}) recipe_search_user_ingredients ON recipe_search_user_ingredients.id = recipe_search_ingredients.id"
-  end
+    def order_by_best_match(scope, ingredients:)
+      ids = filterable_ingredient_ids(ingredients)
+      return scope if ids.empty?
 
-  def ingredient_match_stats_relation(scope, ids)
-    scope
-      .except(:select, :order, :limit, :offset)
-      .joins(RECIPE_INGREDIENT_NAMES_JOIN_SQL)
-      .joins(CATALOG_INGREDIENTS_JOIN_SQL)
-      .joins(user_ingredients_join_sql(ids))
-      .select(<<~SQL.squish)
-        recipes.id AS recipe_id,
-        #{TOTAL_INGREDIENT_COUNT_SQL} AS total_ingredients,
-        #{MATCHED_INGREDIENT_COUNT_SQL} AS matched_ingredients,
-        #{MISSING_INGREDIENT_COUNT_SQL} AS missing_ingredients
+      match_stats = ingredient_match_stats_relation(scope, ids).to_sql
+      scope
+        .joins("LEFT JOIN (#{match_stats}) recipe_search_match_stats ON recipe_search_match_stats.recipe_id = recipes.id")
+        .reorder(Arel.sql(BEST_MATCH_ORDER_SQL))
+    end
+
+    private
+
+    def filter_by_ingredient_overlap(relation:, ingredients:)
+      ids = filterable_ingredient_ids(ingredients)
+      return relation if ids.empty?
+
+      candidate_ids = RecipeIngredient.where(ingredient_id: ids).select(:recipe_id)
+
+      relation.where(id: candidate_ids)
+    end
+
+    def filter_by_ingredient_vector(relation:, ingredients:)
+      query_names = filterable_ingredient_names(ingredients)
+
+      return relation if query_names.empty?
+
+      vector = LocalEmbedding.call(query_names.join("\n"))
+      threshold = SETTINGS.ingredients_max_cosine_distance.to_f.positive? ? SETTINGS.ingredients_max_cosine_distance.to_f : nil
+      ids = relation
+        .except(:select, :order, :limit, :offset)
+        .where.not(ingredients_vector: nil)
+        .nearest_neighbors(:ingredients_vector, vector, distance: "cosine", threshold:)
+        .reselect(:id)
+        .unscope(:order)
+
+      relation.where(id: ids)
+    end
+
+    def filterable_ingredient_ids(ingredients)
+      filterable_ingredients(ingredients).map(&:id)
+    end
+
+    def filterable_ingredient_names(ingredients)
+      filterable_ingredients(ingredients).map(&:name)
+    end
+
+    def filterable_ingredients(ingredients)
+      names = submitted_ingredient_names(ingredients)
+      if names.empty?
+        []
+      else
+        ingredients_by_name = Ingredient.where(optional: false, name: names).index_by(&:name)
+        names.filter_map { |name| ingredients_by_name[name] }
+      end
+    end
+
+    def submitted_ingredient_names(ingredients)
+      ingredients.to_s.split(/[\n,;]+/)
+        .filter_map { |line| Ingredient.normalize_lookup_key(line) }
+        .uniq
+    end
+
+    def matched_ingredient_count_sql(ids)
+      ids_sql = ids.map { |id| Integer(id) }.join(", ")
+      <<~SQL.squish
+        COUNT(DISTINCT CASE
+          WHEN recipe_search_ingredients.optional = FALSE
+            AND recipe_search_recipe_ingredients.ingredient_id IN (#{ids_sql})
+          THEN recipe_search_recipe_ingredients.ingredient_id
+        END)
       SQL
-      .group("recipes.id")
+    end
+
+    def ingredient_match_stats_relation(scope, ids)
+      matched_count_sql = matched_ingredient_count_sql(ids)
+      scope
+        .except(:select, :order, :limit, :offset)
+        .joins(RECIPE_INGREDIENTS_JOIN_SQL)
+        .joins(CATALOG_INGREDIENTS_JOIN_SQL)
+        .select(<<~SQL.squish)
+          recipes.id AS recipe_id,
+          #{TOTAL_INGREDIENT_COUNT_SQL} AS total_ingredients,
+          #{matched_count_sql} AS matched_ingredients,
+          #{TOTAL_INGREDIENT_COUNT_SQL} - #{matched_count_sql} AS missing_ingredients
+        SQL
+        .group("recipes.id")
+    end
   end
 end

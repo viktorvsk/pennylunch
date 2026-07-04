@@ -76,7 +76,7 @@ module RecipeHelper
   end
 
   def recipe_ui_catalog
-    Rails.cache.fetch(RECIPE_UI_CATALOG_CACHE_KEY, expires_in: RECIPE_UI_CATALOG_CACHE_EXPIRATION) do
+    Rails.cache.fetch(recipe_ui_catalog_cache_key, expires_in: RECIPE_UI_CATALOG_CACHE_EXPIRATION) do
       category_labels = Recipe.category_labels
 
       {
@@ -102,6 +102,14 @@ module RecipeHelper
 
   def recipe_category_from_slug(slug)
     recipe_ui_catalog.fetch(:category_slugs).key(slug.to_s)
+  end
+
+  def recipe_ui_catalog_cache_key
+    [
+      RECIPE_UI_CATALOG_CACHE_KEY,
+      Ingredient.all.cache_key_with_version,
+      Recipe.all.cache_key_with_version
+    ]
   end
 
   def recipe_layout_fab_filters

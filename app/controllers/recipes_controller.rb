@@ -20,7 +20,7 @@ class RecipesController < ApplicationController
   end
 
   def show
-    recipe = Recipe.find(params[:id].to_s.rpartition("-").last)
+    recipe = Recipe.find(Recipe.id_from_param(params[:id]))
     render locals: { recipe:, similar_recipes: SimilarRecipesQuery.call(recipe:) }
   end
 
@@ -49,8 +49,7 @@ class RecipesController < ApplicationController
     relation = relation.where(category_normalized: category) if category.present?
     relation = relation.where("total_time > 0 AND total_time < ?", QUICK_TOTAL_TIME_LIMIT) if boolean.cast(recipe_params["quick"])
     relation = relation.where("ratings > ?", POPULAR_RATING_THRESHOLD) if boolean.cast(recipe_params["popular"])
-    recipe_search = RecipeSearch.new(relation:, ingredients: recipe_params["ingredients"])
-    relation = recipe_search.call
+    relation = RecipeSearch.call(relation:, ingredients: recipe_params["ingredients"])
 
     case recipe_params["sort"].presence || DEFAULT_SORT
     when "time_desc"
@@ -62,7 +61,7 @@ class RecipesController < ApplicationController
     when "rating_desc"
       relation.reorder(ratings: :desc, id: :asc)
     else
-      recipe_search.order_by_best_match(relation).order(ratings: :desc, total_time: :asc, id: :asc)
+      RecipeSearch.order_by_best_match(relation, ingredients: recipe_params["ingredients"]).order(ratings: :desc, total_time: :asc, id: :asc)
     end
   end
 

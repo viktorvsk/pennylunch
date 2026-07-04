@@ -10,6 +10,7 @@ class Avo::Resources::Ingredient < Avo::BaseResource
   end
 
   def actions
+    action Avo::Actions::SyncIngredientsFromAliasCatalog, icon: "tabler/outline/refresh"
     action Avo::Actions::DeleteSelectedIngredients, icon: "tabler/outline/trash"
   end
 end

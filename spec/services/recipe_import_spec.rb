@@ -2,37 +2,9 @@ require "rails_helper"
 require "zlib"
 
 RSpec.describe RecipeImport do
-  subject(:import) { described_class.call(url: "https://example.test/recipes.json.gz", downloader:, ingredient_parser:) }
+  subject(:import) { described_class.call(url: "https://example.test/recipes.json.gz", downloader:) }
 
   let(:downloader) { ->(_url) { gzipped(source_records) } }
-  let(:ingredient_parser) do
-    lambda do |ingredient_lists|
-      ingredient_names = {
-        "1 cup flour" => "flour",
-        "1 egg" => "egg",
-        "1 cup milk" => "milk",
-        "2 tomatoes" => "tomatoes",
-        "200g pasta" => "pasta",
-        "basil" => "basil"
-      }
-
-      ingredient_lists.map do |ingredients|
-        IngredientParser::Result.new(
-          ingredients.map { |ingredient| ingredient_names.fetch(ingredient) }.uniq,
-          ingredients.map do |ingredient|
-            {
-              "input" => ingredient,
-              "parser" => {
-                "sentence" => ingredient,
-                "name" => [ { "text" => ingredient_names.fetch(ingredient) } ],
-                "amount" => []
-              }
-            }
-          end
-        )
-      end
-    end
-  end
   let(:source_records) do
     [
       {
@@ -68,32 +40,22 @@ RSpec.describe RecipeImport do
     create(:ingredient, name: "pasta")
     create(:ingredient, name: "basil")
 
+    expect(IngredientParser).not_to receive(:call)
     expect(import).to eq(2)
     expect(Recipe.order(:source_position).map { |recipe| source_hash(recipe) }).to eq(source_records)
-    expect(Recipe.order(:source_position).pluck(:ingredient_names)).to eq([
-      [ "flour", "egg", "milk" ],
-      [ "tomatoes", "pasta", "basil" ]
+    expect(Recipe.order(:source_position).pluck(:ingredient_names, :ingredient_parse_data)).to eq([
+      [ [], [] ],
+      [ [], [] ]
     ])
-    expect(Recipe.order(:source_position).map(&:ingredient_parse_data)).to eq([
-      [
-        { "input" => "1 cup flour", "parser" => { "sentence" => "1 cup flour", "name" => [ { "text" => "flour" } ], "amount" => [] } },
-        { "input" => "1 egg", "parser" => { "sentence" => "1 egg", "name" => [ { "text" => "egg" } ], "amount" => [] } },
-        { "input" => "1 cup milk", "parser" => { "sentence" => "1 cup milk", "name" => [ { "text" => "milk" } ], "amount" => [] } }
-      ],
-      [
-        { "input" => "2 tomatoes", "parser" => { "sentence" => "2 tomatoes", "name" => [ { "text" => "tomatoes" } ], "amount" => [] } },
-        { "input" => "200g pasta", "parser" => { "sentence" => "200g pasta", "name" => [ { "text" => "pasta" } ], "amount" => [] } },
-        { "input" => "basil", "parser" => { "sentence" => "basil", "name" => [ { "text" => "basil" } ], "amount" => [] } }
-      ]
-    ])
+    expect(RecipeIngredient.count).to eq(0)
   end
 
-  it "keeps parsed ingredient names as bootstrap data when the ingredient catalog is empty" do
+  it "leaves derived ingredient data empty for recipe indexing" do
     import
 
-    expect(Recipe.order(:source_position).pluck(:ingredient_names)).to eq([
-      [ "flour", "egg", "milk" ],
-      [ "tomatoes", "pasta", "basil" ]
+    expect(Recipe.order(:source_position).pluck(:ingredient_names, :ingredient_parse_data, :ingredients_vector)).to eq([
+      [ [], [], nil ],
+      [ [], [], nil ]
     ])
   end
 
@@ -111,23 +73,8 @@ RSpec.describe RecipeImport do
     expect(Recipe.count).to eq(0)
   end
 
-  it "rejects parser data that does not match source ingredients before writing" do
-    ingredient_parser = lambda do |ingredient_lists|
-      ingredient_lists.map.with_index do |ingredients, index|
-        IngredientParser::Result.new(
-          [ "ingredient-#{index}" ],
-          ingredients.first(1).map { |ingredient| { "input" => ingredient } }
-        )
-      end
-    end
-
-    expect { described_class.call(url: "https://example.test/recipes.json.gz", downloader:, ingredient_parser:) }
-      .to raise_error(RecipeImport::Error, /parser returned 1 data entries for 3 ingredients in source record 0/)
-    expect(Recipe.count).to eq(0)
-  end
-
   it "requires an explicit source URL" do
-    expect { described_class.call(downloader:, ingredient_parser:) }.to raise_error(ArgumentError, /missing keyword: :url/)
+    expect { described_class.call(downloader:) }.to raise_error(ArgumentError, /missing keyword: :url/)
   end
 
   def gzipped(records)

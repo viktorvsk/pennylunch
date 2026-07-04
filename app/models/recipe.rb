@@ -2,6 +2,8 @@ require "uri"
 
 class Recipe < ApplicationRecord
   SOURCE_FIELDS = %w[title cook_time prep_time ingredients ratings cuisine category author image].freeze
+  has_many :recipe_ingredients, dependent: :delete_all
+  has_many :resolved_ingredients, through: :recipe_ingredients, source: :ingredient
   has_neighbors :ingredients_vector
 
   before_validation :derive_fields
@@ -35,6 +37,10 @@ class Recipe < ApplicationRecord
       [ attributes.fetch(:title), attributes.fetch(:category), attributes.fetch(:author), "#{attributes.fetch(:total_time)}-minutes" ].filter_map do |part|
         part.to_s.parameterize(preserve_case: true).presence
       end.join("-")
+    end
+
+    def id_from_param(value)
+      value.to_s.rpartition("-").last
     end
   end
 
