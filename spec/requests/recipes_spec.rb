@@ -76,7 +76,8 @@ RSpec.describe "Recipes", type: :request do
     expect(document.css(".dropdown-menu")).not_to be_empty
     expect(response.body).to include("data-tooltip=\"Category: Pasta\"")
     expect(document.css(".recipe-toolbar")).not_to be_empty
-    expect(response.body).to include("recipe-toolbar-loading")
+    expect(response.body).to include("recipe-content-loading")
+    expect(response.body).not_to include("recipe-toolbar-loading")
     expect(response.body).to include("type=\"importmap\"")
     expect(response.body).to include("data-controller=\"auto-submit\"")
     expect(response.body).to include("data-auto-submit-target=\"ingredients\"")
@@ -128,6 +129,7 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("id=\"recipe-results-frame\"")
     expect(response.body).to include("Onion Soup")
     expect(response.body).not_to include("recipe-toolbar")
+    expect(response.body).not_to include("recipe-content-loading")
     expect(response.body).not_to include("recipe-ingredients-fab")
     expect(response.body).not_to include("data-ingredient-options")
     expect(response.body).not_to include("data-recipe-ui-catalog")

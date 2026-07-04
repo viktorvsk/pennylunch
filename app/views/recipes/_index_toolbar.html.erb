@@ -12,10 +12,6 @@
         <%= form.search_field :q, value: filters["q"], class: "input", placeholder: "Title", autocomplete: "off", data: { auto_submit_delay: 350 } %>
       </div>
 
-      <span class="recipe-toolbar-loading" aria-hidden="true">
-        <span class="infinite-scroll-spinner"></span>
-      </span>
-
       <%= render "toolbar_filter_toggle", name: :quick, active: toolbar.quick_active, aria_label: "Quick recipes", icon: :quick, tooltip: "Quick: #{toolbar.quick_active ? "on" : "off"}. Shows recipes under 30 minutes." %>
       <%= render "toolbar_filter_toggle", name: :popular, active: toolbar.popular_active, aria_label: "Popular recipes", icon: :popular, tooltip: "Popular: #{toolbar.popular_active ? "on" : "off"}. Shows recipes rated above 4.8." %>
       <%= render "toolbar_category_combobox", selected_category:, selected_category_label: toolbar.selected_category_label, tooltip: toolbar.category_tooltip, categories: toolbar.category_labels.keys, category_labels: toolbar.category_labels %>

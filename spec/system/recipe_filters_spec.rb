@@ -85,6 +85,73 @@ RSpec.describe "Recipe filters", type: :system do
     expect(page).to have_current_path("/recipes/e2e-dinner", ignore_query: true)
   end
 
+  it "shows the Turbo loading spinner over dimmed content" do
+    visit recipes_path
+
+    loading_state = page.evaluate_script(<<~JS)
+      (() => {
+        document.documentElement.setAttribute("data-turbo-loading", "");
+
+        const toolbar = document.querySelector(".recipe-toolbar").getBoundingClientRect();
+        const page = document.querySelector(".recipe-page");
+        const fab = document.querySelector("#recipe-ingredients-fab");
+        const overlay = document.querySelector(".recipe-content-loading");
+        const spinner = document.querySelector(".recipe-content-loading-spinner");
+        const overlayStyle = getComputedStyle(overlay);
+        const spinnerRect = spinner.getBoundingClientRect();
+
+        return {
+          pageOpacity: getComputedStyle(page).opacity,
+          pagePointerEvents: getComputedStyle(page).pointerEvents,
+          fabOpacity: getComputedStyle(fab).opacity,
+          fabPointerEvents: getComputedStyle(fab).pointerEvents,
+          overlayOpacity: Number.parseFloat(overlayStyle.opacity),
+          overlayVisibility: overlayStyle.visibility,
+          overlayTop: Math.round(overlay.getBoundingClientRect().top),
+          toolbarBottom: Math.round(toolbar.bottom),
+          spinnerHeight: Math.round(spinnerRect.height),
+          spinnerWidth: Math.round(spinnerRect.width),
+          spinnerCenterX: Math.round(spinnerRect.left + spinnerRect.width / 2),
+          spinnerCenterY: Math.round(spinnerRect.top + spinnerRect.height / 2),
+          viewportCenterX: Math.round(window.innerWidth / 2),
+          contentCenterY: Math.round(toolbar.bottom + ((window.innerHeight - toolbar.bottom) / 2))
+        };
+      })()
+    JS
+
+    expect(loading_state.fetch("pageOpacity")).to eq("0.3")
+    expect(loading_state.fetch("pagePointerEvents")).to eq("none")
+    expect(loading_state.fetch("fabOpacity")).to eq("0.3")
+    expect(loading_state.fetch("fabPointerEvents")).to eq("none")
+    expect(loading_state.fetch("overlayOpacity")).to eq(1.0)
+    expect(loading_state.fetch("overlayVisibility")).to eq("visible")
+    expect(loading_state.fetch("overlayTop")).to eq(loading_state.fetch("toolbarBottom"))
+    expect(loading_state.fetch("spinnerHeight")).to be >= 48
+    expect(loading_state.fetch("spinnerWidth")).to be >= 48
+    expect((loading_state.fetch("spinnerCenterX") - loading_state.fetch("viewportCenterX")).abs).to be <= 2
+    expect((loading_state.fetch("spinnerCenterY") - loading_state.fetch("contentCenterY")).abs).to be <= 2
+
+    idle_state = page.evaluate_script(<<~JS)
+      (() => {
+        document.documentElement.removeAttribute("data-turbo-loading");
+
+        const overlayStyle = getComputedStyle(document.querySelector(".recipe-content-loading"));
+
+        return {
+          pageOpacity: getComputedStyle(document.querySelector(".recipe-page")).opacity,
+          fabOpacity: getComputedStyle(document.querySelector("#recipe-ingredients-fab")).opacity,
+          overlayOpacity: Number.parseFloat(overlayStyle.opacity),
+          overlayVisibility: overlayStyle.visibility
+        };
+      })()
+    JS
+
+    expect(idle_state.fetch("pageOpacity")).to eq("1")
+    expect(idle_state.fetch("fabOpacity")).to eq("1")
+    expect(idle_state.fetch("overlayOpacity")).to eq(0.0)
+    expect(idle_state.fetch("overlayVisibility")).to eq("hidden")
+  end
+
   it "highlights index card ingredients from the active filter context" do
     create(:ingredient, name: "honey")
     create(:recipe, title: "E2E Honey Toast", ingredient_names: [ "honey", "bread" ])

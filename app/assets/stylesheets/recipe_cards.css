@@ -236,7 +236,41 @@
   margin-inline: auto;
   max-width: 80rem;
   padding: 1.5rem 1rem;
+  transition: opacity 120ms ease;
   width: 100%;
+}
+
+.recipe-content-loading {
+  inset: 4rem 0 0;
+  opacity: 0;
+  place-items: center;
+  pointer-events: none;
+  position: fixed;
+  transition: opacity 120ms ease, visibility 120ms ease;
+  visibility: hidden;
+  z-index: 70;
+}
+
+.recipe-content-loading-spinner {
+  animation: infinite-scroll-spin 700ms linear infinite;
+  border: 4px solid color-mix(in oklch, var(--muted-foreground) 25%, transparent);
+  border-radius: 9999px;
+  border-top-color: var(--foreground);
+  display: block;
+  height: 4rem;
+  width: 4rem;
+}
+
+html[data-turbo-loading] .recipe-page,
+html[data-turbo-loading] #recipe-ingredients-fab {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+html[data-turbo-loading] .recipe-content-loading {
+  display: grid;
+  opacity: 1;
+  visibility: visible;
 }
 
 .recipe-section {
@@ -557,6 +591,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .recipe-card-image img,
+  .recipe-content-loading,
+  .recipe-content-loading-spinner,
   .infinite-scroll-spinner {
     animation: none;
     transition: none;
