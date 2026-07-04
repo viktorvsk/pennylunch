@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 # check=error=true
 
-# This Dockerfile is designed for production, not development. Use with Kamal or build'n'run by hand:
+# This Dockerfile is production-first, with a fibe-dev target for source-mounted Fibe runs.
+# Use the final image with Kamal or build'n'run by hand:
 # docker build -t penny_lunch .
 # docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value from config/master.key> --name penny_lunch penny_lunch
 
@@ -28,6 +29,33 @@ ENV RAILS_ENV="production" \
     LD_PRELOAD="/usr/local/lib/libjemalloc.so" \
     NLTK_DATA="/rails/.venv/nltk_data" \
     PATH="/rails/.venv/bin:$PATH"
+
+# Development image target for Fibe source-mounted production:false deployments.
+FROM base AS fibe-dev
+
+ENV RAILS_ENV="development" \
+    BUNDLE_DEPLOYMENT="false" \
+    BUNDLE_WITHOUT=""
+
+# Install packages needed to build gems and install source-mounted dependencies.
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y build-essential git libpq-dev libvips libyaml-dev pkg-config && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# Prime gems for the current lockfile. bin/setup still verifies at runtime after source sync.
+COPY vendor/* ./vendor/
+COPY Gemfile Gemfile.lock ./
+COPY requirements.txt ./
+
+RUN bundle install && \
+    rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git
+
+# Copy application code for local Compose use. Fibe replaces /rails with a synced source mount.
+COPY . .
+
+ENTRYPOINT ["/rails/bin/docker-entrypoint"]
+EXPOSE 3000
+CMD ["bash", "-lc", "bin/setup --skip-server && bin/dev"]
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build

@@ -1,17 +1,20 @@
 services:
   web:
-    image: penny_lunch:production
+    image: penny_lunch:fibe-dev
     build:
       context: .
       dockerfile: Dockerfile
       pull: true
+      target: fibe-dev
     labels:
       fibe.gg/branch: main
+      fibe.gg/build_target: fibe-dev
       fibe.gg/dockerfile: Dockerfile
-      fibe.gg/port: "80"
-      fibe.gg/production: "true"
+      fibe.gg/port: "3000"
+      fibe.gg/production: "false"
       fibe.gg/repo_url: https://github.com/viktorvsk/pennylunch.git
       fibe.gg/source_mount: /rails
+      fibe.gg/start_command: "bin/setup --skip-server && bin/dev"
       fibe.gg/subdomain: "@"
       fibe.gg/visibility: external
     init: true
@@ -21,6 +24,8 @@ services:
     environment:
       AVO_PASSWORD: ${AVO_PASSWORD:-pennylunch}
       AVO_USERNAME: ${AVO_USERNAME:-pennylunch}
+      BUNDLE_DEPLOYMENT: "false"
+      BUNDLE_WITHOUT: ""
       EMBEDDING_MODEL_PRELOAD: ${EMBEDDING_MODEL_PRELOAD:-true}
       INFORMERS_CACHE_DIR: /rails/storage/informers
       INGREDIENTS_MAX_COSINE_DISTANCE: ${INGREDIENTS_MAX_COSINE_DISTANCE:-0.7}
@@ -37,19 +42,19 @@ services:
       PENNY_LUNCH_DATABASE_PORT: 5432
       PENNY_LUNCH_DATABASE_USERNAME: ${PENNY_LUNCH_DATABASE_USERNAME:-penny_lunch}
       PORT: 3000
-      RAILS_ENV: production
+      RACK_ENV: development
+      RAILS_ENV: development
       RAILS_LOG_LEVEL: ${RAILS_LOG_LEVEL:-info}
       RAILS_MASTER_KEY: ${RAILS_MASTER_KEY:-}
       RAILS_MAX_THREADS: ${RAILS_MAX_THREADS:-3}
       RECIPES_IMPORT_URL: ${RECIPES_IMPORT_URL:-https://pennylane-interviewing-assets-20220328.s3.eu-west-1.amazonaws.com/recipes-en.json.gz}
       SECRET_KEY_BASE: ${SECRET_KEY_BASE:-penny_lunch_local_compose_secret_key_base_for_development_only_1234567890}
-      SOLID_QUEUE_IN_PUMA: "true"
     ports:
-      - "${PENNY_LUNCH_HTTP_PORT:-3000}:80"
+      - "${PENNY_LUNCH_HTTP_PORT:-3000}:3000"
     volumes:
       - rails_storage:/rails/storage
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/up >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/up >/dev/null || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -59,7 +64,7 @@ services:
   db:
     image: pgvector/pgvector:0.8.4-pg18-trixie
     environment:
-      POSTGRES_DB: penny_lunch_production
+      POSTGRES_DB: penny_lunch_development
       POSTGRES_PASSWORD: ${PENNY_LUNCH_DATABASE_PASSWORD:-postgres}
       POSTGRES_USER: ${PENNY_LUNCH_DATABASE_USERNAME:-penny_lunch}
     volumes:
