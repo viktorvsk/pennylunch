@@ -65,6 +65,9 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("data-ingredients-fab")
     expect(response.body).to include("Ingredients at home")
     expect(response.body).to include("Pick matching ingredients. Enable to include them in filters.")
+    expect(document.css("label[for='recipe-ingredients-input']")).to be_empty
+    expect(document.css("[data-ingredients-filter-help]")).to be_empty
+    expect(document.at_css("[data-ingredients-add-button]").text).to eq("Add Ingredient")
     expect(response.body).to include("data-recipe-ui-catalog")
     expect(response.body).not_to include("data-ingredient-options")
     expect(response.body).to include("data-ingredients-filter-input")

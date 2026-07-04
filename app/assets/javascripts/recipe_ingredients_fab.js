@@ -48,6 +48,7 @@
       const trigger = root.querySelector("[data-ingredients-fab-trigger]");
       const panel = root.querySelector("[data-ingredients-filter-panel]");
       const input = root.querySelector("[data-ingredients-filter-input]");
+      const addButton = root.querySelector("[data-ingredients-add-button]");
       const optionsElement = root.querySelector("[data-ingredients-filter-options]");
       const selectedList = root.querySelector("[data-ingredients-selected-list]");
       const enabledInput = root.querySelector("[data-ingredients-filter-enabled]");
@@ -55,7 +56,7 @@
       const enabledText = root.querySelector("[data-ingredients-enable-text]");
       const status = root.querySelector("[data-ingredients-fab-status]");
 
-      if (!trigger || !panel || !input || !optionsElement || !selectedList || !enabledInput || !enabledControl || !enabledText || !status) return;
+      if (!trigger || !panel || !input || !addButton || !optionsElement || !selectedList || !enabledInput || !enabledControl || !enabledText || !status) return;
 
       root.ingredientsFabReady = true;
 
@@ -85,6 +86,7 @@
       const canonicalName = (value) => optionFor(value)?.name;
       const optionalIngredient = (value) => optionFor(value)?.optional === true;
       const filterableSelected = () => selected.filter((name) => !optionalIngredient(name));
+      const selectedForDisplay = () => [...selected].sort((left, right) => Number(optionalIngredient(left)) - Number(optionalIngredient(right)));
       const selectedKeys = () => new Set(selected.map(normalizeIngredientName));
       const optionRank = (name, query) => {
         const key = name.toLowerCase();
@@ -142,6 +144,7 @@
         optionsElement.innerHTML = "";
         input.setAttribute("aria-expanded", "false");
         activeOptionIndex = NO_OPTION_INDEX;
+        setAddButtonState();
       };
 
       const renderOptions = () => {
@@ -184,6 +187,7 @@
 
         optionsElement.hidden = false;
         input.setAttribute("aria-expanded", "true");
+        setAddButtonState();
       };
 
       const setActiveOption = (nextIndex) => {
@@ -196,7 +200,28 @@
           option.dataset.active = active ? "true" : "false";
           option.setAttribute("aria-selected", active ? "true" : "false");
         });
+        setAddButtonState();
       };
+
+      function addButtonValue() {
+        const query = input.value.trim();
+        if (query === "") return "";
+
+        const active = optionsElement.hidden ? null : optionsElement.querySelector("[data-active='true']");
+        if (active?.dataset.value) return active.dataset.value;
+
+        const exact = canonicalName(query);
+        if (exact && !selectedKeys().has(normalizeIngredientName(exact))) return exact;
+
+        return availableOptions(query)[0] || "";
+      }
+
+      function setAddButtonState() {
+        const value = addButtonValue();
+
+        addButton.disabled = value === "";
+        addButton.dataset.state = value === "" ? "empty" : "ready";
+      }
 
       const setStatus = () => {
         const hasSelected = selected.length > 0;
@@ -224,22 +249,22 @@
       const renderSelected = () => {
         selectedList.innerHTML = "";
 
-        selected.forEach((name) => {
-          const chip = document.createElement("span");
-          chip.className = "recipe-ingredients-chip";
-          chip.dataset.optional = optionalIngredient(name) ? "true" : "false";
+        selectedForDisplay().forEach((name) => {
+          const row = document.createElement("div");
+          row.className = "recipe-ingredients-row";
+          row.dataset.optional = optionalIngredient(name) ? "true" : "false";
 
           const label = document.createElement("span");
           label.textContent = name;
 
           const remove = document.createElement("button");
           remove.type = "button";
+          remove.className = "recipe-ingredients-remove";
           remove.setAttribute("aria-label", `Remove ${name}`);
-          remove.textContent = "x";
           remove.addEventListener("click", () => removeIngredient(name));
 
-          chip.append(label, remove);
-          selectedList.append(chip);
+          row.append(label, remove);
+          selectedList.append(row);
         });
       };
 
@@ -289,8 +314,10 @@
       sync();
       initialized = true;
       setOpen(false);
+      setAddButtonState();
 
       trigger.addEventListener("click", () => setOpen(panel.hidden));
+      addButton.addEventListener("click", () => addIngredient(addButtonValue(), { submit: true }));
       input.addEventListener("input", renderOptions);
       input.addEventListener("keydown", (event) => {
         if (event.key === "ArrowDown") {
@@ -307,9 +334,7 @@
 
         if (event.key === "Enter") {
           event.preventDefault();
-          const active = optionsElement.querySelector("[data-active='true']");
-          const exact = canonicalName(input.value);
-          addIngredient(active?.dataset.value || exact || "", { submit: true });
+          addIngredient(addButtonValue(), { submit: true });
         }
       });
 

@@ -19,15 +19,16 @@
     </header>
 
     <section class="recipe-ingredients-picker">
-      <div class="recipe-ingredients-field">
-        <label for="recipe-ingredients-input">Add ingredient</label>
-        <input id="recipe-ingredients-input" class="input" type="text" placeholder="Start typing, then choose a match" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="recipe-ingredients-options" data-ingredients-filter-input>
-        <div id="recipe-ingredients-options" class="recipe-ingredients-options" role="listbox" data-ingredients-filter-options hidden></div>
-        <p class="recipe-ingredients-help" data-ingredients-filter-help>Only known ingredients can be added. Disabled selections stay saved but are not sent to search.</p>
-      </div>
-
       <div class="recipe-ingredients-selected">
         <div class="recipe-ingredients-selected-list" data-empty-text="No ingredients selected yet." data-ingredients-selected-list></div>
+      </div>
+
+      <div class="recipe-ingredients-field">
+        <div class="recipe-ingredients-input-group">
+          <input id="recipe-ingredients-input" class="input" type="text" placeholder="Start typing, then choose a match" autocomplete="off" role="combobox" aria-label="Ingredient name" aria-autocomplete="list" aria-expanded="false" aria-controls="recipe-ingredients-options" data-ingredients-filter-input>
+          <button type="button" class="btn recipe-ingredients-add-button" data-ingredients-add-button disabled>Add Ingredient</button>
+        </div>
+        <div id="recipe-ingredients-options" class="recipe-ingredients-options" role="listbox" data-ingredients-filter-options hidden></div>
       </div>
     </section>
   </div>

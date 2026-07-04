@@ -106,6 +106,57 @@ RSpec.describe "Recipe filters", type: :system do
     expect(page).to have_css(".recipe-card-ingredients .recipe-ingredient-match", text: "honey")
   end
 
+  it "adds basket ingredients from the connected input and lists required ingredients before optional ones" do
+    long_ingredient = "roasted red pepper and caramelized onion relish with toasted sesame seed topping"
+    create(:ingredient, name: "avocado")
+    create(:ingredient, name: "salt", optional: true)
+    create(:ingredient, name: long_ingredient)
+    create(:recipe, title: "E2E Basket List Toast", ingredient_names: [ "avocado", "salt" ])
+
+    visit recipes_path
+
+    find("[data-ingredients-fab-trigger]").click
+    find("[data-ingredients-filter-input]").set("salt")
+    find("[data-ingredients-add-button]").click
+    find("[data-ingredients-filter-input]").set("avocado")
+    find("[data-ingredients-add-button]").click
+    find("[data-ingredients-filter-input]").set(long_ingredient)
+    find("[data-ingredients-add-button]").click
+
+    expect(page).to have_css(".recipe-ingredients-row", count: 3)
+    expect(page.all(".recipe-ingredients-row").map(&:text)).to eq([ "avocado", long_ingredient, "salt" ])
+    expect(page).to have_no_css(".recipe-ingredients-chip")
+    expect(page).to have_css(".recipe-ingredients-row[data-optional='false'] .recipe-ingredients-remove[aria-label='Remove avocado']")
+    expect(page).to have_css(".recipe-ingredients-row[data-optional='false'] .recipe-ingredients-remove[aria-label='Remove #{long_ingredient}']")
+    expect(page).to have_css(".recipe-ingredients-row[data-optional='true'] .recipe-ingredients-remove[aria-label='Remove salt']")
+    layout = page.evaluate_script(<<~JS)
+      (() => {
+        const panel = document.querySelector("#recipe-ingredients-panel").getBoundingClientRect();
+        const picker = document.querySelector(".recipe-ingredients-picker");
+        const pickerRect = picker.getBoundingClientRect();
+        const selected = document.querySelector(".recipe-ingredients-selected").getBoundingClientRect();
+        const inputGroup = document.querySelector(".recipe-ingredients-input-group").getBoundingClientRect();
+        const pickerStyle = getComputedStyle(picker);
+        const paddingBottom = Number.parseFloat(getComputedStyle(picker).paddingBottom);
+        const gap = Number.parseFloat(pickerStyle.rowGap || pickerStyle.gap);
+
+        return {
+          inputBottomGap: Math.round(panel.bottom - inputGroup.bottom - paddingBottom),
+          selectedTopGap: Math.round(selected.top - pickerRect.top),
+          selectedInputGap: Math.round(inputGroup.top - selected.bottom - gap),
+          selectedHeight: Math.round(selected.height),
+          selectedScrollsHorizontally: document.querySelector(".recipe-ingredients-selected").scrollWidth > document.querySelector(".recipe-ingredients-selected").clientWidth
+        };
+      })()
+    JS
+
+    expect(layout.fetch("inputBottomGap").abs).to be <= 2
+    expect(layout.fetch("selectedTopGap").abs).to be <= 2
+    expect(layout.fetch("selectedInputGap").abs).to be <= 2
+    expect(layout.fetch("selectedHeight")).to be_positive
+    expect(layout.fetch("selectedScrollsHorizontally")).to be(true)
+  end
+
   it "does not resubmit ingredient filters after returning from a show page" do
     honey = create(:ingredient, name: "honey")
     matching_recipe = create(:recipe, title: "E2E Cookie Basket Honey Toast", ingredient_names: [ "honey" ])
