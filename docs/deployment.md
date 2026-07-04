@@ -28,6 +28,10 @@ keeps the deployment path aligned with later GitHub webhook source sync.
 The launch should create a long-running environment named for the app, target the deployment root domain, persist
 volumes, and route the `web` service at the root subdomain.
 
+Static crawl assets live in `public/robots.txt` and `public/sitemap.xml`. Because the sitemap is a checked-in static
+file, its URLs use the default local base URL until a canonical production hostname is committed or sitemap generation
+moves into Rails. Replace the sitemap host with the deployment root domain before relying on public search indexing.
+
 Pass these env overrides during launch and keep the same values in the remote operator-only recovery notes:
 
 - `RAILS_MASTER_KEY`
