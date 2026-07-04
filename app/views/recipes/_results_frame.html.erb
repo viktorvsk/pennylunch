@@ -8,7 +8,8 @@
 
     <% if recipes.any? %>
       <% selected_ingredient_names = Array(filters["ingredients"]).filter_map { it.to_s.squish.presence }.uniq %>
-      <%= render "results_grid", recipes:, next_page_url:, selected_ingredient_names: %>
+      <% ingredient_metadata = IngredientCatalogMetadata.call %>
+      <%= render "results_grid", recipes:, next_page_url:, selected_ingredient_names:, ingredient_metadata: %>
     <% else %>
       <%= render "empty_results" %>
     <% end %>

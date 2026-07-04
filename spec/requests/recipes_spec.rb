@@ -299,6 +299,20 @@ RSpec.describe "Recipes", type: :request do
     expect(readiness["data-state"]).to eq("partial")
   end
 
+  it "reuses catalog metadata while rendering recipe cards" do
+    create(:ingredient, name: "avocado", aliases: [ "avocados" ])
+    create(:ingredient, name: "lime")
+    create(:ingredient, name: "rice")
+    create_list(:recipe, 3, ingredient_names: [ "avocados", "lime", "rice" ])
+    create_recipe_ingredient_rows
+    allow(IngredientCatalogMetadata).to receive(:call).and_call_original
+
+    get recipes_path, params: { ingredients: [ "avocado", "lime" ] }
+
+    expect(response).to have_http_status(:ok)
+    expect(IngredientCatalogMetadata).to have_received(:call).once
+  end
+
   it "applies best matching order to vector search candidates" do
     allow(Rails.cache).to receive(:read).and_call_original
     allow(Rails.cache).to receive(:read).with("search_strategy").and_return("vector")

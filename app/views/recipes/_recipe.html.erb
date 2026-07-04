@@ -1,5 +1,6 @@
 <% ingredient_names = recipe.ingredient_names %>
-<% required_names = recipe.catalog_ingredients.reject(&:optional).map(&:name).uniq %>
+<% ingredient_metadata = local_assigns.fetch(:ingredient_metadata) { IngredientCatalogMetadata.call } %>
+<% required_names = recipe.catalog_ingredients(ingredient_metadata).reject(&:optional).map(&:name).uniq %>
 <% readiness = recipe_match_readiness(required_names, local_assigns.fetch(:selected_ingredient_names, [])) if required_names.any? %>
 
 <article class="recipe-card">
@@ -23,7 +24,7 @@
     </header>
 
     <% if ingredient_names.any? %>
-      <p class="recipe-card-ingredients" data-ingredient-matches-target="summary" data-recipe-ingredients="<%= recipe.recipe_ingredients_data.to_json %>" data-visible-limit="<%= IngredientsHelper::DEFAULT_INGREDIENT_SUMMARY_LIMIT %>"><%= ingredient_name_summary(recipe) %></p>
+      <p class="recipe-card-ingredients" data-ingredient-matches-target="summary" data-recipe-ingredients="<%= recipe.recipe_ingredients_data(ingredient_metadata).to_json %>" data-visible-limit="<%= IngredientsHelper::DEFAULT_INGREDIENT_SUMMARY_LIMIT %>"><%= ingredient_name_summary(recipe) %></p>
     <% end %>
 
     <footer class="recipe-card-footer">
