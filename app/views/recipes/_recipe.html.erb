@@ -1,6 +1,9 @@
 <% ingredient_names = recipe_ingredient_names(recipe) %>
 <% ingredient_catalog_names = recipe_ingredient_catalog_names(recipe) %>
 <% ingredient_summary = ingredient_name_summary(recipe) %>
+<% required_ingredient_names = recipe_required_ingredient_names(recipe) %>
+<% selected_ingredient_names = local_assigns.fetch(:selected_ingredient_names, []) %>
+<% readiness = recipe_match_readiness(required_ingredient_names, selected_ingredient_names) if required_ingredient_names.any? %>
 
 <article class="recipe-card">
   <%= link_to recipe_path(recipe), class: "recipe-card-link", data: { turbo_frame: "_top" } do %>
@@ -28,6 +31,12 @@
 
     <footer class="recipe-card-footer">
       <%= render "recipe_meta_items", recipe:, tooltip_side: "top" %>
+      <% if readiness %>
+        <span class="recipe-match-readiness" data-ingredient-matches-target="readiness" data-required-ingredient-names="<%= required_ingredient_names.to_json %>" data-state="<%= readiness.ready ? "ready" : "partial" %>" data-tooltip="<%= readiness.tooltip %>" data-side="top" data-align="end" aria-label="<%= readiness.tooltip %>">
+          <%= icon_svg(:basket, class_name: "size-3.5") %>
+          <span data-readiness-label><%= readiness.label %></span>
+        </span>
+      <% end %>
     </footer>
   </div>
 </article>

@@ -6,6 +6,6 @@
 <% if recipe.total_time.to_i.positive? %>
   <span class="recipe-meta-item" data-tooltip="<%= recipe_time_tooltip(recipe) %>" data-side="<%= tooltip_side %>" data-align="center">
     <%= icon_svg(:clock, class_name: "size-3.5") %>
-    <span><%= recipe.total_time %> min</span>
+    <span><%= recipe_duration_text(recipe.total_time) %></span>
   </span>
 <% end %>

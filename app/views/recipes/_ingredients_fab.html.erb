@@ -1,7 +1,7 @@
 <% fab_filters = (local_assigns[:filters] || {}).to_h.with_indifferent_access %>
 <% fab_ingredients_enabled = fab_filters["ingredients"].to_s.strip.present? %>
 
-<section id="recipe-ingredients-fab" class="recipe-ingredients-fab" data-turbo-permanent data-controller="ingredients-fab" data-ingredients-fab-current-ingredients-value="<%= fab_filters["ingredients"].to_s %>" data-action="keydown->ingredients-fab#escape pointerdown@document->ingredients-fab#closeFromOutside turbo:load@document->ingredients-fab#refreshPageContext">
+<section id="recipe-ingredients-fab" class="recipe-ingredients-fab" data-turbo-permanent data-controller="ingredients-fab" data-ingredients-fab-current-ingredients-value="<%= fab_filters["ingredients"].to_s %>" data-action="keydown->ingredients-fab#escape pointerdown@document->ingredients-fab#closeFromOutside turbo:load@document->ingredients-fab#refreshPageContext pennylunch:add-basket-ingredient@window->ingredients-fab#addIngredientFromEvent pennylunch:remove-basket-ingredient@window->ingredients-fab#removeIngredientFromEvent">
   <div id="recipe-ingredients-panel" class="recipe-ingredients-panel" data-ingredients-fab-target="panel" hidden>
     <header>
       <div class="recipe-ingredients-panel-header">
@@ -33,11 +33,68 @@
       <div class="recipe-ingredients-field">
         <div class="recipe-ingredients-input-group">
           <input id="recipe-ingredients-input" class="input" type="text" placeholder="Tomato, eggs, parsley..." autocomplete="off" role="combobox" aria-label="Ingredient name" aria-autocomplete="list" aria-expanded="false" aria-controls="recipe-ingredients-options" data-ingredients-fab-target="input" data-action="input->ingredients-fab#search keydown->ingredients-fab#keydown blur->ingredients-fab#blur">
+          <button type="button" class="btn recipe-ingredients-photo-trigger" data-variant="outline" data-ingredients-fab-target="imageTrigger" data-action="click->ingredients-fab#openImageDialog" data-tooltip="Scan photo or image URL" data-side="top" data-align="end" aria-label="Scan photo or image URL" aria-controls="recipe-ingredients-image-dialog">
+            <span class="recipe-ingredients-photo-icons" aria-hidden="true">
+              <%= icon_svg(:sparkles, class_name: "recipe-ingredients-photo-sparkles") %>
+              <%= icon_svg(:camera, class_name: "recipe-ingredients-photo-camera") %>
+            </span>
+          </button>
         </div>
         <div id="recipe-ingredients-options" class="recipe-ingredients-options" role="listbox" data-ingredients-fab-target="options" hidden></div>
       </div>
     </section>
   </div>
+
+  <dialog id="recipe-ingredients-image-dialog" class="recipe-ingredients-image-dialog" data-ingredients-fab-target="imageDialog" data-action="click->ingredients-fab#closeImageDialogFromBackdrop cancel->ingredients-fab#cancelImageDialog">
+    <%= form_with scope: :image, url: ingredient_image_path, multipart: true, html: { class: "recipe-ingredients-image-form", data: { ingredients_fab_target: "imageForm", action: "submit->ingredients-fab#submitImage" } } do |form| %>
+      <header class="recipe-ingredients-image-header">
+        <div>
+          <h2>Fill from photo</h2>
+          <p>Pen can fill your basket from a photo. You can also paste an image URL.</p>
+        </div>
+        <button type="button" class="recipe-ingredients-image-close" data-action="click->ingredients-fab#closeImageDialog" aria-label="Close">
+          <span aria-hidden="true"></span>
+        </button>
+      </header>
+
+      <div class="recipe-ingredients-image-idle" data-ingredients-fab-target="imageIdle">
+        <div class="recipe-ingredients-image-dropzone" role="button" tabindex="0" aria-label="Choose or drop a photo" data-ingredients-fab-target="imageDropzone" data-action="click->ingredients-fab#chooseImageFile keydown->ingredients-fab#imageDropzoneKeydown dragenter->ingredients-fab#dragImageFile dragover->ingredients-fab#dragImageFile dragleave->ingredients-fab#leaveImageFile drop->ingredients-fab#dropImageFile">
+          <%= form.file_field :file, accept: "image/jpeg,image/png,image/webp,image/gif", class: "recipe-ingredients-image-file-input", aria: { label: "Photo" }, data: { ingredients_fab_target: "imageFile", action: "change->ingredients-fab#selectImageFile" } %>
+          <span class="recipe-ingredients-image-drop-icon" aria-hidden="true">
+            <%= icon_svg(:sparkles, class_name: "recipe-ingredients-image-drop-sparkles") %>
+            <%= icon_svg(:camera, class_name: "recipe-ingredients-image-drop-camera") %>
+          </span>
+          <strong>Drop a photo here</strong>
+          <span>or click to choose one</span>
+        </div>
+
+        <div class="recipe-ingredients-image-divider"><span>or paste an image URL</span></div>
+
+        <div class="field">
+          <%= form.label :url, "Image URL" %>
+          <%= form.url_field :url, class: "input", placeholder: "https://example.com/fridge.jpg", autocomplete: "off", data: { ingredients_fab_target: "imageUrl", action: "paste->ingredients-fab#pasteImageUrl keydown->ingredients-fab#imageUrlKeydown" } %>
+        </div>
+
+        <p class="recipe-ingredients-image-status" data-ingredients-fab-target="imageStatus" role="status" hidden></p>
+        <p class="recipe-ingredients-image-error" data-ingredients-fab-target="imageError" role="alert" hidden></p>
+
+        <footer class="recipe-ingredients-image-actions">
+          <button type="button" class="btn" data-variant="outline" data-action="click->ingredients-fab#closeImageDialog">Cancel</button>
+        </footer>
+      </div>
+
+      <div class="recipe-ingredients-image-thinking" data-ingredients-fab-target="imageThinking" role="status" hidden>
+        <span class="recipe-ingredients-image-spinner" aria-hidden="true">
+          <span class="recipe-ingredients-image-star recipe-ingredients-image-star--one"></span>
+          <span class="recipe-ingredients-image-star recipe-ingredients-image-star--two"></span>
+          <span class="recipe-ingredients-image-star recipe-ingredients-image-star--three"></span>
+          <span class="recipe-ingredients-image-star recipe-ingredients-image-star--four"></span>
+        </span>
+        <strong>Reading your photo...</strong>
+        <span>Pen is matching what it sees to your basket.</span>
+      </div>
+    <% end %>
+  </dialog>
 
   <button type="button" class="btn recipe-ingredients-fab-button" data-variant="outline" data-ingredients-fab-target="trigger" data-action="click->ingredients-fab#toggle" data-state="disabled" data-tooltip="Ingredients: add what you have" data-side="left" data-align="center" aria-label="Ingredients: add what you have" aria-controls="recipe-ingredients-panel" aria-expanded="false">
     <%= icon_svg(:ingredients, class_name: "recipe-ingredients-fab-icon") %>

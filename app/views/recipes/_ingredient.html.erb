@@ -1,15 +1,34 @@
+<% basket_ingredient_name = ingredient[:catalog_name].presence %>
+<% ingredient_name_parts = ingredient[:name_parts].presence || [ { name: ingredient[:name], catalog_name: ingredient[:catalog_name] } ] %>
+<% ingredient_match_names = ingredient[:catalog_names].presence&.to_json %>
+
 <div class="recipe-ingredient-row" data-recipe-ingredient-row>
-  <span class="recipe-ingredient-match-icon" aria-hidden="true">
-    <%= icon_svg(:check, class_name: "recipe-ingredient-match-icon-svg") %>
-  </span>
+  <% if basket_ingredient_name.present? %>
+    <button type="button" class="recipe-ingredient-match-icon" data-action="click->ingredient-matches#removeFromBasket" data-ingredient-basket-remove data-ingredient-basket-default-name="<%= basket_ingredient_name %>" data-ingredient-basket-name="<%= basket_ingredient_name %>" aria-label="Remove <%= basket_ingredient_name %> from basket" disabled>
+      <%= icon_svg(:check, class_name: "recipe-ingredient-match-icon-svg") %>
+    </button>
+  <% else %>
+    <span class="recipe-ingredient-match-icon" aria-hidden="true">
+      <%= icon_svg(:check, class_name: "recipe-ingredient-match-icon-svg") %>
+    </span>
+  <% end %>
   <span class="recipe-ingredient-content">
     <span class="recipe-ingredient-leading">
       <code><%= ingredient[:size] %></code>
       <% if ingredient[:unit].present? %>
-        <b><%= ingredient[:unit].humanize.downcase %></b> of
+        <b><%= ingredient[:unit].humanize.downcase.pluralize(ingredient[:size].to_i) %></b> of
       <% end %>
       <i><%= ingredient[:state] %></i>
     </span>
-    <%= link_to ingredient[:name], ingredient_reference_url(ingredient[:name]), class: "recipe-ingredient-link", data: { ingredient_matches_target: "name", ingredient_name: ingredient[:name], ingredient_match_name: ingredient[:catalog_name].presence || ingredient[:name], ingredient_match_names: ingredient[:catalog_names].presence&.to_json }, target: "_blank", rel: "noopener" %>
+    <% ingredient_name_parts.each_with_index do |name_part, index| %>
+      <%= index == ingredient_name_parts.size - 1 ? " or " : ", " if index.positive? %>
+      <% ingredient_name = name_part[:name] %>
+      <%= link_to ingredient_name, ingredient_reference_url(ingredient_name), class: "recipe-ingredient-link", data: { ingredient_matches_target: "name", ingredient_name:, ingredient_match_name: name_part[:catalog_name].presence || ingredient_name, ingredient_match_names: }, target: "_blank", rel: "noopener" %>
+    <% end %>
   </span>
+  <% if basket_ingredient_name.present? %>
+    <button type="button" class="btn recipe-ingredient-basket-button" data-variant="outline" data-size="sm" data-action="click->ingredient-matches#addToBasket" data-ingredient-basket-name="<%= basket_ingredient_name %>" aria-label="I have <%= ingredient[:name] %>">
+      I have it
+    </button>
+  <% end %>
 </div>

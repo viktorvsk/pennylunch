@@ -1,5 +1,7 @@
 export const BASKET_COOKIE = "pennylunch.ingredients"
 export const BASKET_CHANGE_EVENT = "pennylunch:ingredient-basket-change"
+export const ADD_BASKET_INGREDIENT_EVENT = "pennylunch:add-basket-ingredient"
+export const REMOVE_BASKET_INGREDIENT_EVENT = "pennylunch:remove-basket-ingredient"
 export const BASKET_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
 export const LEGACY_STORAGE_KEYS = {
   enabled: "pennylunch.ingredients.enabled",

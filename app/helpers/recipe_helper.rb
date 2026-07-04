@@ -43,10 +43,19 @@ module RecipeHelper
 
   def recipe_time_tooltip(recipe)
     result = []
-    result << "prepare for #{recipe.prep_time} minutes" unless recipe.prep_time.zero?
+    result << "prepare for #{recipe_duration_text(recipe.prep_time)}" unless recipe.prep_time.zero?
     result << "then" if recipe.prep_time.positive? && recipe.cook_time.positive?
-    result << "cook for #{recipe.cook_time} minutes" unless recipe.cook_time.zero?
+    result << "cook for #{recipe_duration_text(recipe.cook_time)}" unless recipe.cook_time.zero?
     result.join(" ").capitalize
+  end
+
+  def recipe_duration_text(minutes)
+    total_minutes = minutes.to_i
+    hours, remaining_minutes = total_minutes.divmod(60)
+    parts = []
+    parts << pluralize(hours, "hour") if hours.positive?
+    parts << pluralize(remaining_minutes, "minute") if remaining_minutes.positive? || parts.empty?
+    parts.join(" ")
   end
 
   def recipe_sort_options

@@ -36,9 +36,14 @@ When adding a setting:
 | `EMBEDDING_MODEL_PRELOAD` | `true` | Enables non-blocking model warmup after Rails server boot outside test. |
 | `AVO_USERNAME` | `pennylunch` | HTTP basic username for `/avo`. |
 | `AVO_PASSWORD` | `pennylunch` | HTTP basic password for `/avo`. |
+| `OPENROUTER_API_KEY` | Rails credential `openrouter_api_key` | OpenRouter key used by ingredient image reading. |
 
 Ingredient search strategy is controlled at runtime through the Rails cache key `search_strategy`. The Avo `Set recipe search strategy` action enqueues `SetRecipeSearchStrategyJob`, which sets the key to `vector` when its `strategy` parameter is `vector`, and deletes the key when its `strategy` parameter is `overlap`. Missing or non-`vector` cache values use overlap search.
 
 ## Python Runtime Settings
 
 The Ruby parser wrapper runs `python` against `libexec/parse_ingredients.py`. Rails boot and Docker put `.venv/bin` first on `PATH`, so the command resolves to the parser virtualenv without a separate application setting. `NLTK_DATA` points the Python ingredient parser at its local model-data directory. Docker Compose sets it to `/rails/.venv/nltk_data`; local setup defaults to `.venv/nltk_data`.
+
+## Ingredient Image Reading
+
+Ingredient image reading uses `OPENROUTER_API_KEY`, falling back to the Rails credential `openrouter_api_key`. Store the production secret in credentials and use the environment variable only for local overrides or deployment systems that inject secrets through the process environment.

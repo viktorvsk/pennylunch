@@ -12,3 +12,4 @@ penny_lunch_config.add_config(:informers_cache_dir, Rails.root.join("storage", "
 penny_lunch_config.add_config(:embedding_model_preload, "true")
 penny_lunch_config.add_config(:avo_username, "pennylunch")
 penny_lunch_config.add_config(:avo_password, "pennylunch")
+penny_lunch_config.add_config(:openrouter_api_key, Rails.application.credentials.openrouter_api_key)

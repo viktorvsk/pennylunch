@@ -1,6 +1,15 @@
 require "rails_helper"
 
 RSpec.describe RecipeHelper, type: :helper do
+  describe "#recipe_duration_text" do
+    it "renders recipe durations in human-friendly hour and minute parts" do
+      expect(helper.recipe_duration_text(45)).to eq("45 minutes")
+      expect(helper.recipe_duration_text(60)).to eq("1 hour")
+      expect(helper.recipe_duration_text(65)).to eq("1 hour 5 minutes")
+      expect(helper.recipe_duration_text(105)).to eq("1 hour 45 minutes")
+    end
+  end
+
   describe "#recipe_ui_catalog" do
     it "fetches the shared recipe UI catalog through a short-lived cache" do
       create(:ingredient, name: "tomato", optional: true)

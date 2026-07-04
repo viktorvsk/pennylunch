@@ -58,4 +58,5 @@ The smoke script uses `/Applications/Google Chrome.app/Contents/MacOS/Google Chr
 - The show page renders a two-column desktop detail layout.
 - The image occupies the top of the card and zooms on hover.
 - The structured ingredient table has rows.
+- The show-page `I have it` ingredient action adds a row ingredient to the saved basket without enabling filters.
 - The similar-recipes section renders no more than three recipe cards.

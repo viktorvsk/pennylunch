@@ -11,6 +11,34 @@ RSpec.describe IngredientsHelper, type: :helper do
     end
   end
 
+  describe "#recipe_required_ingredient_names" do
+    it "returns canonical non-optional ingredients only" do
+      create(:ingredient, name: "banana", aliases: [ "banana", "overripe bananas" ])
+      create(:ingredient, name: "salt", aliases: [ "salt", "kosher salt" ], optional: true)
+      recipe = build(:recipe, ingredient_names: [ "overripe bananas", "kosher salt", "unknown" ])
+
+      expect(helper.recipe_required_ingredient_names(recipe)).to eq([ "banana" ])
+    end
+  end
+
+  describe "#recipe_match_readiness" do
+    it "reports the selected share of required ingredients" do
+      readiness = helper.recipe_match_readiness([ "avocado", "lime", "rice" ], [ "Avocado", "lime" ])
+
+      expect(readiness.percentage).to eq(67)
+      expect(readiness.label).to eq("67%")
+      expect(readiness.tooltip).to eq("Matches 2 of 3 required ingredients in your selected ingredients. Pantry staples are not counted.")
+      expect(readiness.ready).to be(false)
+    end
+
+    it "reports 100 percent when every required ingredient is selected" do
+      readiness = helper.recipe_match_readiness([ "avocado", "lime" ], [ "lime", "avocado" ])
+
+      expect(readiness.label).to eq("100%")
+      expect(readiness.ready).to be(true)
+    end
+  end
+
   describe "#recipe_ingredient_rows" do
     it "includes a canonical match name for each parsed ingredient row" do
       create(:ingredient, name: "banana", aliases: [ "banana", "overripe bananas" ])
@@ -56,7 +84,11 @@ RSpec.describe IngredientsHelper, type: :helper do
       )
 
       expect(helper.recipe_ingredient_rows(recipe).first).to include(
-        name: "crusty sourdough",
+        name: "crusty sourdough and ciabatta bread",
+        name_parts: [
+          { name: "crusty sourdough", catalog_name: "crusty sourdough" },
+          { name: "ciabatta bread", catalog_name: "bread" }
+        ],
         catalog_name: "crusty sourdough",
         catalog_names: [ "crusty sourdough", "bread" ],
         optional: false

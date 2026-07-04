@@ -1,5 +1,5 @@
 <section id="recipe-results" class="recipe-results-grid">
-  <%= render partial: "recipes/recipe", collection: recipes, as: :recipe %>
+  <%= render partial: "recipes/recipe", collection: recipes, as: :recipe, locals: { selected_ingredient_names: } %>
 </section>
 
 <% if next_page_url %>

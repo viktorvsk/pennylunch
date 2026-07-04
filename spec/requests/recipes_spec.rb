@@ -89,6 +89,17 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("Market basket")
     expect(response.body).to include("Add what is in your kitchen. Matching recipes move to the front.")
     expect(response.body).to include("Tomato, eggs, parsley...")
+    expect(response.body).to include("aria-label=\"Scan photo or image URL\"")
+    expect(response.body).to include("id=\"recipe-ingredients-image-dialog\"")
+    expect(response.body).to include("Pen can fill your basket from a photo.")
+    expect(response.body).to include("You can also paste an image URL.")
+    expect(response.body).to include("Drop a photo here")
+    expect(response.body).to include("or paste an image URL")
+    expect(response.body).to include("Reading your photo...")
+    expect(response.body).to include("action=\"/ingredient_image\"")
+    expect(response.body).to include("name=\"image[file]\"")
+    expect(response.body).to include("name=\"image[url]\"")
+    expect(response.body).not_to include(">Read image<")
     expect(response.body).not_to include("—")
     expect(response.body).to include("you see all recipes.")
     expect(response.body).not_to include("Pick matching ingredients. Enable to include them in filters.")
@@ -121,6 +132,16 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("infinite-scroll-spinner")
     expect(response.body).not_to include("#{RecipesController::PER_PAGE + 1} recipes")
     expect(response.body).not_to include(">Next<")
+  end
+
+  it "renders recipe card durations as human-friendly text" do
+    create(:recipe, title: "Slow Sunday Pasta", prep_time: 5, cook_time: 60)
+
+    get recipes_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("1 hour 5 minutes")
+    expect(response.body).not_to include(">65 min<")
   end
 
   it "renders only the results frame for Turbo frame filter requests" do
@@ -241,6 +262,26 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include(">Best Match<")
   end
 
+  it "shows required ingredient readiness in recipe card footers" do
+    create(:ingredient, name: "avocado", aliases: [ "avocados" ])
+    create(:ingredient, name: "lime")
+    create(:ingredient, name: "rice")
+    create(:ingredient, name: "salt", optional: true)
+    recipe = create(:recipe, title: "Avocado Rice Bowl", ingredient_names: [ "avocados", "lime", "rice", "salt" ])
+    create_recipe_ingredient_rows
+
+    get recipes_path, params: { ingredients: "avocado, lime" }
+
+    document = Nokogiri::HTML(response.body)
+    card = document.css(".recipe-card").find { |node| node.text.include?(recipe.title) }
+    readiness = card.at_css("[data-ingredient-matches-target='readiness']")
+
+    expect(readiness.text.squish).to eq("67%")
+    expect(JSON.parse(readiness["data-required-ingredient-names"])).to eq([ "avocado", "lime", "rice" ])
+    expect(readiness["data-tooltip"]).to eq("Matches 2 of 3 required ingredients in your selected ingredients. Pantry staples are not counted.")
+    expect(readiness["data-state"]).to eq("partial")
+  end
+
   it "applies best matching order to vector search candidates" do
     allow(Rails.cache).to receive(:read).and_call_original
     allow(Rails.cache).to receive(:read).with("search_strategy").and_return("vector")
@@ -263,6 +304,8 @@ RSpec.describe "Recipes", type: :request do
   end
 
   it "shows a recipe and its ingredients" do
+    create(:ingredient, name: "tomato", aliases: [ "tomatoes" ])
+    create(:ingredient, name: "pasta")
     recipe = create(
       :recipe,
       title: "Quick Tomato Pasta",
@@ -320,6 +363,18 @@ RSpec.describe "Recipes", type: :request do
     ingredient_links = document.css(".recipe-ingredient-link").map { |node| [ node.text.squish, node["href"], node["target"], node["rel"] ] }
     expect(ingredient_links).to include([ "tomatoes", "https://en.wikipedia.org/wiki/tomatoes", "_blank", "noopener" ])
     expect(document.css(".recipe-ingredient-link[data-ingredient-name]").map { |node| node["data-ingredient-name"] }).to include("tomatoes", "pasta")
+    ingredient_action = document.at_css(".recipe-ingredient-row:has(.recipe-ingredient-link[data-ingredient-name='tomatoes']) .recipe-ingredient-basket-button")
+    expect(ingredient_action.text.squish).to eq("I have it")
+    expect(ingredient_action["type"]).to eq("button")
+    expect(ingredient_action["data-action"]).to eq("click->ingredient-matches#addToBasket")
+    expect(ingredient_action["data-ingredient-basket-name"]).to eq("tomato")
+    remove_action = document.at_css(".recipe-ingredient-row:has(.recipe-ingredient-link[data-ingredient-name='tomatoes']) .recipe-ingredient-match-icon")
+    expect(remove_action.name).to eq("button")
+    expect(remove_action["type"]).to eq("button")
+    expect(remove_action["data-action"]).to eq("click->ingredient-matches#removeFromBasket")
+    expect(remove_action["data-ingredient-basket-remove"]).to eq("")
+    expect(remove_action["data-ingredient-basket-name"]).to eq("tomato")
+    expect(remove_action["disabled"]).to eq("disabled")
     expect(response.body).to include("Similar recipes")
     similar_titles.each { |title| expect(response.body).to include(title) }
     expect(response.body).not_to include("Same Category Without Vector")
@@ -358,6 +413,37 @@ RSpec.describe "Recipes", type: :request do
     expect(groups).to eq([
       [ "Main ingredients", [ "tomato", "house seasoning" ] ],
       [ "Pantry staples", [ "salt" ] ]
+    ])
+  end
+
+  it "renders every parsed ingredient name from a combined source ingredient row" do
+    create(:ingredient, name: "salt", optional: true)
+    create(:ingredient, name: "black pepper", optional: true)
+    recipe = create(
+      :recipe,
+      title: "Eggs Over Easy",
+      ingredients: [ "salt and ground black pepper to taste" ],
+      ingredient_names: [ "salt", "black pepper" ],
+      ingredient_parse_data: [
+        {
+          "parser" => {
+            "name" => [ { "text" => "salt" }, { "text" => "black pepper" } ],
+            "preparation" => { "text" => "ground" },
+            "comment" => { "text" => "to taste" }
+          }
+        }
+      ]
+    )
+
+    get recipe_path(recipe)
+
+    document = Nokogiri::HTML(response.body)
+    row = document.at_css(".recipe-ingredient-row")
+
+    expect(row.css(".recipe-ingredient-link").map { |node| node.text.squish }).to eq([ "salt", "black pepper" ])
+    expect(row.css(".recipe-ingredient-link").map { |node| JSON.parse(node["data-ingredient-match-names"]) }).to eq([
+      [ "salt", "black pepper" ],
+      [ "salt", "black pepper" ]
     ])
   end
 

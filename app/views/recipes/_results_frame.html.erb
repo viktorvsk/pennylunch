@@ -7,7 +7,7 @@
     <% end %>
 
     <% if recipes.any? %>
-      <%= render "results_grid", recipes:, next_page_url: %>
+      <%= render "results_grid", recipes:, next_page_url:, selected_ingredient_names: recipe_filter_ingredient_names(filters["ingredients"]) %>
     <% else %>
       <%= render "empty_results" %>
     <% end %>

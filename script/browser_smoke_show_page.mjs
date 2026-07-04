@@ -79,7 +79,12 @@ async function main() {
     const fabCount = await page.locator("#recipe-ingredients-fab").count()
     const showMatchedIngredient = (await page.locator(".recipe-ingredient-row--matched .recipe-ingredient-link").first().innerText()).trim()
     const showLinkHighlightCount = await page.locator(".recipe-ingredient-link.recipe-ingredient-match").count()
-    const showMatchedMarkerOpacity = await page.locator(".recipe-ingredient-row--matched .recipe-ingredient-match-icon").first().evaluate((element) => Number(getComputedStyle(element).opacity))
+    const showMatchedMarker = page.locator(".recipe-ingredient-row--matched .recipe-ingredient-match-icon").first()
+    await page.waitForFunction(() => {
+      const marker = document.querySelector(".recipe-ingredient-row--matched .recipe-ingredient-match-icon")
+      return marker && Number(getComputedStyle(marker).opacity) >= 0.9
+    })
+    const showMatchedMarkerOpacity = await showMatchedMarker.evaluate((element) => Number(getComputedStyle(element).opacity))
     const showUnmatchedMarker = page.locator(".recipe-ingredient-row:not(.recipe-ingredient-row--matched) .recipe-ingredient-match-icon")
     const showUnmatchedMarkerCount = await showUnmatchedMarker.count()
     const showUnmatchedMarkerOpacity = showUnmatchedMarkerCount > 0 ? await showUnmatchedMarker.first().evaluate((element) => Number(getComputedStyle(element).opacity)) : null
@@ -137,11 +142,66 @@ async function main() {
     if (showTimeTooltipState.tooltipWidth < 8) throw new Error("Show page time tooltip has no measurable width.")
     if (showTimeTooltipState.tooltipLeft < showTimeTooltipState.detailLeft && showTimeTooltipState.detailOverflow !== "visible") throw new Error("Show page time tooltip is clipped by the detail panel.")
 
+    await page.evaluate(() => {
+      document.cookie = `pennylunch.ingredients=${encodeURIComponent(JSON.stringify({ selected: [], enabled: false }))}; Path=/; SameSite=Lax`
+      window.dispatchEvent(new CustomEvent("pennylunch:ingredient-basket-change"))
+    })
+    await page.reload({ waitUntil: "networkidle" })
+
+    const showActionTarget = await page.locator(".recipe-ingredient-row").evaluateAll((rows) => {
+      for (const row of rows) {
+        const button = row.querySelector(".recipe-ingredient-basket-button")
+        const link = row.querySelector(".recipe-ingredient-link")
+        if (!button || !link || !button.offsetParent) continue
+
+        return {
+          basketName: button.dataset.ingredientBasketName,
+          displayName: link.textContent.trim(),
+          label: button.textContent.trim()
+        }
+      }
+
+      return null
+    })
+    if (!showActionTarget) throw new Error("No show-page ingredient basket action found.")
+    if (showActionTarget.label !== "I have it") throw new Error(`Show-page ingredient action label mismatch: ${showActionTarget.label}.`)
+
+    await page.locator(".recipe-ingredient-basket-button", { hasText: "I have it" }).first().click()
+    await page.waitForFunction((name) => {
+      const value = document.cookie.split(";").map((item) => item.trim()).find((item) => item.startsWith("pennylunch.ingredients="))
+      if (!value) return false
+
+      return JSON.parse(decodeURIComponent(value.split("=")[1])).selected.includes(name)
+    }, showActionTarget.basketName)
+
+    const showActionState = await page.locator(".recipe-ingredient-row").evaluateAll((rows, name) => {
+      for (const row of rows) {
+        const button = row.querySelector(".recipe-ingredient-basket-button")
+        if (button?.dataset.ingredientBasketName !== name) continue
+
+        return {
+          buttonDisplay: getComputedStyle(button).display,
+          matched: row.classList.contains("recipe-ingredient-row--matched")
+        }
+      }
+
+      return null
+    }, showActionTarget.basketName)
+    const showActionBasket = await page.evaluate(() => {
+      const value = document.cookie.split(";").map((item) => item.trim()).find((item) => item.startsWith("pennylunch.ingredients="))
+      return JSON.parse(decodeURIComponent(value.split("=")[1]))
+    })
+    if (!showActionState?.matched) throw new Error("Show-page ingredient action did not mark the row as matched.")
+    if (showActionState.buttonDisplay !== "none") throw new Error("Show-page ingredient action button is still visible after adding.")
+    if (!showActionBasket.selected.includes(showActionTarget.basketName)) throw new Error("Show-page ingredient action did not update the basket cookie.")
+    if (showActionBasket.enabled !== false) throw new Error("Show-page ingredient action changed the basket filter switch state.")
+
     console.log(JSON.stringify({
       baseUrl,
       title,
       indexMatchedIngredient,
       showMatchedIngredient,
+      showActionAddedIngredient: showActionTarget.basketName,
       showMatchedRows: await page.locator(".recipe-ingredient-row--matched").count(),
       showMatchedMarkerOpacity,
       showUnmatchedMarkerOpacity,

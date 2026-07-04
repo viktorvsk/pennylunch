@@ -20,6 +20,16 @@ export default class extends Controller {
     "enabledControl",
     "enabledInput",
     "enabledText",
+    "imageDialog",
+    "imageDropzone",
+    "imageError",
+    "imageFile",
+    "imageForm",
+    "imageIdle",
+    "imageStatus",
+    "imageThinking",
+    "imageTrigger",
+    "imageUrl",
     "input",
     "modeText",
     "options",
@@ -41,6 +51,7 @@ export default class extends Controller {
     this.selected = []
     this.initialized = false
     this.activeOptionIndex = NO_OPTION_INDEX
+    this.imageLoading = false
 
     const storedBasket = readBasket()
     if (storedBasket.selected.length > 0) this.seedSelected(storedBasket.selected)
@@ -103,6 +114,178 @@ export default class extends Controller {
 
   refreshPageContext() {
     this.sync()
+  }
+
+  addIngredientFromEvent(event) {
+    this.addIngredient(event.detail?.name || "", { submit: true })
+  }
+
+  removeIngredientFromEvent(event) {
+    this.removeIngredient(event.detail?.name || "")
+  }
+
+  openImageDialog() {
+    this.hideOptions()
+    this.imageFormTarget.reset()
+    this.clearImageFeedback()
+    this.setImageLoading(false)
+    if (!this.imageDialogTarget.open) this.imageDialogTarget.showModal()
+    this.imageDropzoneTarget.focus()
+  }
+
+  closeImageDialog() {
+    if (this.imageLoading) return
+    if (this.imageDialogTarget.open) this.imageDialogTarget.close()
+    this.setImageLoading(false)
+  }
+
+  cancelImageDialog(event) {
+    if (this.imageLoading) {
+      event.preventDefault()
+      return
+    }
+
+    this.setImageLoading(false)
+  }
+
+  closeImageDialogFromBackdrop(event) {
+    if (event.target === this.imageDialogTarget) this.closeImageDialog()
+  }
+
+  chooseImageFile(event) {
+    event.preventDefault()
+    if (this.imageLoading) return
+
+    this.imageFileTarget.click()
+  }
+
+  imageDropzoneKeydown(event) {
+    if (event.key !== "Enter" && event.key !== " ") return
+
+    event.preventDefault()
+    this.chooseImageFile(event)
+  }
+
+  selectImageFile() {
+    if (this.imageLoading || this.imageFileTarget.files.length === 0) return
+
+    this.imageUrlTarget.value = ""
+    this.startImageRead({ file: this.imageFileTarget.files[0] })
+  }
+
+  dragImageFile(event) {
+    event.preventDefault()
+    if (this.imageLoading) return
+
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy"
+    this.setImageDropzoneActive(true)
+  }
+
+  leaveImageFile(event) {
+    event.preventDefault()
+    if (event.currentTarget.contains(event.relatedTarget)) return
+
+    this.setImageDropzoneActive(false)
+  }
+
+  dropImageFile(event) {
+    event.preventDefault()
+    this.setImageDropzoneActive(false)
+    if (this.imageLoading) return
+
+    const file = Array.from(event.dataTransfer?.files || []).find((candidate) => candidate.type.startsWith("image/"))
+    if (!file) {
+      this.setImageError("Drop a photo file.")
+      return
+    }
+
+    this.imageFileTarget.value = ""
+    this.imageUrlTarget.value = ""
+    this.startImageRead({ file })
+  }
+
+  pasteImageUrl() {
+    if (this.imageLoading) return
+
+    window.setTimeout(() => {
+      if (this.imageLoading) return
+
+      const url = this.imageUrlTarget.value.trim()
+      if (!present(url)) return
+
+      this.imageFileTarget.value = ""
+      this.startImageRead({ url })
+    }, 0)
+  }
+
+  imageUrlKeydown(event) {
+    if (event.key !== "Enter") return
+
+    event.preventDefault()
+    this.imageFileTarget.value = ""
+    this.startImageRead()
+  }
+
+  submitImage(event) {
+    event.preventDefault()
+    this.startImageRead()
+  }
+
+  async startImageRead({ file = null, url = "" } = {}) {
+    if (this.imageLoading) return
+
+    const selectedFile = file || this.imageFileTarget.files[0] || null
+    const selectedUrl = (url || this.imageUrlTarget.value).trim()
+    const hasFile = selectedFile !== null
+    const hasUrl = present(selectedUrl)
+
+    if (!hasFile && !hasUrl) {
+      this.setImageError("Choose a photo or paste an image URL.")
+      return
+    }
+
+    if (hasFile && hasUrl) {
+      this.setImageError("Choose a photo or paste an image URL, not both.")
+      return
+    }
+
+    const formData = new FormData()
+    if (hasFile) formData.set("image[file]", selectedFile, selectedFile.name)
+    if (hasUrl) formData.set("image[url]", selectedUrl)
+
+    this.setImageLoading(true)
+    this.clearImageFeedback()
+
+    try {
+      const response = await fetch(this.imageFormTarget.action, {
+        method: this.imageFormTarget.method.toUpperCase(),
+        body: formData,
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "X-CSRF-Token": this.csrfToken()
+        }
+      })
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok) throw new Error(payload.error || "Pen could not read that image right now.")
+
+      const addedCount = this.addIngredients(payload.ingredients || [], { submit: true })
+      if (addedCount === 0) {
+        this.setImageLoading(false)
+        this.setImageError("No catalog ingredients were found in that image.")
+        return
+      }
+
+      this.imageFormTarget.reset()
+      this.setImageLoading(false)
+      this.closeImageDialog()
+      this.setOpen(true)
+      this.setImageStatus(`Added ${addedCount} ${addedCount === 1 ? "ingredient" : "ingredients"}.`)
+    } catch (error) {
+      this.setImageLoading(false)
+      this.setImageError(error.message || "Pen could not read that image right now.")
+    }
   }
 
   parseOptionRecords() {
@@ -269,6 +452,46 @@ export default class extends Controller {
     return this.availableOptions(query)[0] || ""
   }
 
+  csrfToken() {
+    return document.querySelector("meta[name='csrf-token']")?.content || ""
+  }
+
+  clearImageFeedback() {
+    this.imageErrorTarget.textContent = ""
+    this.imageErrorTarget.hidden = true
+    this.imageStatusTarget.textContent = ""
+    this.imageStatusTarget.hidden = true
+  }
+
+  setImageError(message) {
+    this.imageStatusTarget.hidden = true
+    this.imageStatusTarget.textContent = ""
+    this.imageErrorTarget.textContent = message
+    this.imageErrorTarget.hidden = false
+  }
+
+  setImageStatus(message) {
+    this.imageErrorTarget.hidden = true
+    this.imageErrorTarget.textContent = ""
+    this.imageStatusTarget.textContent = message
+    this.imageStatusTarget.hidden = false
+  }
+
+  setImageLoading(loading) {
+    this.imageLoading = loading
+    this.imageDialogTarget.dataset.state = loading ? "loading" : "idle"
+    this.imageIdleTarget.hidden = loading
+    this.imageThinkingTarget.hidden = !loading
+    this.setImageDropzoneActive(false)
+    this.imageFormTarget.querySelectorAll("input, button").forEach((control) => {
+      control.disabled = loading
+    })
+  }
+
+  setImageDropzoneActive(active) {
+    this.imageDropzoneTarget.dataset.state = active ? "active" : "idle"
+  }
+
   setStatus() {
     const hasSelected = this.selected.length > 0
     const enabled = this.enabledInputTarget.checked
@@ -333,12 +556,32 @@ export default class extends Controller {
 
   addIngredient(value, { submit = false } = {}) {
     const name = this.canonicalName(value)
-    if (!name || this.selectedKeys().has(normalizeIngredientName(name))) return
+    if (!name || this.selectedKeys().has(normalizeIngredientName(name))) return false
 
     this.selected.push(name)
     this.inputTarget.value = ""
     this.hideOptions()
     this.sync({ submit: this.enabledInputTarget.checked && submit, delay: SUBMIT_DELAY_MS })
+    return true
+  }
+
+  addIngredients(values, { submit = false } = {}) {
+    let addedCount = 0
+    const selectedKeys = this.selectedKeys()
+
+    values.forEach((value) => {
+      const name = this.canonicalName(value)
+      const key = name ? normalizeIngredientName(name) : ""
+      if (!name || selectedKeys.has(key)) return
+
+      selectedKeys.add(key)
+      this.selected.push(name)
+      addedCount += 1
+    })
+
+    if (addedCount > 0) this.sync({ submit: this.enabledInputTarget.checked && submit, delay: SUBMIT_DELAY_MS })
+
+    return addedCount
   }
 
   removeIngredient(value) {
