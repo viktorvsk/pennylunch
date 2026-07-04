@@ -3,6 +3,8 @@ module ApplicationHelper
   DEFAULT_INGREDIENT_SUMMARY_LIMIT = 8
   MAX_RATING_STARS = 5
   RATING_PRECISION = 2
+  RECIPE_UI_CATALOG_CACHE_EXPIRATION = 5.minutes
+  RECIPE_UI_CATALOG_CACHE_KEY = "recipes/ui_catalog/v1"
   SORT_OPTIONS = {
     "time_asc" => "Time ascending",
     "time_desc" => "Time descending",
@@ -50,7 +52,11 @@ module ApplicationHelper
   end
 
   def recipe_time_tooltip(recipe)
-    "Prep: #{recipe.prep_time} min, cook: #{recipe.cook_time} min"
+    result = []
+    result << "prepare for #{recipe.prep_time} minutes" unless recipe.prep_time.zero?
+    result << "then" if recipe.prep_time.positive? and recipe.cook_time.positive?
+    result << "cook for #{recipe.cook_time} minutes" unless recipe.cook_time.zero?
+    result.join(" ").capitalize
   end
 
   def recipe_ingredient_rows(recipe)
@@ -83,6 +89,39 @@ module ApplicationHelper
 
   def recipe_sort_label(sort)
     SORT_OPTIONS.fetch(sort.presence || Recipes::SortQuery::DEFAULT_SORT, SORT_OPTIONS.fetch(Recipes::SortQuery::DEFAULT_SORT))
+  end
+
+  def recipe_ui_catalog
+    Rails.cache.fetch(RECIPE_UI_CATALOG_CACHE_KEY, expires_in: RECIPE_UI_CATALOG_CACHE_EXPIRATION) do
+      category_labels = Recipes::CategoryCatalogQuery.labels
+
+      {
+        ingredient_options: Ingredient.filter_options,
+        category_labels:,
+        category_slugs: category_labels.keys.to_h { |category| [ category, Recipe.category_slug_for(category) ] }
+      }
+    end
+  end
+
+  def recipe_ui_catalog_json
+    catalog = recipe_ui_catalog
+    {
+      ingredientOptions: catalog.fetch(:ingredient_options),
+      categoryLabels: catalog.fetch(:category_labels),
+      categorySlugs: catalog.fetch(:category_slugs)
+    }.to_json
+  end
+
+  def recipe_category_labels
+    recipe_ui_catalog.fetch(:category_labels)
+  end
+
+  def recipe_category_from_slug(slug)
+    recipe_ui_catalog.fetch(:category_slugs).key(slug.to_s)
+  end
+
+  def recipe_layout_fab_filters
+    params.slice(:ingredients).permit(:ingredients).to_h
   end
 
   def recipe_filter_path(filters = {})

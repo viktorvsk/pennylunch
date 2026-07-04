@@ -1,6 +1,30 @@
 require "rails_helper"
 
 RSpec.describe Recipe do
+  describe "#to_param" do
+    it "derives the friendly slug from recipe attributes and appends the id" do
+      recipe = build_stubbed(
+        :recipe,
+        id: 42,
+        title: "Tomato Pasta",
+        category: "",
+        author: "Pasta Maker",
+        prep_time: 8,
+        cook_time: 15,
+        total_time: 23
+      )
+      recipe.slug = nil if recipe.respond_to?(:slug=)
+
+      expect(recipe.to_param).to eq("Tomato-Pasta-Pasta-Maker-23-minutes-42")
+    end
+  end
+
+  describe "schema" do
+    it "does not persist friendly URL slugs" do
+      expect(described_class.column_names).not_to include("slug")
+    end
+  end
+
   describe ".slug_for" do
     it "skips blank category parts" do
       slug = described_class.slug_for(

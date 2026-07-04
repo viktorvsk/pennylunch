@@ -28,12 +28,32 @@
 
   const splitIngredientText = (text) => text.split(/[\n,;]+/).map((name) => name.trim()).filter(Boolean);
 
+  const recipeUiCatalog = () => {
+    const element = document.querySelector("[data-recipe-ui-catalog]");
+
+    if (!element) return {};
+
+    try {
+      return JSON.parse(element.textContent || "{}");
+    } catch {
+      return {};
+    }
+  };
+
   const categorySlugsFor = (form) => {
+    const slugs = recipeUiCatalog().categorySlugs;
+    if (slugs && typeof slugs === "object") return slugs;
+
     try {
       return JSON.parse(form.dataset.categorySlugs || "{}");
     } catch {
       return {};
     }
+  };
+
+  const recipeIngredientOptions = () => {
+    const options = recipeUiCatalog().ingredientOptions;
+    return Array.isArray(options) ? options : [];
   };
 
   const filterUrlFor = (form) => {
@@ -95,6 +115,8 @@
     writeStorage,
     normalizeIngredientName,
     splitIngredientText,
+    recipeIngredientOptions,
+    recipeUiCatalog,
     filterUrlFor,
     visit,
     submitFilterForm,

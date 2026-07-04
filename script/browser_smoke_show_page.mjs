@@ -13,7 +13,8 @@ async function main() {
     }
 
     const indexTarget = await page.locator(".recipe-card").evaluateAll((cards) => {
-      const options = new Set(JSON.parse(document.querySelector("[data-ingredients-fab]").dataset.ingredientOptions || "[]").map((option) => typeof option === "string" ? option : option.name))
+      const catalog = JSON.parse(document.querySelector("[data-recipe-ui-catalog]")?.textContent || "{}")
+      const options = new Set((catalog.ingredientOptions || []).map((option) => typeof option === "string" ? option : option.name))
 
       for (const card of cards) {
         const link = card.querySelector("a[href^='/recipes/']")
@@ -45,7 +46,8 @@ async function main() {
     await page.goto(new URL(indexTarget.href, baseUrl).toString(), { waitUntil: "networkidle" })
 
     const showIngredientName = await page.locator(".recipe-ingredient-link[data-ingredient-name]").evaluateAll((elements) => {
-      const options = new Set(JSON.parse(document.querySelector("[data-ingredients-fab]").dataset.ingredientOptions || "[]").map((option) => typeof option === "string" ? option : option.name))
+      const catalog = JSON.parse(document.querySelector("[data-recipe-ui-catalog]")?.textContent || "{}")
+      const options = new Set((catalog.ingredientOptions || []).map((option) => typeof option === "string" ? option : option.name))
 
       for (const element of elements) {
         const name = element.dataset.ingredientName

@@ -2,61 +2,44 @@ class RecipesController < ApplicationController
   FILTER_KEYS = %i[q category ingredients quick popular sort page].freeze
 
   def index
-    return redirect_category_query if params[:category].present?
-
-    render_index
-  end
-
-  def show
-    if (category = Recipes::CategoryCatalogQuery.from_slug(params[:slug]))
-      render_index(category:)
-      return
-    end
-
-    recipe = Recipe.find_by!(slug: params[:slug])
-    @recipe_fab_filters = {}
-    @recipe_ingredient_options = Ingredient.filter_options
-    render locals: { recipe:, similar_recipes: Recipes::SimilarRecipesQuery.call(recipe:) }
-  end
-
-  private
-
-  def render_index(category: nil)
-    filters = recipe_params.to_h
-    selected_category = category.presence || filters["category"].presence
-    filters["category"] = selected_category if selected_category
-    search = RecipeSearch.new(params: filters).call
-    frame_locals = {
-      search:,
-      recipes: search.recipes,
-      selected_category:,
-      filters:,
-      next_page_url: search.next_page ? helpers.recipe_filter_path(filters.merge("page" => search.next_page)) : nil,
-      random_category: search.category_options.sample
-    }
-
     if turbo_frame_request?
       render partial: "recipes/results_frame", locals: frame_locals
       return
     end
 
-    @recipe_fab_filters = filters
-    @recipe_ingredient_options = Ingredient.filter_options
-    render :index, locals: frame_locals.merge(category_labels: Recipes::CategoryCatalogQuery.labels)
+    render :index, locals: frame_locals
   end
 
-  def redirect_category_query
-    category = Recipe.normalize_category(params[:category])
-    return render_index(category:) unless Recipes::CategoryCatalogQuery.from_slug(Recipe.category_slug_for(category))
+  def show
+    recipe = Recipe.find(params[:id].to_s.rpartition("-").last)
+    render locals: { recipe:, similar_recipes: Recipes::SimilarRecipesQuery.call(recipe:) }
+  end
 
-    query = recipe_params.except(:category).to_h.compact_blank
-    target = "/recipes/#{Recipe.category_slug_for(category)}"
-    target = "#{target}?#{query.to_query}" if query.present?
+  private
 
-    redirect_to target, status: :see_other
+  def frame_locals
+    @frame_locals ||= begin
+      search = RecipeSearch.new(params: recipe_params).call
+      {
+        search:,
+        recipes: search.recipes,
+        selected_category: recipe_params["category"],
+        filters: recipe_params,
+        next_page_url: search.next_page ? helpers.recipe_filter_path(recipe_params.merge("page" => search.next_page)) : nil
+      }
+    end
   end
 
   def recipe_params
-    params.slice(*FILTER_KEYS).permit(*FILTER_KEYS)
+    @recipe_params ||= begin
+      filters = params.slice(*FILTER_KEYS).permit(*FILTER_KEYS)
+
+      selected_category = params[:category_slug].present? ? helpers.recipe_category_from_slug(params[:category_slug]) : filters["category"].presence
+      raise ActiveRecord::RecordNotFound if params[:category_slug].present? && selected_category.blank?
+
+      filters["category"] = selected_category if selected_category
+
+      filters
+    end
   end
 end

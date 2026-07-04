@@ -24,6 +24,5 @@ FactoryBot.define do
     total_time { prep_time + cook_time }
     sequence(:source_position)
     source_key { Recipe.source_key_for(title:, category:, author:) }
-    slug { Recipe.slug_for(title:, category:, author:, total_time:) }
   end
 end

@@ -2,7 +2,6 @@
   <main class="recipe-page">
     <% if selected_category.present? %>
       <section class="recipe-title-section">
-        <p class="recipe-page-subtitle">Category</p>
         <h1 class="recipe-page-title"><%= category_heading(selected_category) %></h1>
       </section>
     <% end %>
@@ -10,7 +9,7 @@
     <% if recipes.any? %>
       <%= render "results_grid", recipes:, next_page_url: %>
     <% else %>
-      <%= render "empty_results", random_category: %>
+      <%= render "empty_results" %>
     <% end %>
   </main>
 <% end %>

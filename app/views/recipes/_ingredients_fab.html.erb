@@ -1,7 +1,6 @@
 <% fab_filters = (local_assigns[:filters] || {}).to_h.with_indifferent_access %>
-<% fab_ingredient_options = Array(local_assigns[:ingredient_options]) %>
 
-<section id="recipe-ingredients-fab" class="recipe-ingredients-fab" data-turbo-permanent data-ingredients-fab data-current-ingredients="<%= fab_filters["ingredients"].to_s %>" data-current-enabled="<%= fab_filters["ingredients"].present? ? "true" : "false" %>" data-ingredient-options="<%= fab_ingredient_options.to_json %>">
+<section id="recipe-ingredients-fab" class="recipe-ingredients-fab" data-turbo-permanent data-ingredients-fab data-current-ingredients="<%= fab_filters["ingredients"].to_s %>" data-current-enabled="<%= fab_filters["ingredients"].present? ? "true" : "false" %>">
   <div id="recipe-ingredients-panel" class="recipe-ingredients-panel" data-ingredients-filter-panel hidden>
     <header>
       <div class="recipe-ingredients-panel-header">

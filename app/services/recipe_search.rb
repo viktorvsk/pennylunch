@@ -1,5 +1,5 @@
 class RecipeSearch
-  Result = Data.define(:recipes, :page, :next_page, :category_options)
+  Result = Data.define(:recipes, :page, :next_page)
   DEFAULT_PAGE = 1
   PER_PAGE = 24
 
@@ -20,8 +20,7 @@ class RecipeSearch
     Result.new(
       recipes: page_records.first(PER_PAGE),
       page: current_page,
-      next_page: page_records.size > PER_PAGE ? current_page + 1 : nil,
-      category_options: Recipes::CategoryCatalogQuery.options
+      next_page: page_records.size > PER_PAGE ? current_page + 1 : nil
     )
   end
 

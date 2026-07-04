@@ -1,15 +1,15 @@
 <% current_sort = filters["sort"].presence || Recipes::SortQuery::DEFAULT_SORT %>
 <% quick_active = Recipes::RelationQuery.active?(filters["quick"]) %>
 <% popular_active = Recipes::RelationQuery.active?(filters["popular"]) %>
+<% category_labels = recipe_category_labels %>
 <% selected_category_label = selected_category.present? ? category_labels.fetch(selected_category, category_heading(selected_category)) : nil %>
 <% category_tooltip = selected_category_label.present? ? "Category: #{selected_category_label}" : "Category: all categories" %>
-<% category_slugs = search.category_options.to_h { |category| [ category, Recipe.category_slug_for(category) ] } %>
 
 <header class="recipe-toolbar">
   <div class="recipe-toolbar-inner">
     <%= link_to "PennyLunch", root_path, class: "recipe-toolbar-brand" %>
 
-    <%= form_with url: recipes_path, method: :get, local: true, html: { data: { auto_submit_form: true, filter_root: recipes_path, category_slugs: category_slugs.to_json } }, class: "recipe-toolbar-form" do |form| %>
+    <%= form_with url: recipes_path, method: :get, local: true, html: { data: { auto_submit_form: true, filter_root: recipes_path } }, class: "recipe-toolbar-form" do |form| %>
       <%= hidden_field_tag :sort, current_sort %>
       <%= hidden_field_tag :ingredients, filters["ingredients"], data: { ingredients_filter_hidden: true } %>
 
@@ -24,7 +24,7 @@
 
       <%= render "toolbar_filter_toggle", name: :quick, active: quick_active, aria_label: "Quick recipes", icon: :quick, tooltip: "Quick: #{quick_active ? "on" : "off"}. Shows recipes under 30 minutes." %>
       <%= render "toolbar_filter_toggle", name: :popular, active: popular_active, aria_label: "Popular recipes", icon: :popular, tooltip: "Popular: #{popular_active ? "on" : "off"}. Shows recipes rated above 4.8." %>
-      <%= render "toolbar_category_combobox", selected_category:, selected_category_label:, tooltip: category_tooltip, categories: search.category_options, category_labels: %>
+      <%= render "toolbar_category_combobox", selected_category:, selected_category_label:, tooltip: category_tooltip, categories: category_labels.keys, category_labels: %>
       <%= render "toolbar_sort_menu", current_sort:, filters: %>
     <% end %>
 

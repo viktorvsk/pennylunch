@@ -18,7 +18,6 @@ module Recipes
       total_time
       source_key
       source_position
-      slug
       created_at
       updated_at
     ].freeze

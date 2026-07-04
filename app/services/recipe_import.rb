@@ -101,7 +101,6 @@ class RecipeImport
           total_time,
           Recipe.source_key_for(title: record.fetch("title"), category: record.fetch("category"), author: record.fetch("author")),
           index,
-          Recipe.slug_for(title: record.fetch("title"), category: record.fetch("category"), author: record.fetch("author"), total_time:),
           now,
           now
         ]

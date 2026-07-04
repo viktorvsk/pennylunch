@@ -8,9 +8,9 @@ class Recipe < ApplicationRecord
   before_validation :derive_fields
 
   validates :title, :cook_time, :prep_time, :ingredients, :ratings, :image, :total_time,
-    :source_key, :source_position, :slug, presence: true
+    :source_key, :source_position, presence: true
   validates :cook_time, :prep_time, :total_time, numericality: { greater_than_or_equal_to: 0 }
-  validates :source_key, :source_position, :slug, uniqueness: true
+  validates :source_key, :source_position, uniqueness: true
   validate :ingredient_names_are_unique
   validate :ingredient_parse_data_matches_ingredients
 
@@ -45,6 +45,10 @@ class Recipe < ApplicationRecord
     end.join("-")
   end
 
+  def to_param
+    [ self.class.slug_for(title:, category:, author:, total_time:), id ].compact.join("-")
+  end
+
   def display_image_url
     self.class.display_image_url_for(image)
   end
@@ -60,7 +64,6 @@ class Recipe < ApplicationRecord
     self.category_normalized = self.class.normalize_category(category)
     self.total_time = prep_time.to_i + cook_time.to_i
     self.source_key = self.class.source_key_for(title:, category:, author:) if title && category && author
-    self.slug = self.class.slug_for(title:, category:, author:, total_time:) if title && author && total_time
   end
 
   def ingredient_names_are_unique

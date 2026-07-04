@@ -36,9 +36,8 @@
   </head>
 
   <body class="min-h-[100dvh] bg-background text-foreground">
+    <script type="application/json" id="recipe-ui-catalog" data-recipe-ui-catalog><%== json_escape(recipe_ui_catalog_json) %></script>
     <%= yield %>
-    <% if defined?(@recipe_ingredient_options) && !@recipe_ingredient_options.nil? %>
-      <%= render "recipes/ingredients_fab", filters: @recipe_fab_filters || {}, ingredient_options: @recipe_ingredient_options %>
-    <% end %>
+    <%= render "recipes/ingredients_fab", filters: recipe_layout_fab_filters %>
   </body>
 </html>

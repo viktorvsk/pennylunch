@@ -4,6 +4,7 @@
     applyIngredientMatches,
     normalizeIngredientName,
     present,
+    recipeIngredientOptions,
     readStorage,
     splitIngredientText,
     submitFilterForm,
@@ -57,8 +58,10 @@
       root.ingredientsFabReady = true;
 
       const optionRecords = (() => {
+        const rawOptions = root.dataset.ingredientOptions || JSON.stringify(recipeIngredientOptions());
+
         try {
-          return JSON.parse(root.dataset.ingredientOptions || "[]").map((option) => {
+          return JSON.parse(rawOptions).map((option) => {
             if (typeof option === "string") return { name: option.trim(), optional: false };
 
             return { name: option.name?.toString().trim() || "", optional: option.optional === true };

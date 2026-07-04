@@ -18,6 +18,7 @@ RSpec.describe RecipeSearch do
     expect(result.recipes.size).to eq(described_class::PER_PAGE)
     expect(result.next_page).to eq(2)
     expect(result).not_to respond_to(:total_count)
+    expect(result).not_to respond_to(:category_options)
   end
 
   it "sorts the ingredient candidate set with the selected sort" do

@@ -30,9 +30,9 @@ RSpec.describe "Recipes", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Quick Tomato Pasta")
     expect(response.body).not_to include("Slow Roast Chicken")
-    expect(response.body).to include(recipe_path(recipe.slug))
+    expect(response.body).to include(recipe_path(recipe))
     document = Nokogiri::HTML(response.body)
-    expect(document.css("a[href='#{recipe_path(recipe.slug)}'][data-turbo-frame='_top']").size).to eq(2)
+    expect(document.css("a[href='#{recipe_path(recipe)}'][data-turbo-frame='_top']").size).to eq(2)
     expect(document.css("a[href='/recipes/pasta'][data-turbo-frame='_top']")).not_to be_empty
     expect(document.at_css("div[role='option'][data-value='air fryer main dish recipes'][data-label='Air Fryer Main Dish Recipes']").text).to eq("Air Fryer Main Dish Recipes")
     expect(response.body).to include("data-tooltip=\"Rating: 4.95 out of 5\"")
@@ -41,7 +41,11 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("tomato, pasta, garlic")
     ingredient_summary = document.at_css("[data-recipe-ingredients]")
     expect(JSON.parse(ingredient_summary["data-ingredient-names"])).to eq([ "tomato", "pasta", "garlic" ])
-    expect(JSON.parse(document.at_css("[data-ingredients-fab]")["data-ingredient-options"])).to include(
+    expect(recipe_ui_catalog_from(document)).to include(
+      "categoryLabels" => hash_including("air fryer main dish recipes" => "Air Fryer Main Dish Recipes"),
+      "categorySlugs" => hash_including("pasta" => "pasta")
+    )
+    expect(recipe_ui_catalog_from(document).fetch("ingredientOptions")).to include(
       { "name" => "tomato", "optional" => true },
       { "name" => "pasta", "optional" => false }
     )
@@ -61,7 +65,8 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("data-ingredients-fab")
     expect(response.body).to include("Ingredients at home")
     expect(response.body).to include("Pick matching ingredients. Enable to include them in filters.")
-    expect(response.body).to include("data-ingredient-options")
+    expect(response.body).to include("data-recipe-ui-catalog")
+    expect(response.body).not_to include("data-ingredient-options")
     expect(response.body).to include("data-ingredients-filter-input")
     expect(response.body).to include("data-ingredients-selected-list")
     expect(response.body).to include("tomato")
@@ -98,6 +103,7 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).not_to include("recipe-toolbar")
     expect(response.body).not_to include("recipe-ingredients-fab")
     expect(response.body).not_to include("data-ingredient-options")
+    expect(response.body).not_to include("data-recipe-ui-catalog")
   end
 
   it "suggests a category from the empty state when filters find no recipes" do
@@ -111,13 +117,15 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).not_to include("Import recipes")
   end
 
-  it "redirects query category filters to category slug paths" do
-    create(:recipe, category: "Pasta", category_normalized: "pasta")
+  it "filters query category params without redirecting" do
+    create(:recipe, title: "Tomato Pasta", category: "Pasta", category_normalized: "pasta")
+    create(:recipe, title: "Tomato Soup", category: "Soup", category_normalized: "soup")
 
     get recipes_path, params: { q: "tomato", category: "pasta", sort: "rating_desc" }
 
-    expect(response).to redirect_to("/recipes/pasta?q=tomato&sort=rating_desc")
-    expect(response).to have_http_status(:see_other)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Tomato Pasta")
+    expect(response.body).not_to include("Tomato Soup")
   end
 
   it "filters recipes by available ingredients through vector search" do
@@ -136,7 +144,7 @@ RSpec.describe "Recipes", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Pasta and Garlic")
     expect(response.body).not_to include("Apple Cake")
-    expect(response.body).to include(recipe_path(pasta.slug))
+    expect(response.body).to include(recipe_path(pasta))
     expect(response.body).to include("value=\"pasta garlic olive oil\"")
     expect(response.body).to include("data-current-enabled=\"true\"")
   end
@@ -178,7 +186,7 @@ RSpec.describe "Recipes", type: :request do
     create(:recipe, title: "Same Category Without Vector", category: "Pasta", ingredients_vector: nil)
     create(:recipe, title: "Distant Pasta", category: "Pasta", ingredients_vector: vector(-1.0))
 
-    get recipe_path(recipe.slug)
+    get recipe_path(recipe)
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Quick Tomato Pasta")
@@ -210,7 +218,20 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body.index("<h1")).to be < response.body.index("<img")
   end
 
+  it "shows a recipe by trailing id when the friendly slug text is stale" do
+    recipe = create(:recipe, title: "Quick Tomato Pasta")
+
+    get "/recipes/stale-friendly-title-#{recipe.id}"
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Quick Tomato Pasta")
+  end
+
   def vector(first_value, second_value = 0.0)
     [ first_value, second_value ] + Array.new(382, 0.0)
+  end
+
+  def recipe_ui_catalog_from(document)
+    JSON.parse(document.at_css("script[data-recipe-ui-catalog]").text)
   end
 end
