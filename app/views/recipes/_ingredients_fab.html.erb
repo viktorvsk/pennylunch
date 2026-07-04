@@ -6,7 +6,7 @@
     <header>
       <div class="recipe-ingredients-panel-header">
         <div class="recipe-ingredients-panel-copy">
-          <h2 class="recipe-ingredients-panel-title">Basket</h2>
+          <h2 class="recipe-ingredients-panel-title">Market basket</h2>
           <p class="recipe-ingredients-filter-status">
             <span>When</span>
             <label class="recipe-ingredients-switch" data-state="<%= fab_ingredients_enabled ? "enabled" : "disabled" %>" data-ingredients-fab-target="enabledControl">
@@ -25,14 +25,14 @@
     <section class="recipe-ingredients-picker">
       <div class="recipe-ingredients-selected">
         <div class="recipe-ingredients-empty-state">
-          <p class="recipe-ingredients-empty-state-phrase">Your basket is empty. If you tell me what food you have at home — I'll do my best to help you cook something amazing!</p>
+          <p class="recipe-ingredients-empty-state-phrase">Add what is in your kitchen. Matching recipes move to the front.</p>
         </div>
         <div class="recipe-ingredients-selected-list" data-ingredients-fab-target="selectedList"></div>
       </div>
 
       <div class="recipe-ingredients-field">
         <div class="recipe-ingredients-input-group">
-          <input id="recipe-ingredients-input" class="input" type="text" placeholder="Open the fridge and start typing..." autocomplete="off" role="combobox" aria-label="Ingredient name" aria-autocomplete="list" aria-expanded="false" aria-controls="recipe-ingredients-options" data-ingredients-fab-target="input" data-action="input->ingredients-fab#search keydown->ingredients-fab#keydown blur->ingredients-fab#blur">
+          <input id="recipe-ingredients-input" class="input" type="text" placeholder="Tomato, eggs, parsley..." autocomplete="off" role="combobox" aria-label="Ingredient name" aria-autocomplete="list" aria-expanded="false" aria-controls="recipe-ingredients-options" data-ingredients-fab-target="input" data-action="input->ingredients-fab#search keydown->ingredients-fab#keydown blur->ingredients-fab#blur">
         </div>
         <div id="recipe-ingredients-options" class="recipe-ingredients-options" role="listbox" data-ingredients-fab-target="options" hidden></div>
       </div>

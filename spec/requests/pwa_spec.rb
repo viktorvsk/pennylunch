@@ -14,9 +14,9 @@ RSpec.describe "PWA manifest", type: :request do
     expect(manifest).to include(
       "name" => "PennyLunch",
       "short_name" => "PennyLunch",
-      "start_url" => "/",
+      "start_url" => "/recipes",
       "display" => "standalone",
-      "theme_color" => "#f97316",
+      "theme_color" => "#dc3f2f",
       "background_color" => "#ffffff"
     )
     expect(icons).to include(

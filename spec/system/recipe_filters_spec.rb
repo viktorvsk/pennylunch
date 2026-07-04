@@ -237,7 +237,7 @@ RSpec.describe "Recipe filters", type: :system do
     expect(page).to have_css("#recipe-ingredients-panel:not([hidden])")
     expect(page).to have_css(".recipe-ingredients-row", text: "honey")
     expect(page).to have_text("only matching recipes are displayed.")
-    expect(page).to have_no_text("Your basket is empty.")
+    expect(page).to have_no_text("Add what is in your kitchen.")
 
     empty_state = page.evaluate_script(<<~JS)
       (() => {
@@ -277,7 +277,7 @@ RSpec.describe "Recipe filters", type: :system do
 
     click_link "PennyLunch"
 
-    expect(page).to have_current_path("/")
+    expect(page).to have_current_path("/recipes")
     expect(page).to have_text("E2E Cookie Basket Honey Toast")
     expect(page).to have_no_text("E2E Cookie Basket Apple Cake")
 

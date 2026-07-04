@@ -2,6 +2,10 @@
 
 PennyLunch uses `public/pen.svg` as the canonical source for browser, install, and in-app brand icons.
 
+The web app install chrome uses the Market Fresh tomato theme color `#dc3f2f` in the HTML metadata, SVG mask icon metadata, and PWA manifest. The generated pen assets do not need to be regenerated when only this theme color changes.
+
+The Market Fresh global ingredient pattern is CSS-only in `app/assets/stylesheets/recipe_theme.css`; it does not introduce a generated asset. The root landing page reuses the same public mascot SVG and PNG icon assets directly.
+
 Generated public assets:
 
 - `icon.svg`, which mirrors the canonical SVG for legacy Rails/default icon URLs.

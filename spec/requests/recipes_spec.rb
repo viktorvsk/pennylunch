@@ -5,7 +5,7 @@ RSpec.describe "Recipes", type: :request do
     get recipes_path
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Nothing found")
+    expect(response.body).to include("No recipe matches yet")
     expect(response.body).to include("M8 16a5 5 0 0 1 8 0")
     expect(response.body).not_to include("Import recipes")
     expect(response.body).not_to include("<h1")
@@ -29,7 +29,7 @@ RSpec.describe "Recipes", type: :request do
       [ "/icon-512x512.png", "512x512" ]
     )
     expect(document.at_css("link[rel='apple-touch-icon'][href='/apple-touch-icon.png'][sizes='180x180']")).not_to be_nil
-    expect(document.at_css("meta[name='theme-color']")["content"]).to eq("#f97316")
+    expect(document.at_css("meta[name='theme-color']")["content"]).to eq("#dc3f2f")
   end
 
   it "filters recipes and links to the show page" do
@@ -70,7 +70,7 @@ RSpec.describe "Recipes", type: :request do
       { "name" => "tomato", "optional" => true },
       { "name" => "pasta", "optional" => false }
     )
-    expect(document.at_css("a[href='/']").text).to eq("PennyLunch")
+    expect(document.at_css("a[href='/recipes']").text).to eq("PennyLunch")
     expect(document.css("[role='switch']")).not_to be_empty
     expect(document.css("[role='combobox']")).not_to be_empty
     expect(document.css(".dropdown-menu")).not_to be_empty
@@ -85,8 +85,11 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("id=\"recipe-ingredients-fab\"")
     expect(response.body).to include("data-turbo-permanent")
     expect(response.body).to include("data-controller=\"ingredients-fab\"")
-    expect(response.body).to include("Basket")
-    expect(response.body).to include("Your basket is empty.")
+    expect(response.body).to include("Search recipes")
+    expect(response.body).to include("Market basket")
+    expect(response.body).to include("Add what is in your kitchen. Matching recipes move to the front.")
+    expect(response.body).to include("Tomato, eggs, parsley...")
+    expect(response.body).not_to include("—")
     expect(response.body).to include("you see all recipes.")
     expect(response.body).not_to include("Pick matching ingredients. Enable to include them in filters.")
     expect(document.css("label[for='recipe-ingredients-input']")).to be_empty
@@ -141,7 +144,7 @@ RSpec.describe "Recipes", type: :request do
     get recipes_path, params: { q: "not-a-real-title" }
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Nothing found")
+    expect(response.body).to include("No recipe matches yet")
     expect(response.body).to include("href=\"/recipes/pasta\"")
     expect(response.body).not_to include("Import recipes")
   end
@@ -304,7 +307,7 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("data-tooltip=\"Rating: 4.59 out of 5\"")
     document = Nokogiri::HTML(response.body)
     expect(document.css("span").map { |node| node.text.squish }).not_to include("0 min")
-    expect(response.body).to include("href=\"/\"")
+    expect(response.body).to include("href=\"/recipes\"")
     expect(response.body).to include("href=\"/recipes/pasta\"")
     expect(document.css(".recipe-toolbar")).not_to be_empty
     expect(response.body).to include("aria-label=\"Admin\"")

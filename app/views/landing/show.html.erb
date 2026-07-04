@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>PennyLunch - Dinner From Your Pantry</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="PennyLunch turns the ingredients you already have into realistic dinner matches.">
+    <meta name="theme-color" content="#dc3f2f">
+    <meta property="og:title" content="PennyLunch">
+    <meta property="og:description" content="AI-ranked recipes from what you already have.">
+    <meta property="og:image" content="/icon-512x512.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/pen.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
+    <style>
+      :root {
+        color-scheme: light;
+        --page: oklch(0.985 0 0);
+        --surface: oklch(0.997 0.004 145);
+        --surface-soft: oklch(0.965 0.055 92);
+        --ink: oklch(0.18 0.018 255);
+        --muted: oklch(0.43 0.02 255);
+        --border: oklch(0.875 0.018 92);
+        --tomato: oklch(0.57 0.19 32);
+        --tomato-deep: oklch(0.38 0.14 32);
+        --tomato-soft: oklch(0.94 0.055 32);
+        --herb: oklch(0.58 0.14 150);
+        --herb-soft: oklch(0.955 0.04 150);
+        --lemon: oklch(0.84 0.15 92);
+        --lemon-soft: oklch(0.965 0.055 92);
+        --blue: oklch(0.48 0.12 255);
+        --blue-soft: oklch(0.955 0.028 255);
+        --shadow: oklch(0.18 0.018 255 / 0.12);
+        --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--page);
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        background:
+          radial-gradient(0.7rem 0.42rem at 1.35rem 1.55rem, oklch(0.57 0.19 32 / 0.12) 0 62%, transparent 64%),
+          radial-gradient(0.34rem 0.8rem at 6.7rem 2.4rem, oklch(0.58 0.14 150 / 0.11) 0 62%, transparent 65%),
+          radial-gradient(0.2rem 0.2rem at 4.15rem 6.1rem, oklch(0.48 0.12 255 / 0.085) 0 68%, transparent 71%),
+          radial-gradient(0.64rem 0.3rem at 8rem 6.65rem, oklch(0.84 0.15 92 / 0.18) 0 62%, transparent 65%),
+          linear-gradient(180deg, color-mix(in oklch, var(--lemon-soft) 68%, var(--page)) 0, var(--page) 22rem);
+        background-size: 10rem 10rem, 11rem 11rem, 7rem 7rem, 13rem 13rem, auto;
+        color: var(--ink);
+        margin: 0;
+        min-height: 100dvh;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      img {
+        display: block;
+        max-width: 100%;
+      }
+
+      .page-shell {
+        overflow: clip;
+      }
+
+      .nav {
+        align-items: center;
+        display: flex;
+        gap: 1rem;
+        justify-content: space-between;
+        margin-inline: auto;
+        max-width: 76rem;
+        padding: 1rem;
+        position: relative;
+        z-index: 2;
+      }
+
+      .brand {
+        align-items: center;
+        display: inline-flex;
+        font-size: 1rem;
+        font-weight: 750;
+        gap: 0.625rem;
+      }
+
+      .brand-mark {
+        background: color-mix(in oklch, var(--lemon-soft) 70%, var(--tomato-soft));
+        border: 1px solid color-mix(in oklch, var(--lemon) 52%, var(--tomato));
+        border-radius: 0.875rem;
+        height: 2.5rem;
+        padding: 0.25rem;
+        width: 2.5rem;
+      }
+
+      .nav-links {
+        align-items: center;
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .nav-links a:not(.button) {
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 0.925rem;
+        font-weight: 650;
+        padding: 0.625rem 0.75rem;
+      }
+
+      .button {
+        align-items: center;
+        border-radius: 999px;
+        display: inline-flex;
+        font-weight: 750;
+        justify-content: center;
+        min-height: 2.75rem;
+        padding: 0.75rem 1.125rem;
+        transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), color 160ms var(--ease-out), transform 140ms var(--ease-out);
+        white-space: nowrap;
+      }
+
+      .button:active {
+        transform: scale(0.97);
+      }
+
+      .button-primary {
+        background: var(--tomato);
+        border: 1px solid var(--tomato);
+        color: white;
+      }
+
+      .button-secondary {
+        background: color-mix(in oklch, var(--surface) 76%, var(--blue-soft));
+        border: 1px solid color-mix(in oklch, var(--border) 72%, var(--blue));
+        color: var(--blue);
+      }
+
+      .hero {
+        display: grid;
+        gap: clamp(2rem, 5vw, 5rem);
+        grid-template-columns: minmax(0, 0.88fr) minmax(22rem, 1.12fr);
+        margin-inline: auto;
+        max-width: 76rem;
+        padding: clamp(2rem, 5vw, 4rem) 1rem clamp(2.5rem, 7vw, 5rem);
+      }
+
+      .hero-copy {
+        align-self: center;
+        max-width: 38rem;
+      }
+
+      .hero-badge {
+        align-items: center;
+        background: color-mix(in oklch, var(--surface) 82%, var(--herb-soft));
+        border: 1px solid color-mix(in oklch, var(--border) 62%, var(--herb));
+        border-radius: 999px;
+        color: oklch(0.31 0.095 150);
+        display: inline-flex;
+        font-size: 0.925rem;
+        font-weight: 750;
+        gap: 0.5rem;
+        padding: 0.375rem 0.75rem 0.375rem 0.425rem;
+      }
+
+      .hero-badge img {
+        height: 1.75rem;
+        width: 1.75rem;
+      }
+
+      h1 {
+        font-size: clamp(3.25rem, 7.4vw, 6rem);
+        letter-spacing: 0;
+        line-height: 0.95;
+        margin: 1.25rem 0 1rem;
+        max-width: 13ch;
+        text-wrap: balance;
+      }
+
+      .hero-copy p {
+        color: var(--muted);
+        font-size: clamp(1.125rem, 1.7vw, 1.35rem);
+        line-height: 1.55;
+        margin: 0;
+        max-width: 34rem;
+        text-wrap: pretty;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+      }
+
+      .hero-visual {
+        align-self: center;
+        min-width: 0;
+        position: relative;
+      }
+
+      .mascot-orbit {
+        align-items: center;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        display: flex;
+        gap: 0.875rem;
+        left: -1.25rem;
+        padding: 0.75rem;
+        position: absolute;
+        top: 1.5rem;
+        width: min(18rem, 52vw);
+        z-index: 2;
+      }
+
+      .mascot-orbit img {
+        background: var(--lemon-soft);
+        border-radius: 0.875rem;
+        height: 4rem;
+        padding: 0.35rem;
+        width: 4rem;
+      }
+
+      .mascot-orbit strong {
+        display: block;
+        font-size: 0.95rem;
+        line-height: 1.2;
+      }
+
+      .mascot-orbit span {
+        color: var(--muted);
+        display: block;
+        font-size: 0.825rem;
+        line-height: 1.3;
+        margin-top: 0.2rem;
+      }
+
+      .preview-frame {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        box-shadow: 0 0.5rem 1rem var(--shadow);
+        height: clamp(30rem, 58vw, 42rem);
+        overflow: hidden;
+        position: relative;
+      }
+
+      .preview-frame iframe {
+        border: 0;
+        height: 100%;
+        width: 100%;
+      }
+
+      .preview-ribbon {
+        align-items: center;
+        background: var(--lemon-soft);
+        border: 1px solid color-mix(in oklch, var(--lemon) 70%, var(--border));
+        border-radius: 999px;
+        bottom: 1rem;
+        color: oklch(0.35 0.08 82);
+        display: inline-flex;
+        font-size: 0.875rem;
+        font-weight: 750;
+        gap: 0.5rem;
+        padding: 0.625rem 0.875rem;
+        position: absolute;
+        right: 1rem;
+        z-index: 2;
+      }
+
+      .section {
+        margin-inline: auto;
+        max-width: 76rem;
+        padding: clamp(2.5rem, 7vw, 5rem) 1rem;
+      }
+
+      .section h2 {
+        font-size: clamp(2.25rem, 4.5vw, 4.25rem);
+        letter-spacing: 0;
+        line-height: 1;
+        margin: 0;
+        max-width: 12ch;
+        text-wrap: balance;
+      }
+
+      .section-intro {
+        color: var(--muted);
+        font-size: 1.125rem;
+        line-height: 1.6;
+        margin: 1rem 0 0;
+        max-width: 42rem;
+      }
+
+      .signal-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: 1.1fr 0.9fr;
+        margin-top: 2rem;
+      }
+
+      .signal-panel {
+        background: color-mix(in oklch, var(--surface) 88%, var(--lemon-soft));
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        padding: clamp(1.25rem, 3vw, 2rem);
+      }
+
+      .signal-panel-large {
+        min-height: 22rem;
+      }
+
+      .signal-stack {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .signal-panel h3,
+      .flow-card h3 {
+        font-size: clamp(1.35rem, 2vw, 1.75rem);
+        line-height: 1.1;
+        margin: 0;
+      }
+
+      .signal-panel p,
+      .flow-card p {
+        color: var(--muted);
+        line-height: 1.55;
+        margin: 0.75rem 0 0;
+      }
+
+      .ingredient-cloud {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.625rem;
+        margin-top: 2rem;
+      }
+
+      .ingredient-cloud span {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        color: var(--tomato-deep);
+        font-weight: 750;
+        padding: 0.625rem 0.8rem;
+      }
+
+      .flow {
+        background: color-mix(in oklch, var(--tomato-soft) 38%, transparent);
+        border-block: 1px solid color-mix(in oklch, var(--border) 80%, var(--tomato));
+      }
+
+      .flow-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: 2rem;
+      }
+
+      .flow-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        min-height: 14rem;
+        padding: 1.5rem;
+      }
+
+      .flow-card:first-child {
+        background: var(--herb-soft);
+      }
+
+      .flow-card:nth-child(2) {
+        background: var(--lemon-soft);
+      }
+
+      .flow-card:nth-child(3) {
+        background: var(--blue-soft);
+      }
+
+      .closer {
+        align-items: center;
+        display: grid;
+        gap: 2rem;
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+
+      .closer-card {
+        align-items: center;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        display: flex;
+        gap: 1rem;
+        padding: 1rem;
+      }
+
+      .closer-card img {
+        background: var(--lemon-soft);
+        border-radius: 0.875rem;
+        height: 5.5rem;
+        padding: 0.35rem;
+        width: 5.5rem;
+      }
+
+      footer {
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        margin-inline: auto;
+        max-width: 76rem;
+        padding: 1.5rem 1rem 2rem;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .button:hover {
+          transform: translateY(-1px);
+        }
+
+        .nav-links a:not(.button):hover {
+          background: color-mix(in oklch, var(--surface) 72%, var(--lemon-soft));
+          color: var(--ink);
+        }
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        .brand-mark,
+        .mascot-orbit img {
+          animation: mascot-breathe 4s var(--ease-out) infinite;
+        }
+
+        .preview-frame {
+          animation: preview-rise 520ms var(--ease-out) both;
+        }
+      }
+
+      @keyframes mascot-breathe {
+        50% {
+          transform: translateY(-0.18rem) rotate(-1deg);
+        }
+      }
+
+      @keyframes preview-rise {
+        from {
+          opacity: 0;
+          transform: translateY(1rem);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          scroll-behavior: auto !important;
+          transition-duration: 0.001ms !important;
+        }
+      }
+
+      @media (max-width: 920px) {
+        .hero,
+        .signal-grid,
+        .closer {
+          grid-template-columns: 1fr;
+        }
+
+        .hero {
+          padding-top: 1rem;
+        }
+
+        h1 {
+          max-width: 12ch;
+        }
+
+        .mascot-orbit {
+          left: 1rem;
+          top: 1rem;
+        }
+
+        .preview-frame {
+          height: 36rem;
+        }
+      }
+
+      @media (max-width: 680px) {
+        .nav {
+          align-items: flex-start;
+        }
+
+        .nav-links a:not(.button) {
+          display: none;
+        }
+
+        .hero {
+          gap: 1.25rem;
+        }
+
+        h1 {
+          font-size: clamp(2.75rem, 14vw, 4rem);
+        }
+
+        .hero-actions,
+        .hero-actions .button,
+        .closer .button {
+          width: 100%;
+        }
+
+        .preview-frame {
+          height: 28rem;
+        }
+
+        .mascot-orbit {
+          position: relative;
+          width: 100%;
+        }
+
+        .flow-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .closer-card {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="nav">
+        <a class="brand" href="/">
+          <img class="brand-mark" src="/pen.svg" alt="" width="40" height="40">
+          <span>PennyLunch</span>
+        </a>
+        <nav class="nav-links" aria-label="Landing page">
+          <a href="#intelligence">Intelligence</a>
+          <a href="#flow">Kitchen flow</a>
+          <a class="button button-primary" href="<%= recipes_path %>">Find tonight's dinner</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero" aria-labelledby="landing-title">
+          <div class="hero-copy">
+            <div class="hero-badge">
+              <img src="/icon-64x64.png" alt="" width="28" height="28">
+              Pantry-aware recipe AI
+            </div>
+            <h1 id="landing-title">Dinner from your pantry</h1>
+            <p>AI ranks realistic recipes from what you already have, then shows the meal you can cook now.</p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="<%= recipes_path %>">Find tonight's dinner</a>
+              <a class="button button-secondary" href="#intelligence">See how it works</a>
+            </div>
+          </div>
+
+          <div class="hero-visual" aria-label="PennyLunch app preview">
+            <div class="mascot-orbit">
+              <img src="/icon-512x512.png" alt="PennyLunch mascot" width="64" height="64">
+              <div>
+                <strong>Your pantry gets a point of view.</strong>
+                <span>Ingredients become ranked dinner options, not another search box.</span>
+              </div>
+            </div>
+            <div class="preview-frame">
+              <iframe src="<%= recipes_path %>" title="Live PennyLunch recipe discovery preview" loading="eager"></iframe>
+              <span class="preview-ribbon">Live app preview</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="intelligence" class="section" aria-labelledby="intelligence-title">
+          <h2 id="intelligence-title">The kitchen decides the ranking.</h2>
+          <p class="section-intro">PennyLunch treats your pantry as the signal. Matches move forward, pantry staples stay secondary, and the next feasible recipe becomes obvious.</p>
+          <div class="signal-grid">
+            <article class="signal-panel signal-panel-large">
+              <h3>Ingredient intelligence that behaves like a sous-chef.</h3>
+              <p>The basket separates what matters from optional pantry noise, then pushes recipes with real overlap to the front.</p>
+              <div class="ingredient-cloud" aria-label="Example ingredients">
+                <span>tomato</span>
+                <span>eggs</span>
+                <span>parsley</span>
+                <span>garlic</span>
+                <span>pasta</span>
+                <span>lime</span>
+                <span>olive oil</span>
+              </div>
+            </article>
+            <div class="signal-stack">
+              <article class="signal-panel">
+                <h3>Fast by default.</h3>
+                <p>Quick and popular filters are always one tap away, so dinner stays a decision instead of a research project.</p>
+              </article>
+              <article class="signal-panel">
+                <h3>Readable at cooking speed.</h3>
+                <p>Cards lead with images, category, ingredient overlap, rating, and time. You can scan before the pan is hot.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section id="flow" class="flow">
+          <div class="section" aria-labelledby="flow-title">
+            <h2 id="flow-title">From fridge scan to dinner plan.</h2>
+            <p class="section-intro">A tight workflow for the moment when everyone is hungry and the answer has to be practical.</p>
+            <div class="flow-grid">
+              <article class="flow-card">
+                <h3>Add what you have.</h3>
+                <p>Drop ingredients into the Market basket. Optional staples stay saved without distorting the match.</p>
+              </article>
+              <article class="flow-card">
+                <h3>Rank the feasible meals.</h3>
+                <p>The recipe list reorders around your basket, shortcut filters, category, rating, and total time.</p>
+              </article>
+              <article class="flow-card">
+                <h3>Open the best fit.</h3>
+                <p>The detail view keeps the image and ingredient list side by side, with matched rows marked clearly.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section closer" aria-labelledby="closer-title">
+          <div>
+            <h2 id="closer-title">Dinner software with taste.</h2>
+            <p class="section-intro">PennyLunch is built like an AI startup and shaped like a kitchen tool: bright, fast, practical, and focused on the meal you can make now.</p>
+          </div>
+          <div class="closer-card">
+            <img src="/pen.svg" alt="PennyLunch mascot" width="88" height="88">
+            <a class="button button-primary" href="<%= recipes_path %>">Find tonight's dinner</a>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        PennyLunch turns pantry ingredients into relevant dinner recipes.
+      </footer>
+    </div>
+  </body>
+</html>

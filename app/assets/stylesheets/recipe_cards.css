@@ -1,24 +1,26 @@
 .recipe-card {
   background-color: var(--card);
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   display: flex;
   flex-direction: column;
   height: 100%;
-  box-shadow: 0 1px 2px oklch(0.145 0 0 / 0.06);
   overflow: visible;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), transform 160ms var(--ease-out);
 }
 
-.recipe-card:hover {
-  border-color: oklch(0.75 0 0);
-  box-shadow: 0 4px 8px oklch(0.145 0 0 / 0.08);
+@media (hover: hover) and (pointer: fine) {
+  .recipe-card:hover {
+    background-color: color-mix(in oklch, var(--card) 88%, var(--pl-surface-warm));
+    border-color: color-mix(in oklch, var(--pl-tomato-border) 72%, var(--border));
+    transform: translateY(-1px);
+  }
 }
 
 .recipe-card-image {
-  border-start-end-radius: calc(0.5rem - 1px);
-  border-start-start-radius: calc(0.5rem - 1px);
-  background-color: var(--muted);
+  border-start-end-radius: calc(0.75rem - 1px);
+  border-start-start-radius: calc(0.75rem - 1px);
+  background-color: var(--pl-surface-soft);
   overflow: hidden;
 }
 
@@ -38,7 +40,7 @@
 }
 
 .recipe-card-image img {
-  transition: transform 220ms ease;
+  transition: filter 220ms var(--ease-out), transform 220ms var(--ease-out);
 }
 
 .recipe-card-link {
@@ -86,7 +88,7 @@
 }
 
 .recipe-card-footer {
-  color: var(--muted-foreground);
+  color: color-mix(in oklch, var(--foreground) 72%, var(--muted-foreground));
   display: flex;
   flex-wrap: wrap;
   font-size: 0.875rem;
@@ -135,26 +137,27 @@
 .recipe-card a:focus-visible .recipe-card-image img,
 .recipe-show-card:hover .recipe-card-image img,
 .recipe-show-card:focus-within .recipe-card-image img {
-  transform: scale(1.045);
+  filter: saturate(1.04);
+  transform: scale(1.025);
 }
 
 .recipe-card-category {
-  color: var(--muted-foreground);
+  color: var(--pl-tomato-ink);
   font-size: 0.875rem;
   font-weight: 500;
   text-wrap: pretty;
 }
 
 .recipe-card-category:hover {
-  color: var(--foreground);
+  color: var(--pl-tomato);
   text-decoration-line: underline;
 }
 
 .recipe-card-ingredients .recipe-ingredient-match {
-  background-color: color-mix(in oklch, oklch(0.88 0.17 91) 34%, transparent);
+  background-color: color-mix(in oklch, var(--pl-herb-soft) 78%, transparent);
   border-radius: 0.25rem;
   box-decoration-break: clone;
-  color: color-mix(in oklch, var(--foreground) 86%, oklch(0.62 0.14 75));
+  color: var(--pl-herb-ink);
   padding: 0.0625rem 0.1875rem;
 }
 
@@ -162,8 +165,7 @@
   align-items: stretch;
   background-color: var(--card);
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 2px oklch(0.145 0 0 / 0.06);
+  border-radius: 0.75rem;
   display: grid;
   overflow: visible;
 }
@@ -181,12 +183,12 @@
 
 .recipe-show-card:hover {
   border-color: transparent;
-  box-shadow: none;
+  transform: none;
 }
 
 .recipe-show-card .recipe-card-image {
-  border-start-end-radius: calc(0.5rem - 1px);
-  border-start-start-radius: calc(0.5rem - 1px);
+  border-start-end-radius: calc(0.75rem - 1px);
+  border-start-start-radius: calc(0.75rem - 1px);
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -197,8 +199,8 @@
 
 .recipe-show-ingredients-panel {
   background-color: var(--card);
-  border-end-end-radius: calc(0.5rem - 1px);
-  border-end-start-radius: calc(0.5rem - 1px);
+  border-end-end-radius: calc(0.75rem - 1px);
+  border-end-start-radius: calc(0.75rem - 1px);
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -207,6 +209,7 @@
 }
 
 .recipe-show-ingredients-header {
+  background-color: color-mix(in oklch, var(--pl-surface-soft) 58%, transparent);
   border-bottom: 1px solid var(--border);
   padding: 1rem;
 }
@@ -220,7 +223,7 @@
 .recipe-show-card-footer {
   align-items: center;
   border-top: 1px solid var(--border);
-  color: var(--muted-foreground);
+  color: color-mix(in oklch, var(--foreground) 72%, var(--muted-foreground));
   display: flex;
   flex-wrap: wrap;
   font-size: 0.875rem;
@@ -236,26 +239,24 @@
   margin-inline: auto;
   max-width: 80rem;
   padding: 1.5rem 1rem;
-  transition: opacity 120ms ease;
   width: 100%;
 }
 
 .recipe-content-loading {
-  inset: 4rem 0 0;
+  inset: calc(4rem + 1px) 0 0;
   opacity: 0;
   place-items: center;
   pointer-events: none;
   position: fixed;
-  transition: opacity 120ms ease, visibility 120ms ease;
   visibility: hidden;
   z-index: 70;
 }
 
 .recipe-content-loading-spinner {
   animation: infinite-scroll-spin 700ms linear infinite;
-  border: 4px solid color-mix(in oklch, var(--muted-foreground) 25%, transparent);
+  border: 4px solid color-mix(in oklch, var(--pl-tomato) 22%, transparent);
   border-radius: 9999px;
-  border-top-color: var(--foreground);
+  border-top-color: var(--pl-tomato);
   display: block;
   height: 4rem;
   width: 4rem;
@@ -286,10 +287,12 @@ html[data-turbo-loading] .recipe-content-loading {
 }
 
 .recipe-page-title {
+  color: var(--pl-ink);
   font-size: 1.875rem;
-  font-weight: 600;
-  line-height: 1.25;
+  font-weight: 650;
+  line-height: 1.2;
   letter-spacing: 0;
+  text-wrap: balance;
 }
 
 .recipe-results-grid {
@@ -312,19 +315,19 @@ html[data-turbo-loading] .recipe-content-loading {
 }
 
 .recipe-empty-state {
-  background-color: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  background-color: color-mix(in oklch, var(--pl-surface) 76%, var(--pl-lemon-soft));
+  border: 1px solid color-mix(in oklch, var(--pl-lemon-border) 62%, var(--border));
+  border-radius: 0.75rem;
   padding: 2rem;
   text-align: center;
 }
 
 .recipe-empty-state-icon {
   align-items: center;
-  background-color: var(--muted);
-  border: 1px solid var(--border);
+  background-color: var(--pl-lemon-soft);
+  border: 1px solid var(--pl-lemon-border);
   border-radius: 9999px;
-  color: var(--muted-foreground);
+  color: var(--pl-lemon-ink);
   display: flex;
   height: 3.5rem;
   justify-content: center;
@@ -333,20 +336,21 @@ html[data-turbo-loading] .recipe-content-loading {
 }
 
 .recipe-empty-state h2 {
+  color: var(--pl-ink);
   font-size: 1.25rem;
   font-weight: 600;
   margin-top: 1rem;
 }
 
 .recipe-empty-state p {
-  color: var(--muted-foreground);
+  color: var(--pl-ink-muted);
   font-size: 0.875rem;
   margin: 0.5rem auto 0;
   max-width: 36rem;
 }
 
 .recipe-empty-state a {
-  color: var(--foreground);
+  color: var(--pl-tomato-ink);
   font-weight: 500;
   text-decoration-line: underline;
   text-underline-offset: 0.25rem;
@@ -371,7 +375,7 @@ html[data-turbo-loading] .recipe-content-loading {
 }
 
 .recipe-ingredient-group h3 {
-  color: var(--muted-foreground);
+  color: color-mix(in oklch, var(--pl-ink-muted) 88%, var(--pl-herb));
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0;
@@ -395,7 +399,7 @@ html[data-turbo-loading] .recipe-content-loading {
 }
 
 .recipe-ingredient-row:hover {
-  background-color: color-mix(in oklch, var(--muted) 58%, transparent);
+  background-color: color-mix(in oklch, var(--pl-herb-soft) 45%, transparent);
 }
 
 .recipe-ingredient-match-icon {
@@ -408,14 +412,14 @@ html[data-turbo-loading] .recipe-content-loading {
   justify-content: center;
   margin-top: 0.25rem;
   opacity: 0;
-  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, opacity 140ms ease;
+  transition: background-color 140ms var(--ease-out), border-color 140ms var(--ease-out), color 140ms var(--ease-out), opacity 140ms var(--ease-out);
   width: 1rem;
 }
 
 .recipe-ingredient-row--matched .recipe-ingredient-match-icon {
-  background-color: color-mix(in oklch, oklch(0.72 0.18 150) 18%, transparent);
-  border-color: color-mix(in oklch, oklch(0.56 0.16 150) 72%, transparent);
-  color: oklch(0.42 0.15 150);
+  background-color: var(--pl-herb-soft);
+  border-color: var(--pl-herb-border);
+  color: var(--pl-herb-ink);
   opacity: 1;
 }
 
@@ -448,37 +452,37 @@ html[data-turbo-loading] .recipe-content-loading {
 }
 
 .recipe-ingredient-leading i {
-  color: color-mix(in oklch, var(--foreground) 82%, var(--muted-foreground));
+  color: color-mix(in oklch, var(--foreground) 80%, var(--muted-foreground));
 }
 
 .recipe-ingredient-link {
   border-radius: 0.25rem;
-  color: oklch(0.43 0.12 248);
+  color: var(--pl-french-blue);
   font-weight: 600;
   text-decoration-line: underline;
   text-decoration-color: color-mix(in oklch, currentColor 34%, transparent);
   text-decoration-thickness: 0.08em;
   text-underline-offset: 0.18em;
-  transition: background-color 140ms ease, box-shadow 140ms ease, color 140ms ease, text-decoration-color 140ms ease;
+  transition: background-color 140ms var(--ease-out), box-shadow 140ms var(--ease-out), color 140ms var(--ease-out), text-decoration-color 140ms var(--ease-out);
 }
 
 .recipe-ingredient-link:hover {
-  color: oklch(0.34 0.14 248);
+  color: var(--pl-french-blue-hover);
   text-decoration-color: currentColor;
 }
 
 .recipe-ingredient-link:focus-visible {
-  background-color: color-mix(in oklch, var(--accent) 75%, transparent);
+  background-color: color-mix(in oklch, var(--pl-french-blue) 14%, transparent);
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 45%, transparent);
   outline: none;
 }
 
 .dark .recipe-ingredient-link {
-  color: oklch(0.74 0.11 248);
+  color: var(--pl-french-blue);
 }
 
 .dark .recipe-ingredient-link:hover {
-  color: oklch(0.84 0.08 248);
+  color: var(--pl-french-blue-hover);
 }
 
 @media (max-width: 640px) {
@@ -509,7 +513,7 @@ html[data-turbo-loading] .recipe-content-loading {
     align-self: stretch;
     border-left: 1px solid var(--border);
     border-end-start-radius: 0;
-    border-start-end-radius: calc(0.5rem - 1px);
+    border-start-end-radius: calc(0.75rem - 1px);
     border-top: 0;
   }
 
@@ -552,10 +556,10 @@ html[data-turbo-loading] .recipe-content-loading {
 
 .recipe-rating {
   align-items: center;
-  background-color: oklch(0.97 0.035 86);
-  border: 1px solid oklch(0.88 0.075 82);
+  background-color: var(--pl-lemon-soft);
+  border: 1px solid var(--pl-lemon-border);
   border-radius: 0.375rem;
-  color: oklch(0.48 0.12 65);
+  color: var(--pl-lemon-ink);
   display: inline-flex;
   font-size: 0.875rem;
   font-weight: 600;
@@ -566,18 +570,18 @@ html[data-turbo-loading] .recipe-content-loading {
 }
 
 .recipe-rating .text-amber-500 {
-  color: oklch(0.64 0.16 70);
+  color: var(--pl-lemon-ink);
 }
 
 .recipe-rating .text-zinc-300 {
-  color: oklch(0.82 0.018 84);
+  color: color-mix(in oklch, var(--pl-lemon-ink) 28%, transparent);
 }
 
 .infinite-scroll-spinner {
   animation: infinite-scroll-spin 700ms linear infinite;
-  border: 2px solid color-mix(in oklch, var(--muted-foreground) 25%, transparent);
+  border: 2px solid color-mix(in oklch, var(--pl-tomato) 22%, transparent);
   border-radius: 9999px;
-  border-top-color: var(--foreground);
+  border-top-color: var(--pl-tomato);
   display: inline-block;
   height: 1rem;
   width: 1rem;
@@ -590,11 +594,15 @@ html[data-turbo-loading] .recipe-content-loading {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .recipe-card,
   .recipe-card-image img,
-  .recipe-content-loading,
   .recipe-content-loading-spinner,
   .infinite-scroll-spinner {
     animation: none;
     transition: none;
+  }
+
+  .recipe-card:hover {
+    transform: none;
   }
 }

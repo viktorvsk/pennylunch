@@ -5,6 +5,7 @@
 - [Configuration](configuration.md)
 - [Deployment](deployment.md)
 - [Development workflow](workflow.md)
+- [Landing page](features/landing-page.md)
 - [Recipe MVP](features/recipe-mvp.md)
 - [Glossary](glossary.md)
 - [Product context](../PRODUCT.md)

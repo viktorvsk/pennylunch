@@ -4,12 +4,12 @@
   <div class="recipe-empty-state-icon">
     <%= icon_svg(:sad_face, class_name: "size-8") %>
   </div>
-  <h2>Nothing found</h2>
+  <h2>No recipe matches yet</h2>
   <% if random_category.present? %>
     <p>
-      Try another search or browse <%= link_to category_heading(random_category), recipe_filter_path("category" => random_category) %>.
+      Try fewer filters, remove an ingredient, or browse <%= link_to category_heading(random_category), recipe_filter_path("category" => random_category) %>.
     </p>
   <% else %>
-    <p>Try another search.</p>
+    <p>Try fewer filters or remove an ingredient from your basket.</p>
   <% end %>
 </section>

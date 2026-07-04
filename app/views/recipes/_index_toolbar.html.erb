@@ -9,7 +9,7 @@
 
       <div class="recipe-toolbar-search">
         <%= form.label :q, "Title", class: "sr-only" %>
-        <%= form.search_field :q, value: filters["q"], class: "input", placeholder: "Title", autocomplete: "off", data: { auto_submit_delay: 350 } %>
+        <%= form.search_field :q, value: filters["q"], class: "input", placeholder: "Search recipes", autocomplete: "off", data: { auto_submit_delay: 350 } %>
       </div>
 
       <%= render "toolbar_filter_toggle", name: :quick, active: toolbar.quick_active, aria_label: "Quick recipes", icon: :quick, tooltip: "Quick: #{toolbar.quick_active ? "on" : "off"}. Shows recipes under 30 minutes." %>
