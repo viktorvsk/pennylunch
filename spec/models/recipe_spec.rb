@@ -38,16 +38,15 @@ RSpec.describe Recipe do
   end
 
   describe ".ingredient_filter_options" do
-    it "includes known ingredient names and derived exact ingredient terms" do
+    it "uses canonical ingredient names from the ingredient catalog" do
       create(:recipe, ingredient_names: [ "boneless chicken breasts", "fresh tomatoes", "all-purpose flour" ])
+      create(:ingredient, name: "chicken breast", aliases: [ "boneless chicken breasts" ])
+      create(:ingredient, name: "tomato", aliases: [ "fresh tomatoes" ], optional: true)
 
-      expect(described_class.ingredient_filter_options).to include(
-        "boneless chicken breasts",
-        "chicken",
-        "tomato",
-        "flour"
-      )
-      expect(described_class.ingredient_filter_options).not_to include("boneless", "fresh", "purpose")
+      expect(described_class.ingredient_filter_options).to eq([
+        { name: "chicken breast", optional: false },
+        { name: "tomato", optional: true }
+      ])
     end
   end
 
@@ -71,13 +70,21 @@ RSpec.describe Recipe do
   end
 
   describe "#ingredients_embedding_text" do
-    it "uses normalized ingredient names instead of source ingredient sentences" do
+    it "preserves parser ingredient names without canonicalizing them" do
       recipe = build(:recipe, ingredients: [ "1 cup Flour", "2 eggs" ], ingredient_names: [ " Flour ", "EGGS", "flour" ])
 
       recipe.valid?
 
       expect(recipe.ingredient_names).to eq([ "flour", "eggs" ])
       expect(recipe.ingredients_embedding_text).to eq("flour\neggs")
+    end
+
+    it "uses vector ingredient names when they are available" do
+      recipe = build(:recipe, ingredient_names: [ "chicken", "salt" ], ingredients_vector_names: [ "chicken" ])
+
+      recipe.valid?
+
+      expect(recipe.ingredients_embedding_text).to eq("chicken")
     end
   end
 

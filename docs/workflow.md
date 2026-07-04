@@ -37,15 +37,24 @@ Rails runs on the host in development. PostgreSQL runs in Docker through the sha
 
 ## Recipe Data
 
-Open `/maintenance_tasks` after starting the app. Local defaults are username `pennylunch` and password `pennylunch`.
+Open `/maintenance_tasks` or `/avo` after starting the app. Local defaults are username `pennylunch` and password `pennylunch`.
 
 Run these tasks in order:
 
 1. `Maintenance::WarmEmbeddingModelTask`
-2. `Maintenance::ImportRecipesTask`
-3. `Maintenance::BackfillRecipeIngredientVectorsTask`
+2. `Maintenance::DeleteRecipesAndIngredientsTask`
+3. `Maintenance::ImportRecipesTask`
+4. Review and complete `config/ingredient_aliases.yml` for any raw names reported by the next task.
+5. `Maintenance::SyncIngredientsFromAliasCatalogTask`
+6. `Maintenance::DeleteRecipesTask`
+7. `Maintenance::ImportRecipesTask`
+8. `Maintenance::BackfillRecipeIngredientVectorsTask`
 
-The import task only runs when the `recipes` table is empty. Reset the local database if you need to repeat the MVP import before staging upsert support exists. The backfill task parses source ingredient lines into `ingredient_names`, stores structured `ingredient_parse_data`, and generates vectors from the names.
+The first import stores raw parser names in `recipes.ingredient_parse_data` and `recipes.ingredient_names`. The sync task reads `config/ingredient_aliases.yml`, verifies every raw parser name is covered by one alias, then recreates Ingredient records from that reviewed catalog. Optional ingredients are declared in the catalog for low-signal pantry items such as salt, sugar, water, and general cooking oils. Use Avo for small local edits, but keep repository-owned bulk decisions in the YAML file. The delete task removes only recipes, leaving Ingredients in place. The second import must keep raw parser names in `recipes.ingredient_names`, stores non-optional canonical names in `recipes.ingredients_vector_names`, and the backfill task stores structured `ingredient_parse_data` and generates vectors from those non-optional canonical names.
+
+`Maintenance::DeleteIngredientsTask` removes only Ingredient rows. `Maintenance::ReloadIngredientsFromAliasCatalogTask` deletes current Ingredients and loads exactly `config/ingredient_aliases.yml` without checking recipe coverage; use it when debugging the catalog in Avo while recipes still exist. The strict sync task should be used for the real import/reindex loop because it refuses incomplete catalog coverage.
+
+The import task only runs when the `recipes` table is empty. Use `Maintenance::DeleteRecipesTask` locally if you need to repeat the MVP import before staging upsert support exists, or `Maintenance::DeleteRecipesAndIngredientsTask` when catalog logic changed and both tables should be rebuilt.
 
 ## RSpec
 

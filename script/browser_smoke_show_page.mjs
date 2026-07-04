@@ -30,13 +30,26 @@ async function main() {
   try {
     await page.goto(`${baseUrl}/recipes`, { waitUntil: "networkidle" })
 
-    const firstRecipeLink = page.locator(".recipe-card > a[href^='/recipes/']").first()
-    if (await firstRecipeLink.count() === 0) {
+    if (await page.locator(".recipe-card > a[href^='/recipes/']").count() === 0) {
       throw new Error("No recipe cards found on /recipes. Import recipe data before running the show-page smoke check.")
     }
 
-    const firstIngredientSummary = page.locator("[data-recipe-ingredients]").first()
-    const exactIndexIngredient = await firstIngredientSummary.evaluate((element) => JSON.parse(element.dataset.ingredientNames || "[]")[0])
+    const indexTarget = await page.locator(".recipe-card").evaluateAll((cards) => {
+      const options = new Set(JSON.parse(document.querySelector("[data-ingredients-fab]").dataset.ingredientOptions || "[]").map((option) => typeof option === "string" ? option : option.name))
+
+      for (const card of cards) {
+        const link = card.querySelector("a[href^='/recipes/']")
+        const summary = card.querySelector("[data-recipe-ingredients]")
+        if (!link || !summary) continue
+
+        const names = JSON.parse(summary.dataset.ingredientNames || "[]")
+        const match = names.find((name) => options.has(name))
+        if (match) return { ingredient: match, href: link.getAttribute("href") }
+      }
+
+      return null
+    })
+    const exactIndexIngredient = indexTarget?.ingredient
     if (!exactIndexIngredient) throw new Error("No card ingredient names found for basket highlight smoke check.")
 
     await page.evaluate((name) => {
@@ -51,10 +64,19 @@ async function main() {
       throw new Error(`Index basket highlight mismatch: expected ${exactIndexIngredient}, got ${indexMatchedIngredient}.`)
     }
 
-    await firstRecipeLink.click()
-    await page.waitForLoadState("networkidle")
+    await page.goto(new URL(indexTarget.href, baseUrl).toString(), { waitUntil: "networkidle" })
 
-    const showIngredientName = await page.locator(".recipe-ingredient-link[data-ingredient-name]").first().getAttribute("data-ingredient-name")
+    const showIngredientName = await page.locator(".recipe-ingredient-link[data-ingredient-name]").evaluateAll((elements) => {
+      const options = new Set(JSON.parse(document.querySelector("[data-ingredients-fab]").dataset.ingredientOptions || "[]").map((option) => typeof option === "string" ? option : option.name))
+
+      for (const element of elements) {
+        const name = element.dataset.ingredientName
+        if (options.has(name)) return name
+      }
+
+      return null
+    })
+    if (!showIngredientName) throw new Error("No show ingredient names found for basket highlight smoke check.")
     await page.evaluate((name) => {
       localStorage.setItem("pennylunch.ingredients.selected", JSON.stringify([name]))
       localStorage.setItem("pennylunch.ingredients.text", name)

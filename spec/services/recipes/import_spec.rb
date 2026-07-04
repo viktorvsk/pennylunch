@@ -61,6 +61,13 @@ RSpec.describe Recipes::Import do
   end
 
   it "imports recipes and stores source-shaped JSON in denormalized columns" do
+    create(:ingredient, name: "tomato", aliases: [ "tomatoes" ], optional: true)
+    create(:ingredient, name: "flour")
+    create(:ingredient, name: "egg")
+    create(:ingredient, name: "milk")
+    create(:ingredient, name: "pasta")
+    create(:ingredient, name: "basil")
+
     result = import
 
     expect(result.imported_count).to eq(2)
@@ -68,6 +75,10 @@ RSpec.describe Recipes::Import do
     expect(Recipe.order(:source_position).pluck(:ingredient_names)).to eq([
       [ "flour", "egg", "milk" ],
       [ "tomatoes", "pasta", "basil" ]
+    ])
+    expect(Recipe.order(:source_position).pluck(:ingredients_vector_names)).to eq([
+      [ "flour", "egg", "milk" ],
+      [ "pasta", "basil" ]
     ])
     expect(Recipe.order(:source_position).map(&:ingredient_parse_data)).to eq([
       [
@@ -80,6 +91,19 @@ RSpec.describe Recipes::Import do
         { "input" => "200g pasta", "parser" => { "sentence" => "200g pasta", "name" => [ { "text" => "pasta" } ], "amount" => [] } },
         { "input" => "basil", "parser" => { "sentence" => "basil", "name" => [ { "text" => "basil" } ], "amount" => [] } }
       ]
+    ])
+  end
+
+  it "keeps parsed ingredient names as bootstrap data when the ingredient catalog is empty" do
+    import
+
+    expect(Recipe.order(:source_position).pluck(:ingredient_names)).to eq([
+      [ "flour", "egg", "milk" ],
+      [ "tomatoes", "pasta", "basil" ]
+    ])
+    expect(Recipe.order(:source_position).pluck(:ingredients_vector_names)).to eq([
+      [ "flour", "egg", "milk" ],
+      [ "tomato", "pasta", "basil" ]
     ])
   end
 

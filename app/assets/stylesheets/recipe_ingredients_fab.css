@@ -118,6 +118,11 @@
   background-color: var(--accent);
 }
 
+.recipe-ingredients-option[data-optional="true"],
+.recipe-ingredients-chip[data-optional="true"] {
+  opacity: 0.5;
+}
+
 .recipe-ingredients-selected {
   flex: 1;
   overflow-y: auto;

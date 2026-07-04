@@ -7,6 +7,7 @@ module Recipes
   class Import
     Result = Data.define(:imported_count)
     CopyRow = Data.define(:record, :parser_result, :index, :timestamp)
+    ImportParserResult = Data.define(:ingredient_names, :ingredient_parse_data, :ingredients_vector_names)
     DEFAULT_DOWNLOADER = ->(source_url) { URI.open(source_url, "rb", &:read) }
 
     class Error < StandardError; end
@@ -30,7 +31,9 @@ module Recipes
 
       records = records_from_payload(downloader.call(url))
       validate_records(records)
-      parser_results = parse_ingredients(records)
+      ingredient_lookup = Ingredient.lookup_map
+      vector_ingredient_lookup = Ingredient.filterable_lookup_map
+      parser_results = parse_ingredients(records).map { |parser_result| canonical_parser_result(parser_result, ingredient_lookup, vector_ingredient_lookup) }
       raise Error, "ingredient parser returned #{parser_results.size} lists for #{records.size} source records" unless parser_results.size == records.size
 
       Recipe.transaction do
@@ -78,6 +81,20 @@ module Recipes
       end
     end
 
+    def canonical_parser_result(parser_result, ingredient_lookup, vector_ingredient_lookup)
+      names = parser_result.ingredient_names.filter_map { |name| name.to_s.squish.downcase.presence }.uniq
+      vector_names = parser_result.ingredient_names.filter_map do |name|
+        key = Ingredient.normalize_lookup_key(name)
+        vector_ingredient_lookup[key] || (ingredient_lookup.empty? ? key : nil)
+      end.uniq
+
+      ImportParserResult.new(
+        names,
+        parser_result.ingredient_parse_data,
+        vector_names
+      )
+    end
+
     def copy_records(records, parser_results)
       now = Time.current.utc.iso8601(6)
       raw_connection = Recipe.connection.raw_connection
@@ -91,7 +108,7 @@ module Recipes
     def copy_sql
       <<~SQL.squish
         COPY recipes (
-          title, cook_time, prep_time, ingredients, ingredient_names, ingredient_parse_data, ratings, cuisine, category, category_normalized,
+          title, cook_time, prep_time, ingredients, ingredient_names, ingredients_vector_names, ingredient_parse_data, ratings, cuisine, category, category_normalized,
           author, image, total_time, source_key, source_position, slug, created_at, updated_at
         ) FROM STDIN WITH (FORMAT csv)
       SQL
@@ -106,6 +123,7 @@ module Recipes
         record.fetch("prep_time"),
         JSON.generate(record.fetch("ingredients")),
         postgres_text_array(row.parser_result.ingredient_names),
+        postgres_text_array(row.parser_result.ingredients_vector_names),
         JSON.generate(row.parser_result.ingredient_parse_data),
         record.fetch("ratings"),
         record.fetch("cuisine"),

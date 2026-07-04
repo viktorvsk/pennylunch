@@ -36,6 +36,8 @@ gem "thruster", require: false
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 gem "image_processing", "~> 1.2"
 
+gem "avo", "= 4.0.7"
+gem "informers", "1.3.0"
 gem "maintenance_tasks", "2.17.0"
 gem "neighbor", "1.2.0"
 gem "pgvector", "0.3.3"
@@ -78,5 +80,3 @@ group :test do
   gem "faker"
   gem "webmock"
 end
-
-gem "informers", "1.3.0"

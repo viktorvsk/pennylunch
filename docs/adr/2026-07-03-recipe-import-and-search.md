@@ -9,18 +9,20 @@ The MVP needs locally testable recipe discovery from a fixed gzipped JSON source
 
 ## Decision
 
-Store recipes in one denormalized `recipes` table with typed source columns plus derived search fields. Import directly into an empty table with PostgreSQL `COPY`. Prove source-column fidelity in specs by reconstructing source-shaped JSON from columns and comparing it with parsed gzip fixture data. Parse source ingredient sentences with a pinned Python `ingredient-parser-nlp` CLI, store the full structured parser output in `ingredient_parse_data`, extract lowercase unique `ingredient_names`, then use those names as the text source for pgvector embeddings. Use PostgreSQL full-text search for titles and pgvector with Neighbor and Informers for ingredient candidate selection, constrained by a configurable cosine-distance threshold.
+Store recipes in one denormalized `recipes` table with typed source columns plus derived search fields. Import directly into an empty table with PostgreSQL `COPY`. Prove source-column fidelity in specs by reconstructing source-shaped JSON from columns and comparing it with parsed gzip fixture data. Parse source ingredient sentences with a pinned Python `ingredient-parser-nlp` CLI and store the raw parsed names in `ingredient_names` plus the full structured parser output in `ingredient_parse_data`. Resolve parsed names through the Ingredient catalog's unique alias-to-name mapping only for derived search fields, then store non-optional canonical Ingredient names in `ingredients_vector_names` as the text source for pgvector embeddings. Use PostgreSQL full-text search for titles and pgvector with Neighbor and Informers for ingredient candidate selection, constrained by a configurable cosine-distance threshold.
 
 ## Alternatives Considered
 
 - Store raw source JSON and compare it during verification: rejected because it does not prove typed columns were stored correctly.
 - Normalize recipes, authors, categories, and ingredients immediately: rejected because the MVP source has no stable external IDs and the first product needs read-only discovery.
 - Embed full source ingredient sentences: rejected because quantities, units, and preparation notes dilute matching for pantry ingredients.
+- Use parser output directly as canonical ingredient names: rejected because plural forms, preparation adjectives, and parser-specific variants fragment search and highlighting.
+- Include optional pantry staples in vectors: rejected because ingredients such as salt and sugar are usually available and can overpower more meaningful recipe matches.
 - External vector database: rejected because PostgreSQL with pgvector keeps local development self-contained.
 
 ## Consequences
 
-The MVP has a simple, inspectable data model and a strong import equality spec. Re-importing changed source data is intentionally not handled yet. Ingredient relevance depends on parser-backed ingredient names and vectors being backfilled through the maintenance UI. Parser output is derived data, so it can be regenerated without changing the original source fields.
+The MVP has a simple, inspectable data model and a strong import equality spec. Re-importing changed source data is intentionally not handled yet. Ingredient relevance depends on the Ingredient catalog, parser-backed canonical vector names, and vectors being backfilled through the maintenance UI. Parser output, canonical vector names, and vectors are derived data, so they can be regenerated without changing the original source fields or raw parser ingredient names.
 
 ## Verification
 

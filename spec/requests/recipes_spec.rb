@@ -12,6 +12,8 @@ RSpec.describe "Recipes", type: :request do
   end
 
   it "filters recipes and links to the show page" do
+    create(:ingredient, name: "tomato", optional: true)
+    create(:ingredient, name: "pasta")
     recipe = create(
       :recipe,
       title: "Quick Tomato Pasta",
@@ -39,6 +41,10 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("tomato, pasta, garlic")
     ingredient_summary = document.at_css("[data-recipe-ingredients]")
     expect(JSON.parse(ingredient_summary["data-ingredient-names"])).to eq([ "tomato", "pasta", "garlic" ])
+    expect(JSON.parse(document.at_css("[data-ingredients-fab]")["data-ingredient-options"])).to include(
+      { "name" => "tomato", "optional" => true },
+      { "name" => "pasta", "optional" => false }
+    )
     expect(response.body).to include("M20 21a8 8 0 0 0-16 0")
     expect(response.body).to include("M12 6v6l4 2")
     expect(response.body).to include("href=\"/\"")
@@ -117,7 +123,10 @@ RSpec.describe "Recipes", type: :request do
   end
 
   it "filters recipes by available ingredients through vector search" do
-    pasta = create(:recipe, title: "Pasta and Garlic", ingredients_vector: vector(1.0))
+    create(:ingredient, name: "pasta")
+    create(:ingredient, name: "garlic")
+    create(:ingredient, name: "olive oil")
+    pasta = create(:recipe, title: "Pasta and Garlic", ingredient_names: [ "pasta", "garlic", "olive oil" ], ingredients_vector_names: [ "pasta", "garlic", "olive oil" ], ingredients_vector: vector(1.0))
     create(:recipe, title: "Apple Cake", ingredients_vector: vector(-1.0))
     allow(IngredientParser).to receive(:call).and_return([
       IngredientParser::Result.new([ "pasta", "garlic", "olive oil" ], [])

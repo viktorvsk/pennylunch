@@ -4,12 +4,6 @@ require "uri"
 class Recipe < ApplicationRecord
   SOURCE_FIELDS = %w[title cook_time prep_time ingredients ratings cuisine category author image].freeze
   SORTS = %w[time_asc time_desc rating_asc rating_desc].freeze
-  INGREDIENT_TERM_STOP_WORDS = %w[
-    all and boneless canned chopped cooked condensed crushed diced dried extra fat free fresh frozen grated ground halves
-    large lean less low medium minced of or peeled pieces purpose reduced shredded skin skinless sliced small sodium taste
-    teaspoon tablespoon teaspoons tablespoons to unsalted with without
-  ].freeze
-
   has_neighbors :ingredients_vector
 
   before_validation :derive_fields
@@ -75,9 +69,7 @@ class Recipe < ApplicationRecord
   end
 
   def self.ingredient_filter_options
-    names = pluck(:ingredient_names).flatten.compact_blank.map { |name| name.to_s.squish.downcase }.uniq
-
-    (names + names.flat_map { |name| ingredient_filter_terms_for(name) }).uniq.sort
+    Ingredient.filter_options
   end
 
   def self.similar_by_ingredients(recipe, limit: 3)
@@ -122,16 +114,6 @@ class Recipe < ApplicationRecord
     url
   end
 
-  def self.ingredient_filter_terms_for(name)
-    name.scan(/[[:alpha:]][[:alpha:]'-]*/).filter_map do |word|
-      term = word.delete("'").downcase.singularize
-      next if term.length < 3 || INGREDIENT_TERM_STOP_WORDS.include?(term)
-
-      term
-    end.uniq
-  end
-  private_class_method :ingredient_filter_terms_for
-
   def self.slug_for(attributes)
     [ attributes.fetch(:title), attributes.fetch(:category), attributes.fetch(:author), "#{attributes.fetch(:total_time)}-minutes" ].filter_map do |part|
       part.to_s.parameterize(preserve_case: true).presence
@@ -153,7 +135,7 @@ class Recipe < ApplicationRecord
   end
 
   def ingredients_embedding_text
-    names = ingredient_names.presence || ingredients
+    names = ingredients_vector_names.presence || ingredient_names.presence || ingredients
     names.join("\n")
   end
 
@@ -169,6 +151,7 @@ class Recipe < ApplicationRecord
 
   def derive_fields
     self.ingredient_names = Array(ingredient_names).filter_map { |name| name.to_s.squish.downcase.presence }.uniq
+    self.ingredients_vector_names = Array(ingredients_vector_names).filter_map { |name| Ingredient.normalize_lookup_key(name) }.uniq
     self.category_normalized = self.class.normalize_category(category)
     self.total_time = prep_time.to_i + cook_time.to_i
     self.source_key = self.class.source_key_for(title:, category:, author:) if title && category && author

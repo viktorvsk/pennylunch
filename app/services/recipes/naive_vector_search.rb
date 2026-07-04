@@ -5,17 +5,20 @@ module Recipes
     end
 
     def call
-      query_text = ingredients_embedding_text
-      return relation.none if query_text.blank?
+      query_names = query_ingredient_names
+      return relation if query_names.empty?
+
+      candidate_relation = relation.where("ingredients_vector_names && ARRAY[?]::text[]", query_names)
+      query_text = query_names.join("\n")
 
       vector = embedder.call(query_text)
-      ids = relation
+      ids = candidate_relation
         .where.not(ingredients_vector: nil)
         .nearest_neighbors(:ingredients_vector, vector, distance: "cosine", threshold: max_distance)
         .limit(candidate_count)
         .pluck(:id)
 
-      ids.any? ? relation.where(id: ids) : relation.none
+      ids.any? ? candidate_relation.where(id: ids) : candidate_relation
     end
 
     private
@@ -24,8 +27,10 @@ module Recipes
 
     delegate :relation, :text, :embedder, :ingredient_parser, to: :request
 
-    def ingredients_embedding_text
-      ingredient_parser.call([ ingredient_query_lines ]).first.ingredient_names.join("\n")
+    def query_ingredient_names
+      lines = ingredient_query_lines
+      parser_result = ingredient_parser.call([ lines ]).first
+      Ingredient.filterable_canonical_names_for(lines + parser_result.ingredient_names)
     end
 
     def ingredient_query_lines

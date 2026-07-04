@@ -39,8 +39,8 @@ When adding a setting:
 | `INGREDIENT_PARSER_TIMEOUT_SECONDS` | `120` | Timeout for each parser shell-out batch. |
 | `INFORMERS_CACHE_DIR` | `storage/informers` | Persistent local model cache path. |
 | `EMBEDDING_MODEL_PRELOAD` | `true` | Enables non-blocking model warmup after Rails server boot outside test. |
-| `MAINTENANCE_TASKS_USERNAME` | `pennylunch` | HTTP basic username for `/maintenance_tasks`. |
-| `MAINTENANCE_TASKS_PASSWORD` | `pennylunch` | HTTP basic password for `/maintenance_tasks`. |
+| `MAINTENANCE_TASKS_USERNAME` | `pennylunch` | HTTP basic username for `/maintenance_tasks` and `/avo`. |
+| `MAINTENANCE_TASKS_PASSWORD` | `pennylunch` | HTTP basic password for `/maintenance_tasks` and `/avo`. |
 
 ## Python Runtime Settings
 

@@ -244,14 +244,19 @@
 
       root.ingredientsFabReady = true;
 
-      const optionNames = (() => {
+      const optionRecords = (() => {
         try {
-          return JSON.parse(root.dataset.ingredientOptions || "[]").map((name) => name.toString().trim()).filter(Boolean);
+          return JSON.parse(root.dataset.ingredientOptions || "[]").map((option) => {
+            if (typeof option === "string") return { name: option.trim(), optional: false };
+
+            return { name: option.name?.toString().trim() || "", optional: option.optional === true };
+          }).filter((option) => option.name !== "");
         } catch {
           return [];
         }
       })();
-      const optionByKey = new Map(optionNames.map((name) => [name.toLowerCase(), name]));
+      const optionNames = optionRecords.map((option) => option.name);
+      const optionByKey = new Map(optionRecords.map((option) => [normalizeIngredientName(option.name), option]));
       const currentIngredients = (root.dataset.currentIngredients || "").trim();
       const storedSelected = (() => {
         try {
@@ -270,8 +275,10 @@
       let timeoutId;
       let activeOptionIndex = -1;
 
-      const canonicalName = (value) => optionByKey.get(value.toString().trim().toLowerCase());
-      const selectedKeys = () => new Set(selected.map((name) => name.toLowerCase()));
+      const optionFor = (value) => optionByKey.get(normalizeIngredientName(value));
+      const canonicalName = (value) => optionFor(value)?.name;
+      const optionalIngredient = (value) => optionFor(value)?.optional === true;
+      const selectedKeys = () => new Set(selected.map(normalizeIngredientName));
       const optionRank = (name, query) => {
         const key = name.toLowerCase();
         const words = key.split(/\s+/);
@@ -288,15 +295,16 @@
       const seedSelected = (values) => {
         values.forEach((value) => {
           const name = canonicalName(value);
-          if (name && !selectedKeys().has(name.toLowerCase())) selected.push(name);
+          if (name && !selectedKeys().has(normalizeIngredientName(name))) selected.push(name);
         });
       };
 
+      if (storedSelected.length > 0) {
+        seedSelected(storedSelected);
+      }
       if (present(currentIngredients)) {
         seedSelected(splitIngredientText(currentIngredients));
-      } else if (storedSelected.length > 0) {
-        seedSelected(storedSelected);
-      } else {
+      } else if (selected.length === 0) {
         seedSelected(splitIngredientText(storedText));
       }
 
@@ -311,7 +319,7 @@
         const normalizedQuery = query.trim().toLowerCase();
 
         return optionNames
-          .filter((name) => !selectedKeySet.has(name.toLowerCase()))
+          .filter((name) => !selectedKeySet.has(normalizeIngredientName(name)))
           .map((name) => [name, optionRank(name, normalizedQuery)])
           .filter(([, rank]) => rank !== null)
           .sort(([leftName, leftRank], [rightName, rightRank]) => {
@@ -356,6 +364,7 @@
             option.type = "button";
             option.className = "recipe-ingredients-option w-full text-left";
             option.dataset.value = name;
+            option.dataset.optional = optionalIngredient(name) ? "true" : "false";
             option.dataset.active = index === activeOptionIndex ? "true" : "false";
             option.setAttribute("role", "option");
             option.setAttribute("aria-selected", index === activeOptionIndex ? "true" : "false");
@@ -385,6 +394,7 @@
       };
 
       const setStatus = () => {
+        const filterableSelected = selected.filter((name) => !optionalIngredient(name));
         const hasSelected = selected.length > 0;
         const enabled = enabledInput.checked;
         const state = enabled ? "enabled" : "disabled";
@@ -393,8 +403,8 @@
         enabledControl.dataset.state = state;
         enabledText.textContent = enabled ? "On" : "Off";
 
-        if (enabled && hasSelected) {
-          status.textContent = `Filtering with ${selected.length} selected`;
+        if (enabled && filterableSelected.length > 0) {
+          status.textContent = `Filtering with ${filterableSelected.length} selected`;
         } else if (enabled) {
           status.textContent = "On, add matches";
         } else if (hasSelected) {
@@ -413,6 +423,7 @@
         selected.forEach((name) => {
           const chip = document.createElement("span");
           chip.className = "recipe-ingredients-chip";
+          chip.dataset.optional = optionalIngredient(name) ? "true" : "false";
 
           const label = document.createElement("span");
           label.textContent = name;
@@ -431,9 +442,10 @@
       const sync = ({ submit = false, delay = 0 } = {}) => {
         const enabled = enabledInput.checked;
         const text = selected.join("\n");
+        const filterText = selected.filter((name) => !optionalIngredient(name)).join("\n");
         const hidden = currentHidden();
 
-        if (hidden) hidden.value = enabled ? text : "";
+        if (hidden) hidden.value = enabled ? filterText : "";
         writeStorage(ingredientStorageKeys.selected, JSON.stringify(selected));
         writeStorage(ingredientStorageKeys.text, text);
         writeStorage(ingredientStorageKeys.enabled, enabled ? "true" : "false");

@@ -12,9 +12,11 @@ RSpec.describe Recipes::Search do
   end
 
   it "sorts the ingredient candidate set with the selected sort" do
-    tomato_fast = create(:recipe, title: "Fast Tomato Pasta", ratings: 4.4, prep_time: 5, cook_time: 10, ingredients_vector: vector(1.0))
-    tomato_best = create(:recipe, title: "Best Tomato Soup", ratings: 4.9, prep_time: 20, cook_time: 30, ingredients_vector: vector(0.8, 0.6))
-    chicken = create(:recipe, title: "Chicken Dinner", ratings: 5.0, prep_time: 10, cook_time: 15, ingredients_vector: vector(-1.0))
+    create(:ingredient, name: "tomato", aliases: [ "tomatoes" ])
+    create(:ingredient, name: "pasta")
+    tomato_fast = create(:recipe, title: "Fast Tomato Pasta", ratings: 4.4, prep_time: 5, cook_time: 10, ingredient_names: [ "tomatoes", "pasta" ], ingredients_vector_names: [ "tomato", "pasta" ], ingredients_vector: vector(1.0))
+    tomato_best = create(:recipe, title: "Best Tomato Soup", ratings: 4.9, prep_time: 20, cook_time: 30, ingredient_names: [ "tomatoes" ], ingredients_vector_names: [ "tomato" ], ingredients_vector: vector(0.8, 0.6))
+    chicken = create(:recipe, title: "Chicken Dinner", ratings: 5.0, prep_time: 10, cook_time: 15, ingredient_names: [ "chicken" ], ingredients_vector_names: [ "chicken" ], ingredients_vector: vector(-1.0))
 
     result = described_class.new(
       params: { ingredients: "tomatoes, pasta", sort: "rating_desc" },
@@ -25,6 +27,54 @@ RSpec.describe Recipes::Search do
 
     expect(result.recipes).to eq([ tomato_best, tomato_fast ])
     expect(result.recipes).not_to include(chicken)
+  end
+
+  it "embeds canonical ingredient names resolved from basket aliases" do
+    create(:ingredient, name: "avocado", aliases: [ "ripe avocado", "green avocado" ])
+    create(:ingredient, name: "salt", optional: true)
+    avocado_recipe = create(:recipe, title: "Avocado Salad", ingredient_names: [ "green avocado" ], ingredients_vector_names: [ "avocado" ], ingredients_vector: vector(1.0))
+    create(:recipe, title: "Apple Cake", ingredient_names: [ "apple" ], ingredients_vector_names: [ "apple" ], ingredients_vector: vector(-1.0))
+    embedder = fake_embedder(vector(1.0))
+
+    result = described_class.new(
+      params: { ingredients: "green avocado, salt" },
+      embedder:,
+      ingredient_parser: fake_ingredient_parser([ IngredientParser::Result.new([ "green avocado", "salt" ], []) ]),
+      ingredients_candidate_count: 1,
+    ).call
+
+    expect(embedder.calls).to eq([ "avocado" ])
+    expect(result.recipes).to eq([ avocado_recipe ])
+  end
+
+  it "does not return vector-near recipes that lack the requested canonical ingredient" do
+    create(:ingredient, name: "avocado")
+    avocado_recipe = create(:recipe, title: "Avocado Smoothie", ingredient_names: [ "green avocado", "banana" ], ingredients_vector_names: [ "avocado", "banana" ], ingredients_vector: vector(0.8, 0.6))
+    create(:recipe, title: "Banana Ice Cream", ingredient_names: [ "banana" ], ingredients_vector_names: [ "banana" ], ingredients_vector: vector(1.0))
+
+    result = described_class.new(
+      params: { ingredients: "avocado" },
+      embedder: fake_embedder(vector(1.0)),
+      ingredient_parser: fake_ingredient_parser([ IngredientParser::Result.new([ "avocado" ], []) ]),
+      ingredients_candidate_count: 2,
+    ).call
+
+    expect(result.recipes).to eq([ avocado_recipe ])
+  end
+
+  it "does not filter when the basket only has optional ingredients" do
+    create(:ingredient, name: "salt", optional: true)
+    recipe = create(:recipe, title: "Any Dinner", ingredients_vector: vector(1.0))
+    embedder = fake_embedder(vector(1.0))
+
+    result = described_class.new(
+      params: { ingredients: "salt" },
+      embedder:,
+      ingredient_parser: fake_ingredient_parser([ IngredientParser::Result.new([ "salt" ], []) ]),
+    ).call
+
+    expect(embedder.calls).to be_empty
+    expect(result.recipes).to eq([ recipe ])
   end
 
   it "ranks ingredient matches with the real local embedding model" do
@@ -61,7 +111,14 @@ RSpec.describe Recipes::Search do
 
   def fake_embedder(value)
     Class.new do
-      define_singleton_method(:call) { |_text| value }
+      def self.calls
+        @calls ||= []
+      end
+
+      define_singleton_method(:call) do |text|
+        calls << text
+        value
+      end
     end
   end
 
