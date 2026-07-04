@@ -5,7 +5,7 @@ Rails.application.config.after_initialize do
 
   Thread.new do
     Rails.application.executor.wrap do
-      LocalEmbedding.warm!
+      LocalEmbedding.model
     rescue StandardError => error
       Rails.logger.warn("Embedding model warmup failed: #{error.class}: #{error.message}")
     end

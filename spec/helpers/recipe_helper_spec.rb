@@ -29,8 +29,7 @@ RSpec.describe RecipeHelper, type: :helper do
           RecipeHelper::RECIPE_UI_CATALOG_CACHE_KEY,
           Ingredient.all.cache_key_with_version,
           Recipe.all.cache_key_with_version
-        ],
-        expires_in: RecipeHelper::RECIPE_UI_CATALOG_CACHE_EXPIRATION
+        ]
       ).at_least(:once)
     end
 

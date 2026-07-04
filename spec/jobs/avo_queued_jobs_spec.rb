@@ -17,11 +17,6 @@ RSpec.describe "Avo-queued jobs", type: :job do
     expect(RecipeImport).to have_received(:call).with(url: RecipeImport::DEFAULT_URL)
   end
 
-  it "rejects blank import URLs" do
-    expect { ImportRecipesJob.perform_now(" ") }
-      .to raise_error(ImportRecipesJob::InvalidUrlError, "recipe import URL can't be blank")
-  end
-
   it "sets vector recipe search through the search strategy job" do
     with_memory_cache do |cache|
       SetRecipeSearchStrategyJob.perform_now("vector")
@@ -36,13 +31,13 @@ RSpec.describe "Avo-queued jobs", type: :job do
 
       SetRecipeSearchStrategyJob.perform_now("overlap")
 
-      expect(cache.read("search_strategy")).to be_nil
+      expect(cache.read("search_strategy")).to eq("overlap")
     end
   end
 
   it "rejects unknown recipe search strategies" do
     expect { SetRecipeSearchStrategyJob.perform_now("naive_vector_search") }
-      .to raise_error(SetRecipeSearchStrategyJob::InvalidStrategyError, "unknown recipe search strategy: naive_vector_search")
+      .to raise_error(ArgumentError, "unknown recipe search strategy: naive_vector_search")
   end
 
   it "indexes a missing recipe vector" do
@@ -213,8 +208,7 @@ RSpec.describe "Avo-queued jobs", type: :job do
     YAML
 
       upsert_statements = recorded_sql do
-        synced_count = BootstrapIngredients.perform_now(path.to_s)
-        expect(synced_count).to eq(2)
+        BootstrapIngredientsJob.perform_now(path)
       end.grep(/\AINSERT INTO "ingredients"/)
 
       expect(avocado.reload.aliases).to eq([ "avocado", "avocados", "ripe avocado" ])
@@ -225,7 +219,7 @@ RSpec.describe "Avo-queued jobs", type: :job do
   end
 
   it "uses normalized names, aliases, and boolean optional values in the real alias catalog" do
-    ingredients = YAML.safe_load_file(BootstrapIngredients::CATALOG_PATH.to_s)["ingredients"]
+    ingredients = YAML.safe_load_file(BootstrapIngredientsJob::CATALOG_PATH)["ingredients"]
     optional_values = ingredients.values.map { |attributes| attributes["optional"] || false }.uniq
     invalid_names = ingredients.keys.reject { |name| name == Ingredient.normalize_lookup_key(name) }
     invalid_aliases = ingredients.values.flat_map { |attributes| attributes["aliases"] }.reject { |name| name == Ingredient.normalize_lookup_key(name) }

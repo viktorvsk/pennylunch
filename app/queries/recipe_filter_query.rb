@@ -9,7 +9,7 @@ class RecipeFilterQuery
 
       relation = TitleSearchQuery.call(relation:, query: filters["q"])
       relation = relation.where(category_normalized: category) if category.present?
-      relation = relation.where("total_time > 0 AND total_time < ?", QUICK_TOTAL_TIME_LIMIT) if BOOLEAN.cast(filters["quick"])
+      relation = relation.where(total_time: 1...QUICK_TOTAL_TIME_LIMIT) if BOOLEAN.cast(filters["quick"])
       relation = relation.where("ratings > ?", POPULAR_RATING_THRESHOLD) if BOOLEAN.cast(filters["popular"])
       RecipeIngredientFilterQuery.call(relation:, ingredients: filters["ingredients"])
     end

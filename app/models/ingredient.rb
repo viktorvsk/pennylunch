@@ -1,19 +1,23 @@
 class Ingredient < ApplicationRecord
   has_many :recipe_ingredients, dependent: :delete_all
 
-  before_validation :normalize_name
-  before_validation :normalize_aliases
+  normalizes :name, with: ->(name) { name.to_s.squish.downcase.presence }
+  normalizes :aliases, with: ->(aliases) { aliases.is_a?(Array) ? aliases.filter_map { it.to_s.squish.downcase.presence }.uniq : aliases }
 
   validates :name, presence: true, uniqueness: true
+  validates :name, format: { without: /,/, message: "must not contain commas" }
   validate :aliases_must_be_array
   validate :aliases_must_be_present
   validate :aliases_must_be_globally_unique
   validate :name_must_not_match_another_alias
-  validate :name_must_be_canonical
 
   class << self
     def normalize_lookup_key(value)
       value.to_s.squish.downcase.presence
+    end
+
+    def normalize_lookup_keys(values)
+      Array(values).filter_map { normalize_lookup_key(it) }.uniq
     end
 
     def lookup_map(scope = all)
@@ -29,28 +33,28 @@ class Ingredient < ApplicationRecord
       lookup_map(where(optional: false))
     end
 
-    def filterable_canonical_names_for(names)
-      mapping = filterable_lookup_map
-      Array(names).filter_map { |name| mapping[normalize_lookup_key(name)] }.uniq
-    end
-
     def filter_options
       order(:name).pluck(:name, :optional).map { |name, optional| { name:, optional: } }
+    end
+
+    def filterable_matches(text)
+      names = text.to_s.split(/[\n,;]+/).filter_map { normalize_lookup_key(it) }.uniq
+      return [] if names.empty?
+
+      where(optional: false, name: names).to_a
+    end
+
+    def catalog_metadata
+      pluck(:name, :aliases, :optional).each_with_object({}) do |(name, aliases, optional), mapping|
+        ([ name ] + aliases).each do |value|
+          key = normalize_lookup_key(value)
+          mapping[key] = { name:, optional: } if key.present?
+        end
+      end
     end
   end
 
   private
-
-  def normalize_name
-    self.name = self.class.normalize_lookup_key(name) if name.present?
-  end
-
-  def normalize_aliases
-    self.aliases = [] if aliases.nil?
-    return unless aliases.is_a?(Array)
-
-    self.aliases = aliases.filter_map { |value| value.to_s.squish.downcase.presence }.uniq
-  end
 
   def aliases_must_be_array
     errors.add(:aliases, "must be an array") unless aliases.is_a?(Array)
@@ -63,14 +67,13 @@ class Ingredient < ApplicationRecord
   def aliases_must_be_globally_unique
     return unless aliases.is_a?(Array) && aliases.any?
 
-    normalized_aliases = aliases.filter_map { |alias_name| self.class.normalize_lookup_key(alias_name) }
-    other_ingredients = self.class.where.not(id:).pluck(:name, :aliases)
-
-    if other_ingredients.any? { |_other_name, other_aliases| (other_aliases.filter_map { |alias_name| self.class.normalize_lookup_key(alias_name) } & normalized_aliases).any? }
+    others = self.class.where.not(id:)
+    # pg array syntax for jsonb_exists_any
+    if others.where("jsonb_exists_any(aliases, ARRAY[?]::text[])", aliases).exists?
       errors.add(:aliases, "must be unique across ingredients")
     end
 
-    if other_ingredients.any? { |other_name, _other_aliases| normalized_aliases.include?(self.class.normalize_lookup_key(other_name)) }
+    if others.where(name: aliases).exists?
       errors.add(:aliases, "must not match another ingredient name")
     end
   end
@@ -78,14 +81,9 @@ class Ingredient < ApplicationRecord
   def name_must_not_match_another_alias
     return if name.blank?
 
-    normalized_name = self.class.normalize_lookup_key(name)
-    exists = self.class.where.not(id:).pluck(:aliases).any? do |other_aliases|
-      other_aliases.filter_map { |alias_name| self.class.normalize_lookup_key(alias_name) }.include?(normalized_name)
+    others = self.class.where.not(id:)
+    if others.where("jsonb_exists(aliases, ?)", name).exists?
+      errors.add(:name, "must not match another ingredient alias")
     end
-    errors.add(:name, "must not match another ingredient alias") if exists
-  end
-
-  def name_must_be_canonical
-    errors.add(:name, "must not contain commas") if name.to_s.include?(",")
   end
 end

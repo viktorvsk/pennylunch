@@ -130,7 +130,7 @@ RSpec.describe "Avo record actions" do
   it "queues ingredient catalog bootstrap" do
     action = run_action(Avo::Actions::BootstrapIngredients, [])
 
-    expect(enqueued_jobs.first[:job]).to eq(BootstrapIngredients)
+    expect(enqueued_jobs.first[:job]).to eq(BootstrapIngredientsJob)
     expect(enqueued_jobs.first[:args]).to eq([])
     expect(action.response[:messages]).to include(hash_including(type: :success, body: "Queued ingredient catalog bootstrap."))
   end

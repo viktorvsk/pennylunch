@@ -5,7 +5,7 @@ class Avo::Actions::BootstrapIngredients < Avo::BaseAction
   self.standalone = true
 
   def handle(**)
-    ::BootstrapIngredients.perform_later
+    BootstrapIngredientsJob.perform_later
     succeed "Queued ingredient catalog bootstrap."
     reload
   end

@@ -29,19 +29,6 @@ RSpec.describe Recipe do
     end
   end
 
-  describe ".slug_for" do
-    it "skips blank category parts" do
-      slug = described_class.slug_for(
-        title: "Tomato Pasta",
-        category: "",
-        author: "Pasta Maker",
-        total_time: 23
-      )
-
-      expect(slug).to eq("Tomato-Pasta-Pasta-Maker-23-minutes")
-    end
-  end
-
   describe ".category_labels" do
     it "maps normalized categories to original display names" do
       create(:recipe, category: "Air Fryer Main Dish Recipes", category_normalized: "air fryer main dish recipes")

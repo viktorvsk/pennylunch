@@ -24,23 +24,16 @@ class RecipeIngredientRecomputeQuery
               WHERE desired_pairs.recipe_id = recipe_ingredients.recipe_id
                 AND desired_pairs.ingredient_id = recipe_ingredients.ingredient_id
             )
-          RETURNING 1
-        ),
-        inserted_pairs AS (
-          INSERT INTO recipe_ingredients (
-            recipe_id,
-            ingredient_id,
-            created_at,
-            updated_at
-          )
-          SELECT desired_pairs.recipe_id, desired_pairs.ingredient_id, NOW(), NOW()
-          FROM desired_pairs
-          ON CONFLICT (recipe_id, ingredient_id) DO NOTHING
-          RETURNING 1
         )
-        SELECT
-          (SELECT COUNT(*) FROM deleted_pairs) AS deleted_count,
-          (SELECT COUNT(*) FROM inserted_pairs) AS inserted_count
+        INSERT INTO recipe_ingredients (
+          recipe_id,
+          ingredient_id,
+          created_at,
+          updated_at
+        )
+        SELECT desired_pairs.recipe_id, desired_pairs.ingredient_id, NOW(), NOW()
+        FROM desired_pairs
+        ON CONFLICT (recipe_id, ingredient_id) DO NOTHING
       SQL
     end
   end

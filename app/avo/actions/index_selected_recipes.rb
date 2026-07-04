@@ -4,11 +4,11 @@ class Avo::Actions::IndexSelectedRecipes < Avo::BaseAction
   self.confirm_button_label = "Queue indexing"
 
   def handle(query:, **)
-    recipes = query.is_a?(ActiveRecord::Relation) ? query : Recipe.where(id: query.map(&:id))
+    recipes = Recipe.where(id: query)
     count = recipes.count
     return error("Select at least one recipe.").keep_modal_open if count.zero?
 
-    if whole_recipe_scope?(recipes)
+    if query.is_a?(ActiveRecord::Relation) && query.where_clause.empty?
       IndexRecipeJob.perform_later("all")
       succeed "Queued recipe indexing for all recipes."
     else
@@ -18,17 +18,5 @@ class Avo::Actions::IndexSelectedRecipes < Avo::BaseAction
     end
 
     reload
-  end
-
-  private
-
-  def whole_recipe_scope?(recipes)
-    recipes.is_a?(ActiveRecord::Relation) &&
-      recipes.where_clause.empty? &&
-      recipes.limit_value.nil? &&
-      recipes.offset_value.nil? &&
-      recipes.group_values.empty? &&
-      recipes.having_clause.empty? &&
-      !recipes.distinct_value
   end
 end

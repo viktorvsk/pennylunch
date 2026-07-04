@@ -6,16 +6,12 @@ class LocalEmbedding
       @model ||= Informers.pipeline(
         "embedding",
         MODEL_NAME,
-        cache_dir: SETTINGS.informers_cache_dir,
+        cache_dir: SETTINGS.informers_cache_dir
       )
     end
 
     def call(text)
       model.call(text)
-    end
-
-    def warm!
-      model
     end
   end
 end

@@ -10,7 +10,7 @@ class Avo::Actions::SetRecipeSearchStrategy < Avo::BaseAction
 
   def handle(fields:, **)
     strategy = fields[:strategy].to_s
-    return error("Unknown recipe search strategy.").keep_modal_open unless SetRecipeSearchStrategyJob::STRATEGIES.include?(strategy)
+    return error("Unknown recipe search strategy.").keep_modal_open unless RecipeIngredientFilterQuery::STRATEGIES.include?(strategy)
 
     SetRecipeSearchStrategyJob.perform_later(strategy)
     succeed "Queued recipe search strategy update to #{strategy}."

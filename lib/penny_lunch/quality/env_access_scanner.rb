@@ -63,30 +63,34 @@ module PennyLunch
             path = relative_path(root, absolute_path)
             next if skipped?(path)
 
-            File.readlines(absolute_path, encoding: "UTF-8").each_with_index do |line, index|
-              next if line.lstrip.start_with?("#")
-
-              referenced_names.concat(environment_names(line))
-              referenced_names.concat(shell_environment_names(line)) if path.start_with?("bin/")
-
-              if line.match?(PATTERNS[:direct_env]) && !env_allowed?(path)
-                direct_access_findings << Finding.new(path: path, line_number: index + 1, line: line)
-              end
-
-              if line.match?(PATTERNS[:direct_credentials]) && !central_configuration?(path)
-                credentials_access_findings << Finding.new(path: path, line_number: index + 1, line: line)
-              end
-            end
+            scan_file(absolute_path, path, direct_access_findings, credentials_access_findings, referenced_names)
           end
 
           Result.new(
             direct_access_findings: direct_access_findings,
             credentials_access_findings: credentials_access_findings,
-            undocumented_names: referenced_names.uniq.sort - documented_names(root, env_file),
+            undocumented_names: referenced_names.uniq.sort - documented_names(root, env_file)
           )
         end
 
         private
+
+        def scan_file(absolute_path, path, direct_access_findings, credentials_access_findings, referenced_names)
+          File.readlines(absolute_path, encoding: "UTF-8").each_with_index do |line, index|
+            next if line.lstrip.start_with?("#")
+
+            referenced_names.concat(environment_names(line))
+            referenced_names.concat(shell_environment_names(line)) if path.start_with?("bin/")
+
+            if line.match?(PATTERNS[:direct_env]) && !env_allowed?(path)
+              direct_access_findings << Finding.new(path: path, line_number: index + 1, line: line)
+            end
+
+            if line.match?(PATTERNS[:direct_credentials]) && !central_configuration?(path)
+              credentials_access_findings << Finding.new(path: path, line_number: index + 1, line: line)
+            end
+          end
+        end
 
         def files(root)
           RULES[:scan_globs].flat_map { |glob| Dir.glob(root.join(glob)) }.uniq.select { |path| File.file?(path) }.sort

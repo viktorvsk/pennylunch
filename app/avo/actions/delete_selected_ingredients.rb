@@ -4,8 +4,7 @@ class Avo::Actions::DeleteSelectedIngredients < Avo::BaseAction
   self.confirm_button_label = "Delete ingredients"
 
   def handle(query:, **)
-    ingredients = query.is_a?(ActiveRecord::Relation) ? query : Ingredient.where(id: query.map(&:id))
-    deleted_count = ingredients.delete_all
+    deleted_count = Ingredient.where(id: query).delete_all
 
     succeed "Deleted #{deleted_count} #{"ingredient".pluralize(deleted_count)}."
     reload

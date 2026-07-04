@@ -3,7 +3,7 @@ module IngredientsHelper
   RecipeMatchReadiness = Data.define(:matched_count, :required_count, :percentage, :label, :tooltip, :ready)
 
   def recipe_ingredient_names(recipe)
-    Array(recipe.ingredient_names).filter_map { |name| name.to_s.squish.presence }
+    Array(recipe.ingredient_names).filter_map { it.to_s.squish.presence }
   end
 
   def ingredient_name_summary(recipe, limit: DEFAULT_INGREDIENT_SUMMARY_LIMIT)
@@ -52,31 +52,8 @@ module IngredientsHelper
   end
 
   def recipe_ingredient_rows(recipe)
-    metadata = ingredient_catalog_metadata
     Array(recipe.ingredients).each_with_index.map do |ingredient, index|
-      parser = ingredient_parser_payload(recipe, index)
-      amount = Array(parser["amount"]).find { |value| value.is_a?(Hash) } || {}
-      names = Array(parser["name"]).select { |value| value.is_a?(Hash) }
-      state = [ parser["preparation"], parser["comment"], parser["purpose"], parser["size"] ].filter_map { |value| ingredient_parser_value(value) }.join(", ")
-      name_parts = ingredient_name_parts(names, metadata)
-      ingredient_name = ingredient_display_name(name_parts, Array(recipe.ingredient_names)[index].presence || ingredient.to_s)
-      records = names.filter_map { |value| metadata[Ingredient.normalize_lookup_key(value["text"])] }.uniq { |record| record[:name] }
-      fallback_record = metadata[Ingredient.normalize_lookup_key(ingredient_name)]
-      records << fallback_record if records.empty? && fallback_record.present?
-      catalog_names = records.map { |record| record[:name] }
-      name_parts = [ { name: ingredient_name, catalog_name: catalog_names.first } ] if name_parts.empty?
-      optional = records.any? && records.all? { |record| record[:optional] }
-
-      {
-        size: amount["quantity"].presence || amount["quantity_max"].presence || amount["text"].presence,
-        unit: amount["unit"].presence,
-        name: ingredient_name,
-        name_parts:,
-        catalog_name: catalog_names.first,
-        catalog_names:,
-        optional:,
-        state:
-      }
+      ingredient_row(recipe, ingredient, index)
     end
   end
 
@@ -95,12 +72,34 @@ module IngredientsHelper
   end
 
   def ingredient_catalog_metadata
-    @ingredient_catalog_metadata ||= Ingredient.pluck(:name, :aliases, :optional).each_with_object({}) do |(name, aliases, optional), mapping|
-      ([ name ] + Array(aliases)).each do |value|
-        key = Ingredient.normalize_lookup_key(value)
-        mapping[key] = { name:, optional: } if key.present?
-      end
-    end
+    @ingredient_catalog_metadata ||= Ingredient.catalog_metadata
+  end
+
+  def ingredient_row(recipe, ingredient, index)
+    metadata = ingredient_catalog_metadata
+    parser = ingredient_parser_payload(recipe, index)
+    amount = Array(parser["amount"]).find { |value| value.is_a?(Hash) } || {}
+    names = Array(parser["name"]).select { |value| value.is_a?(Hash) }
+    state = [ parser["preparation"], parser["comment"], parser["purpose"], parser["size"] ].filter_map { |value| ingredient_parser_value(value) }.join(", ")
+    name_parts = ingredient_name_parts(names, metadata)
+    ingredient_name = ingredient_display_name(name_parts, Array(recipe.ingredient_names)[index].presence || ingredient.to_s)
+    records = names.filter_map { |value| metadata[Ingredient.normalize_lookup_key(value["text"])] }.uniq { |record| record[:name] }
+    fallback_record = metadata[Ingredient.normalize_lookup_key(ingredient_name)]
+    records << fallback_record if records.empty? && fallback_record.present?
+    catalog_names = records.map { |record| record[:name] }
+    name_parts = [ { name: ingredient_name, catalog_name: catalog_names.first } ] if name_parts.empty?
+    optional = records.any? && records.all? { |record| record[:optional] }
+
+    {
+      size: amount["quantity"].presence || amount["quantity_max"].presence || amount["text"].presence,
+      unit: amount["unit"].presence,
+      name: ingredient_name,
+      name_parts:,
+      catalog_name: catalog_names.first,
+      catalog_names:,
+      optional:,
+      state:
+    }
   end
 
   def ingredient_parser_payload(recipe, index)

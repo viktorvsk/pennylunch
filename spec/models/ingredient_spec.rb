@@ -48,13 +48,6 @@ RSpec.describe Ingredient do
     expect(ingredient.errors[:name]).to include("must not contain commas")
   end
 
-  it "maps aliases and names to canonical ingredient names" do
-    create(:ingredient, name: "avocado", aliases: [ "avocado", "ripe avocado", "green avocado", "green avocados" ])
-    create(:ingredient, name: "tomato", aliases: [ "tomato", "tomatoes" ])
-
-    expect(described_class.filterable_canonical_names_for([ "green avocados", "tomatoes", "unknown" ])).to eq([ "avocado", "tomato" ])
-  end
-
   it "normalizes lookup text without inflecting ingredient words" do
     expect(described_class.normalize_lookup_key("pasta")).to eq("pasta")
     expect(described_class.normalize_lookup_key(" Cookies ")).to eq("cookies")
@@ -64,11 +57,11 @@ RSpec.describe Ingredient do
     expect(described_class.normalize_lookup_key("s green onions")).to eq("s green onions")
   end
 
-  it "keeps optional ingredients out of filterable canonical names" do
+  it "filters matches from text excluding optional ingredients" do
     create(:ingredient, name: "salt", aliases: [ "salt", "kosher salt" ], optional: true)
-    create(:ingredient, name: "avocado")
+    avocado = create(:ingredient, name: "avocado")
 
-    expect(described_class.filterable_canonical_names_for([ "kosher salt", "avocado" ])).to eq([ "avocado" ])
+    expect(described_class.filterable_matches("kosher salt\navocado")).to eq([ avocado ])
   end
 
   it "exposes ingredient filter options with optional metadata" do

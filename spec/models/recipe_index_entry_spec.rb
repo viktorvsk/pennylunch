@@ -5,7 +5,7 @@ RSpec.describe RecipeIndexEntry do
     recipe = build_stubbed(:recipe)
     vector = Array.new(384, 0.1)
     parser_result = IngredientParser::Result.new(
-      [ "lemon", "chicken breasts", "salt", "lemon" ],
+      [ "lemon", "chicken breasts", "salt" ],
       [ { "input" => "1 lemon" } ]
     )
     allow(LocalEmbedding).to receive(:call).and_return(vector)

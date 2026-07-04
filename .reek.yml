@@ -13,6 +13,25 @@ detectors:
     enabled: false
   UtilityFunction:
     enabled: false
+  LongParameterList:
+    exclude:
+      - "RecipeHelper#rating_stars"
+      - "ImageReader#call"
+      - "PennyLunch::Quality::EnvAccessScanner#scan_file"
+  ControlParameter:
+    exclude:
+      - "RecipeSortQuery#call"
+  TooManyConstants:
+    exclude:
+      - "RecipeSortQuery"
+      - "ImageReader"
+      - "RecipeImport"
+  TooManyMethods:
+    exclude:
+      - "ImageReader"
+  ManualDispatch:
+    exclude:
+      - "ImageReader#uploaded_image_data_url"
 
 exclude_paths:
   - bin

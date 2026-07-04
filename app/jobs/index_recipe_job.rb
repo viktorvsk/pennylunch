@@ -1,6 +1,4 @@
 class IndexRecipeJob < ApplicationJob
-  queue_as :default
-
   def perform(recipe_ids = "all")
     recipes = (recipe_ids == "all" ? Recipe.all : Recipe.where(id: recipe_ids)).to_a
     return if recipes.empty?

@@ -1,7 +1,4 @@
-require "uri"
-
 class Recipe < ApplicationRecord
-  SOURCE_FIELDS = %w[title cook_time prep_time ingredients ratings cuisine category author image].freeze
   has_many :recipe_ingredients, dependent: :delete_all
   has_many :resolved_ingredients, through: :recipe_ingredients, source: :ingredient
   has_neighbors :ingredients_vector
@@ -22,21 +19,12 @@ class Recipe < ApplicationRecord
     end
 
     def category_labels
-      source_categories = where.not(category_normalized: "").pluck(:category_normalized, :category).group_by(&:first)
-
-      source_categories.keys.sort.to_h do |normalized|
-        label = source_categories.fetch(normalized, [])
-          .filter_map { |(_, category)| category.to_s.squish.presence }
-          .min_by { |category| [ category == normalize_category(category) ? 1 : 0, category.downcase ] }
-
-        [ normalized, label || normalized ]
-      end
-    end
-
-    def slug_for(attributes)
-      [ attributes.fetch(:title), attributes.fetch(:category), attributes.fetch(:author), "#{attributes.fetch(:total_time)}-minutes" ].filter_map do |part|
-        part.to_s.parameterize(preserve_case: true).presence
-      end.join("-")
+      where.not(category_normalized: "")
+        .pluck(:category_normalized, :category)
+        .group_by(&:first)
+        .transform_values { |pairs| pairs.map(&:second).filter_map { it.to_s.squish.presence }.min_by { [ it == normalize_category(it) ? 1 : 0, it.downcase ] } }
+        .sort
+        .to_h
     end
 
     def id_from_param(value)
@@ -45,7 +33,7 @@ class Recipe < ApplicationRecord
   end
 
   def to_param
-    [ self.class.slug_for(title:, category:, author:, total_time:), id ].compact.join("-")
+    [ title, category, author, "#{total_time}-minutes", id ].filter_map { it.to_s.parameterize(preserve_case: true).presence }.join("-")
   end
 
   def display_image_url
@@ -60,7 +48,7 @@ class Recipe < ApplicationRecord
   private
 
   def derive_fields
-    self.ingredient_names = Array(ingredient_names).filter_map { |name| name.to_s.squish.downcase.presence }.uniq
+    self.ingredient_names = Array(ingredient_names).filter_map { Ingredient.normalize_lookup_key(it) }.uniq
     self.category_normalized = self.class.normalize_category(category)
     self.total_time = prep_time.to_i + cook_time.to_i
   end

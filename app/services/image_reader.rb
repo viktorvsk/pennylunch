@@ -1,8 +1,6 @@
 require "base64"
 require "ipaddr"
-require "json"
 require "net/http"
-require "set"
 require "socket"
 require "uri"
 
@@ -13,14 +11,13 @@ class ImageReader
   class RemoteImageError < Error; end
 
   ENDPOINT = URI("https://openrouter.ai/api/v1/chat/completions")
-  MODEL = "google/gemini-2.5-flash-lite"
-  FALLBACK_MODEL = "google/gemini-2.5-flash"
-  MODELS = [ MODEL, FALLBACK_MODEL ].freeze
+  MODELS = [ "google/gemini-2.5-flash-lite", "google/gemini-2.5-flash" ].freeze
   TOOL_NAME = "set_detected_ingredients"
   MAX_IMAGE_BYTES = 10 * 1024 * 1024
   MAX_REDIRECTS = 3
   OPEN_TIMEOUT_SECONDS = 5
   READ_TIMEOUT_SECONDS = 30
+  SIZE_ERROR_MESSAGE = "Image must be smaller than 10 MB."
   ALLOWED_CONTENT_TYPES = {
     "image/jpg" => "image/jpeg",
     "image/jpeg" => "image/jpeg",
@@ -35,16 +32,35 @@ class ImageReader
     IPAddr.new("ff00::/8")
   ].freeze
 
+  TOOL_DEFINITION = {
+    type: "function",
+    function: {
+      name: TOOL_NAME,
+      description: "Returns catalog ingredient names that are visible in the submitted image.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          ingredient_names: {
+            type: "array",
+            description: "Exact catalog ingredient names visible in the image.",
+            items: { type: "string" },
+            uniqueItems: true
+          }
+        },
+        required: [ "ingredient_names" ]
+      }
+    }
+  }.freeze
+
   class << self
     def call(file: nil, url: nil, ingredient_names: Ingredient.order(:name).pluck(:name), api_key: SETTINGS.openrouter_api_key)
       raise ConfigurationError, "OpenRouter API key is not configured" if api_key.blank?
+      return [] if ingredient_names.empty?
 
-      catalog_names = normalized_catalog_names(ingredient_names)
-      return [] if catalog_names.empty?
-
-      payload = request_payload(image_url: image_reference(file:, url:), ingredient_names: catalog_names)
+      payload = request_payload(image_url: image_reference(file:, url:), ingredient_names:)
       response = post_openrouter(payload, api_key:)
-      parse_ingredient_names(response, catalog_names)
+      parse_ingredient_names(response, ingredient_names)
     end
 
     private
@@ -84,8 +100,7 @@ class ImageReader
 
     def read_limited(io)
       body = io.read(MAX_IMAGE_BYTES + 1).to_s
-      io.rewind if io.respond_to?(:rewind)
-      raise InvalidImageError, "Image must be smaller than 10 MB." if body.bytesize > MAX_IMAGE_BYTES
+      raise InvalidImageError, SIZE_ERROR_MESSAGE if body.bytesize > MAX_IMAGE_BYTES
 
       body
     end
@@ -110,7 +125,7 @@ class ImageReader
     end
 
     def fetch_remote_image(uri, redirects_remaining)
-      validate_public_host!(uri.host)
+      validate_public_host(uri.host)
 
       response, body = request_remote_image(uri)
       if response.is_a?(Net::HTTPRedirection)
@@ -139,22 +154,20 @@ class ImageReader
           response = http_response
           if http_response.is_a?(Net::HTTPSuccess)
             content_length = http_response["Content-Length"].to_i
-            raise InvalidImageError, "Image must be smaller than 10 MB." if content_length > MAX_IMAGE_BYTES
+            raise InvalidImageError, SIZE_ERROR_MESSAGE if content_length > MAX_IMAGE_BYTES
 
             http_response.read_body do |chunk|
               body << chunk
-              raise InvalidImageError, "Image must be smaller than 10 MB." if body.bytesize > MAX_IMAGE_BYTES
+              raise InvalidImageError, SIZE_ERROR_MESSAGE if body.bytesize > MAX_IMAGE_BYTES
             end
           end
         end
       end
 
       [ response, body ]
-    rescue Timeout::Error, SystemCallError, SocketError => error
-      raise RemoteImageError, "Image URL could not be loaded: #{error.message}"
     end
 
-    def validate_public_host!(host)
+    def validate_public_host(host)
       addresses = Addrinfo.getaddrinfo(host, nil, nil, :STREAM).map(&:ip_address).uniq
       raise InvalidImageError, "Image URL host could not be reached." if addresses.empty?
       raise InvalidImageError, "Image URL host is not allowed." if addresses.any? { |address| blocked_address?(address) }
@@ -167,18 +180,6 @@ class ImageReader
       ip.private? || ip.loopback? || ip.link_local? || BLOCKED_IP_RANGES.any? { |range| range.include?(ip) }
     rescue IPAddr::InvalidAddressError
       true
-    end
-
-    def normalized_catalog_names(ingredient_names)
-      seen = Set.new
-
-      Array(ingredient_names).filter_map do |name|
-        canonical = name.to_s.squish.downcase
-        next if canonical.blank? || seen.include?(canonical)
-
-        seen << canonical
-        canonical
-      end
     end
 
     def request_payload(image_url:, ingredient_names:)
@@ -199,43 +200,13 @@ class ImageReader
               },
               {
                 type: "image_url",
-                image_url: {
-                  url: image_url
-                }
+                image_url: { url: image_url }
               }
             ]
           }
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: TOOL_NAME,
-              description: "Returns catalog ingredient names that are visible in the submitted image.",
-              parameters: {
-                type: "object",
-                additionalProperties: false,
-                properties: {
-                  ingredient_names: {
-                    type: "array",
-                    description: "Exact catalog ingredient names visible in the image.",
-                    items: {
-                      type: "string"
-                    },
-                    uniqueItems: true
-                  }
-                },
-                required: [ "ingredient_names" ]
-              }
-            }
-          }
-        ],
-        tool_choice: {
-          type: "function",
-          function: {
-            name: TOOL_NAME
-          }
-        }
+        tools: [ TOOL_DEFINITION ],
+        tool_choice: { type: "function", function: { name: TOOL_NAME } }
       }
     end
 
@@ -258,8 +229,6 @@ class ImageReader
       JSON.parse(response.body)
     rescue JSON::ParserError
       raise RemoteImageError, "OpenRouter returned invalid JSON."
-    rescue Timeout::Error, SystemCallError, SocketError => error
-      raise RemoteImageError, "OpenRouter request failed: #{error.message}"
     end
 
     def parse_ingredient_names(response, catalog_names)
@@ -269,22 +238,13 @@ class ImageReader
       raise RemoteImageError, "OpenRouter response did not include ingredient results." unless tool_call
 
       arguments = parse_tool_arguments(tool_call.dig("function", "arguments"))
-      catalog_lookup = catalog_names.index_by { |name| Ingredient.normalize_lookup_key(name) }
-      seen = Set.new
+      catalog_lookup = catalog_names.index_by { Ingredient.normalize_lookup_key(it) }
 
-      Array(arguments["ingredient_names"]).filter_map do |name|
-        canonical = catalog_lookup[Ingredient.normalize_lookup_key(name)]
-        next if canonical.blank? || seen.include?(canonical)
-
-        seen << canonical
-        canonical
-      end
+      Array(arguments["ingredient_names"]).filter_map { catalog_lookup[Ingredient.normalize_lookup_key(it)] }.uniq
     end
 
     def parse_tool_arguments(arguments)
-      return arguments if arguments.is_a?(Hash)
-
-      JSON.parse(arguments.to_s)
+      arguments.is_a?(Hash) ? arguments : JSON.parse(arguments.to_s)
     rescue JSON::ParserError
       raise RemoteImageError, "OpenRouter response included invalid ingredient results."
     end
