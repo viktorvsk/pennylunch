@@ -74,7 +74,7 @@ RSpec.describe "Recipes", type: :request do
       { "name" => "tomato", "optional" => true },
       { "name" => "pasta", "optional" => false }
     )
-    expect(document.at_css("a[href='/recipes']")["aria-label"]).to eq("PennyLunch")
+    expect(document.at_css("a.recipe-toolbar-brand[href='/']")["aria-label"]).to eq("PennyLunch")
     expect(document.css("[role='switch']")).not_to be_empty
     expect(document.css("[role='combobox']")).not_to be_empty
     expect(document.css(".dropdown-menu")).not_to be_empty
@@ -95,8 +95,7 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("Tomato, eggs, parsley...")
     expect(response.body).to include("aria-label=\"Scan photo or image URL\"")
     expect(response.body).to include("id=\"recipe-ingredients-image-dialog\"")
-    expect(response.body).to include("Pen can fill your basket from a photo.")
-    expect(response.body).to include("You can also paste an image URL.")
+    expect(response.body).to include("Fill ingredients from photo")
     expect(response.body).to include("Drop a photo here")
     expect(response.body).to include("or paste an image URL")
     expect(response.body).to include("Reading your photo...")
@@ -406,7 +405,7 @@ RSpec.describe "Recipes", type: :request do
     expect(remove_action["data-ingredient-basket-remove"]).to eq("")
     expect(remove_action["data-ingredient-basket-name"]).to eq("tomato")
     expect(remove_action["disabled"]).to eq("disabled")
-    expect(response.body).to include("Similar recipes")
+    expect(response.body).to include("Others also view")
     similar_titles.each { |title| expect(response.body).to include(title) }
     expect(response.body).not_to include("Same Category Without Vector")
     expect(response.body).not_to include("Distant Pasta")

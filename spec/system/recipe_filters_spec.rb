@@ -477,7 +477,7 @@ RSpec.describe "Recipe filters", type: :system do
     find("button[aria-label='Scan photo or image URL']").click
 
     expect(page).to have_css("#recipe-ingredients-image-dialog[open]")
-    expect(page).to have_text("Pen can fill your basket from a photo.")
+    expect(page).to have_text("Fill ingredients from photo")
     expect(page).to have_text("Drop a photo here")
     expect(page).to have_no_button("Read image")
 
@@ -653,7 +653,7 @@ RSpec.describe "Recipe filters", type: :system do
       window.dispatchEvent(new CustomEvent("pennylunch:ingredient-basket-change"));
     JS
 
-    page.execute_script('document.querySelector(".recipe-toolbar-brand").click()')
+    click_link "Back to all recipes"
 
     expect(page).to have_current_path("/recipes")
     expect(page).to have_text("E2E Cookie Basket Honey Toast")

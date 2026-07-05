@@ -5,12 +5,12 @@ RSpec.describe "Landing page", type: :request do
     get root_path
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Dinner from your pantry")
-    expect(response.body).to include("Pantry-aware recipe AI")
+    expect(response.body).to include("Dinner from your fridge")
+    expect(response.body).to include("Smart-match recipes")
     expect(response.body).to include("Find tonight's dinner")
     expect(response.body).to include("href=\"/recipes\"")
     expect(response.body).to include("src=\"/pen.svg\"")
-    expect(response.body).to include("src=\"/icon-512x512.png\"")
+    expect(response.body).to include("content=\"/icon-512x512.png\"")
     expect(response.body).to include("PennyLunch")
     expect(response.body).not_to include("id=\"recipe-ingredients-fab\"")
     expect(response.body).not_to include("data-controller=\"recipe-ui")
