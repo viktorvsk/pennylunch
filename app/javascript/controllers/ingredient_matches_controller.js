@@ -17,17 +17,25 @@ const activeIngredientKeys = (basket) => {
     : []
   if (!basket.enabled) return keys
 
-  return [...new Set([...keys, ...basket.selected.map(normalizeIngredientName)])]
+  return Array.from(new Set(keys.concat(basket.selected.map(normalizeIngredientName))))
 }
 
 const matchNamesFor = (entry) => {
-  const names = [
-    ...(Array.isArray(entry.matchNames) ? entry.matchNames : []),
-    entry.matchName,
-    entry.name
-  ].map((name) => name?.toString().trim()).filter(Boolean)
+  const names = []
 
-  return [...new Set(names)]
+  if (Array.isArray(entry.matchNames)) {
+    entry.matchNames.forEach((name) => {
+      const value = name?.toString().trim()
+      if (value) names.push(value)
+    })
+  }
+  const fallbackNames = [entry.matchName, entry.name]
+  fallbackNames.forEach((name) => {
+    const value = name?.toString().trim()
+    if (value) names.push(value)
+  })
+
+  return Array.from(new Set(names))
 }
 
 const ingredientMatches = (entry, selectedKeys) => {
@@ -43,7 +51,7 @@ const ingredientMatchRank = (entry, selectedKeys) => {
     .map((name) => selectedKeys.indexOf(normalizeIngredientName(name)))
     .filter((index) => index >= 0)
 
-  return indexes.length > 0 ? Math.min(...indexes) : Number.POSITIVE_INFINITY
+  return indexes.length > 0 ? indexes.reduce((minimum, index) => Math.min(minimum, index), Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY
 }
 
 const recipeIngredientEntriesFor = (element) => {
@@ -84,9 +92,7 @@ const renderRecipeIngredientSummary = (element, selectedKeys) => {
 }
 
 const renderRecipeMatchReadiness = (element, selectedKeys) => {
-  const requiredKeys = [
-    ...new Set(JSON.parse(element.dataset.requiredIngredientNames).map(normalizeIngredientName).filter(Boolean))
-  ]
+  const requiredKeys = Array.from(new Set(JSON.parse(element.dataset.requiredIngredientNames).map(normalizeIngredientName).filter(Boolean)))
   const selectedKeySet = new Set(selectedKeys)
   const matchedCount = requiredKeys.filter((key) => selectedKeySet.has(key)).length
   const requiredCount = requiredKeys.length
@@ -120,7 +126,7 @@ export default class extends Controller {
     const basket = readBasket()
     const activeKeys = activeIngredientKeys(basket)
     const basketKeys = basket.selected.map(normalizeIngredientName)
-    const displayKeys = [...new Set([...activeKeys, ...basketKeys])]
+    const displayKeys = Array.from(new Set(activeKeys.concat(basketKeys)))
 
     this.summaryTargets.forEach((element) => {
       renderRecipeIngredientSummary(element, displayKeys)

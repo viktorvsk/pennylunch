@@ -58,7 +58,7 @@ export default class extends Controller {
         return
       }
 
-      currentResults.append(...Array.from(nextResults.children))
+      Array.from(nextResults.children).forEach((child) => currentResults.appendChild(child))
       document.dispatchEvent(new CustomEvent(RECIPES_UPDATED_EVENT))
 
       const nextSentinelUrl = nextSentinel?.dataset.infiniteScrollNextUrlValue

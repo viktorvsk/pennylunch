@@ -501,7 +501,7 @@ export default class extends Controller {
   renderSelected() {
     this.selectedListTarget.innerHTML = ""
 
-    [...this.selected]
+    this.selected.slice()
       .sort((left, right) => Number(this.optionalIngredient(left)) - Number(this.optionalIngredient(right)))
       .forEach((name) => {
         const row = document.createElement("div")
@@ -529,13 +529,15 @@ export default class extends Controller {
     const container = form?.querySelector("[data-auto-submit-target~='ingredients']")
 
     if (container) {
-      container.replaceChildren(...(enabled ? filterableNames : []).map((name) => {
+      container.replaceChildren()
+      const names = enabled ? filterableNames : []
+      names.forEach((name) => {
         const input = document.createElement("input")
         input.type = "hidden"
         input.name = "ingredients[]"
         input.value = name
-        return input
-      }))
+        container.append(input)
+      })
     }
     writeBasket({ selected: this.selected, enabled })
     this.renderSelected()
