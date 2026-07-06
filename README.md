@@ -4,7 +4,9 @@ PennyLunch helps home cooks find dinner recipes they can prepare with ingredient
 The app imports recipes from the PennyLane gzip source, builds a reviewed ingredient catalog, and
 supports recipe search by title, category, quick/popular shortcuts, selected ingredients, and relevance-aware sorting.
 
-See [Trello](https://trello.com/b/jXpg1CdU/pennylunch) for more information: user stories, scope, backlog, roadmap and more.
+- See [Trello](https://trello.com/b/jXpg1CdU/pennylunch) for more information: user stories, scope, backlog, roadmap and more.
+- App is available at https://pennylunch.viktorvsk.com/
+- To access [admin](https://pennylunch.viktorvsk.com/avo) use `pennylunch/pennylunch`
 
 ## Stack
 
@@ -90,3 +92,41 @@ LocalEmbedding
   returns real finite vectors from the local embedding model
   places related ingredient text closer than unrelated ingredient text
 ```
+
+# User Stories
+
+Detailed user stories (and more are available at [Trello](https://trello.com/b/jXpg1CdU/pennylunch)), but adding 2 of them here just for the sake of meeting requirements in the README.md :)
+
+## Import Raw Recipes
+
+We need to be able to import raw Recipes from a JSON file as an admin.
+We will first implement general service to achieve that without admin UI.
+
+Initial data is located at https://pennylane-interviewing-assets-20220328.s3.eu-west-1.amazonaws.com/recipes-en.json.gz
+This is a ~1MB .gz file that restores into ~6MB JSON.
+We need to get the file, unzip, read as JSON, convert into CSV and store in the database quickly, without modifications.
+
+- Create Recipe model that matches basic attributes of raw data
+- Use Postgres COPY to import CSV directly into recipes table
+
+**Deliverables**: RecipeImport service that populates Recipe model with raw data
+
+
+## Basic UI
+
+Now that we have Recipe imported into the system we need very basic index and show pages to overview them. We also need some very basic filters at this stage.
+
+- Create /recipes and /recipes/:slug pages
+- Generate SEO and human friendly slug based on Recipe  data
+- On show page keep things very simple - image and ingredients list
+- On index page show infinite scroll of all of the Recipes at first
+- Allow to filter recipes by:
+  - Quick: shortcut that finds those which total time < X
+  - Popular: shortcut that finds those with rating > Y
+  - Allow sort by quick, slow, popular, unpopular
+  - Category (we need basic normalization for that)
+  - Title (use Postgres FTS for simplicity)
+
+Use Turbo for seamless navigation.
+
+**Deliverables**: /recipes and /recipes/:slug pages + functional search
