@@ -32,6 +32,16 @@ RSpec.describe "Recipes", type: :request do
     expect(document.at_css("meta[name='theme-color']")["content"]).to eq("#dc3f2f")
   end
 
+  it "does not prefetch the admin link from public recipe pages" do
+    get recipes_path
+
+    document = Nokogiri::HTML(response.body)
+    admin_link = document.at_css("a[aria-label='Admin']")
+
+    expect(admin_link["href"]).to eq("/avo")
+    expect(admin_link["data-turbo-prefetch"]).to eq("false")
+  end
+
   it "filters recipes and links to the show page" do
     create(:ingredient, name: "tomato", optional: true)
     create(:ingredient, name: "pasta")
@@ -414,6 +424,18 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("role=\"combobox\"")
     expect(response.body).to include("id=\"recipe-ingredients-fab\"")
     expect(response.body.index("<h1")).to be < response.body.index("<img")
+  end
+
+  it "does not prefetch the admin link from recipe detail pages" do
+    recipe = create(:recipe)
+
+    get recipe_path(recipe)
+
+    document = Nokogiri::HTML(response.body)
+    admin_link = document.at_css("a[aria-label='Admin']")
+
+    expect(admin_link["href"]).to eq("/avo")
+    expect(admin_link["data-turbo-prefetch"]).to eq("false")
   end
 
   it "groups recipe ingredients by optional ingredient metadata" do
