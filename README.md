@@ -4,6 +4,8 @@ PennyLunch helps home cooks find dinner recipes they can prepare with ingredient
 The app imports recipes from the PennyLane gzip source, builds a reviewed ingredient catalog, and
 supports recipe search by title, category, quick/popular shortcuts, selected ingredients, and relevance-aware sorting.
 
+See [Trello](https://trello.com/b/jXpg1CdU/pennylunch) for more information: user stories, scope, backlog, roadmap and more.
+
 ## Stack
 
 - Rails 8.1 monolith with PostgreSQL, pgvector, Solid Cache, Solid Queue, Turbo 8, Stimulus, Tailwind, Basecoat UI, Avo, and Foreman.
