@@ -1,5 +1,5 @@
 class ImportRecipesJob < ApplicationJob
-  def perform(url = RecipeImport::DEFAULT_URL)
+  def perform(url)
     RecipeImport.call(url:)
   end
 end

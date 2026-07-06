@@ -1,42 +1,45 @@
 import { Controller } from "@hotwired/stimulus"
-import { initBasecoat, setTurboLoading } from "lib/recipe_filter_core"
+import { RECIPES_UPDATED_EVENT } from "lib/recipe_filter_core"
+
+const initBasecoat = (force = false) => {
+  if (force) {
+    window.basecoat.stop()
+    window.basecoat.start()
+  }
+
+  window.basecoat.initAll({ force })
+}
 
 export default class extends Controller {
   connect() {
-    this.init()
+    this.recipesUpdated = this.recipesUpdated.bind(this)
+    document.addEventListener(RECIPES_UPDATED_EVENT, this.recipesUpdated)
+    initBasecoat()
     this.stopLoading()
   }
 
-  init() {
-    initBasecoat()
-  }
-
-  forceInit() {
-    initBasecoat({ force: true })
+  disconnect() {
+    document.removeEventListener(RECIPES_UPDATED_EVENT, this.recipesUpdated)
   }
 
   turboLoad() {
-    this.forceInit()
+    initBasecoat(true)
     this.stopLoading()
   }
 
   turboRender() {
-    this.forceInit()
-  }
-
-  turboFrameRender() {
-    this.forceInit()
+    initBasecoat(true)
   }
 
   recipesUpdated() {
-    this.init()
+    initBasecoat()
   }
 
   startLoading() {
-    setTurboLoading(true)
+    document.documentElement.toggleAttribute("data-turbo-loading", true)
   }
 
   stopLoading() {
-    setTurboLoading(false)
+    document.documentElement.toggleAttribute("data-turbo-loading", false)
   }
 }

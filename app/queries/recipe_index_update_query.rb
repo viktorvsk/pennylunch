@@ -1,5 +1,5 @@
 # Builds one bulk `UPDATE recipes ... FROM (VALUES ...)` statement for recipe
-# index fields produced by `RecipeIndexEntry`.
+# index fields.
 #
 # Returns a SQL string for the caller to run. Each entry contributes the target
 # recipe id, parsed ingredient names, parser details, and nullable pgvector
@@ -20,12 +20,15 @@ class RecipeIndexUpdateQuery
       connection = Recipe.connection
       vector_type = Recipe.type_for_attribute("ingredients_vector")
 
-      rows = entries.map do |entry|
-        id = connection.quote(entry.recipe.id)
-        names = connection.quote(entry.ingredient_names.to_json)
-        parse = connection.quote(entry.ingredient_parse_data.to_json)
-        vector = entry.ingredients_vector
-        vector_val = vector.nil? ? "NULL::vector" : "#{connection.quote(vector_type.serialize(vector))}::vector"
+      rows = entries.map do |id, ingredient_names, ingredient_parse_data, ingredients_vector|
+        id = connection.quote(id)
+        names = connection.quote(ingredient_names.to_json)
+        parse = connection.quote(ingredient_parse_data.to_json)
+        vector_val = if ingredients_vector.nil?
+          "NULL::vector"
+        else
+          "#{connection.quote(vector_type.serialize(ingredients_vector))}::vector"
+        end
 
         "(#{id}, #{names}::jsonb, #{parse}::jsonb, #{vector_val})"
       end.join(", ")

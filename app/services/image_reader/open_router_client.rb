@@ -11,8 +11,14 @@ class ImageReader
   class OpenRouterClient < Data.define(:api_key, :catalog_names, :image_url)
     ENDPOINT = URI("https://openrouter.ai/api/v1/chat/completions")
     MODELS = [ "google/gemini-2.5-flash-lite", "google/gemini-2.5-flash" ].freeze
+    REQUEST_SETTINGS = {
+      error_body_limit: 300,
+      open_timeout: 5,
+      read_timeout: 30,
+      temperature: 0,
+      use_ssl: true
+    }.freeze
     TOOL_NAME = "set_detected_ingredients"
-    HTTP_OPTIONS = { use_ssl: true, open_timeout: 5, read_timeout: 30 }.freeze
     TOOL_DEFINITION = {
       type: "function",
       function: {
@@ -43,7 +49,7 @@ class ImageReader
     def request_payload
       {
         models: MODELS,
-        temperature: 0,
+        temperature: REQUEST_SETTINGS.fetch(:temperature),
         messages: [
           {
             role: "system",
@@ -69,7 +75,13 @@ class ImageReader
     end
 
     def post(payload)
-      response = Net::HTTP.start(ENDPOINT.host, ENDPOINT.port, **HTTP_OPTIONS) do |http|
+      response = Net::HTTP.start(
+        ENDPOINT.host,
+        ENDPOINT.port,
+        use_ssl: REQUEST_SETTINGS.fetch(:use_ssl),
+        open_timeout: REQUEST_SETTINGS.fetch(:open_timeout),
+        read_timeout: REQUEST_SETTINGS.fetch(:read_timeout)
+      ) do |http|
         request = Net::HTTP::Post.new(ENDPOINT)
         request["Authorization"] = "Bearer #{api_key}"
         request["Content-Type"] = "application/json"
@@ -78,19 +90,17 @@ class ImageReader
         http.request(request)
       end
 
-      raise_http_error(response) unless response.is_a?(Net::HTTPSuccess)
+      unless response.is_a?(Net::HTTPSuccess)
+        body = response.body.to_s.squish
+        detail = body.present? ? ": #{body.truncate(REQUEST_SETTINGS.fetch(:error_body_limit))}" : ""
+        raise RemoteImageError, "OpenRouter returned HTTP #{response.code}#{detail}"
+      end
 
       JSON.parse(response.body)
     rescue JSON::ParserError
       raise RemoteImageError, "OpenRouter returned invalid JSON."
     rescue Timeout::Error, SystemCallError, SocketError => error
       raise RemoteImageError, "OpenRouter request failed: #{error.message}"
-    end
-
-    def raise_http_error(response)
-      body = response.body.to_s.squish
-      detail = body.present? ? ": #{body.truncate(300)}" : ""
-      raise RemoteImageError, "OpenRouter returned HTTP #{response.code}#{detail}"
     end
 
     def parse_ingredient_names(response)

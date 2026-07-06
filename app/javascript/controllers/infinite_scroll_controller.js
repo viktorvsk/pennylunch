@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { RECIPES_UPDATED_EVENT } from "lib/recipe_filter_core"
 
 const NEAR_VIEWPORT_MARGIN_PX = 600
 
@@ -11,20 +12,13 @@ export default class extends Controller {
   connect() {
     this.loading = false
 
-    if (!this.hasNextUrlValue || this.nextUrlValue === "") {
+    if (!this.nextUrlValue) {
       this.element.remove()
       return
     }
 
-    if (!("IntersectionObserver" in window)) {
-      this.appendNextPage()
-      return
-    }
-
     this.observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) this.appendNextPage()
-      })
+      if (entries.some((entry) => entry.isIntersecting)) this.appendNextPage()
     }, { rootMargin: `${NEAR_VIEWPORT_MARGIN_PX}px 0px` })
 
     this.observer.observe(this.element)
@@ -32,12 +26,6 @@ export default class extends Controller {
 
   disconnect() {
     this.observer?.disconnect()
-    this.loading = false
-  }
-
-  nearViewport() {
-    const rect = this.element.getBoundingClientRect()
-    return rect.top < window.innerHeight + NEAR_VIEWPORT_MARGIN_PX
   }
 
   async appendNextPage() {
@@ -71,20 +59,19 @@ export default class extends Controller {
       }
 
       currentResults.append(...Array.from(nextResults.children))
-      document.dispatchEvent(new CustomEvent("recipes:updated"))
-      window.basecoat?.initAll()
+      document.dispatchEvent(new CustomEvent(RECIPES_UPDATED_EVENT))
 
       const nextSentinelUrl = nextSentinel?.dataset.infiniteScrollNextUrlValue
       if (nextSentinelUrl) {
         this.nextUrlValue = nextSentinelUrl
         this.loading = false
-        if (this.nearViewport()) this.appendNextPage()
+        if (this.element.getBoundingClientRect().top < window.innerHeight + NEAR_VIEWPORT_MARGIN_PX) this.appendNextPage()
       } else {
         this.element.remove()
       }
     } catch {
       this.loading = false
-      if (this.hasStatusTarget) this.statusTarget.textContent = "Scroll to retry loading more recipes."
+      this.statusTarget.textContent = "Scroll to retry loading more recipes."
     }
   }
 }

@@ -1,7 +1,11 @@
 <% ingredient_names = recipe.ingredient_names %>
-<% ingredient_metadata = local_assigns.fetch(:ingredient_metadata) { IngredientCatalogMetadata.call } %>
-<% required_names = recipe.catalog_ingredients(ingredient_metadata).reject(&:optional).map(&:name).uniq %>
-<% readiness = recipe_match_readiness(required_names, local_assigns.fetch(:selected_ingredient_names, [])) if required_names.any? %>
+<% ingredient_metadata = local_assigns.fetch(:ingredient_metadata) { Ingredient.catalog_metadata } %>
+<% ingredient_data = ingredient_names.map { |name| entry = ingredient_metadata[name]; { name:, matchName: entry&.[](:name), optional: entry&.[](:optional) } } %>
+<% required_names = ingredient_data.filter_map { it[:matchName] unless it[:optional] }.uniq %>
+<% selected_ingredient_names = local_assigns.fetch(:selected_ingredient_names, []) %>
+<% matched_ingredient_count = (required_names & selected_ingredient_names).size %>
+<% readiness_tooltip = "Matches #{matched_ingredient_count} of #{required_names.size} required ingredients in your selected ingredients. Pantry staples are not counted." if required_names.any? %>
+<% ingredient_summary_suffix = ingredient_names.size > 8 ? " + #{ingredient_names.size - 8} more" : "" %>
 
 <article class="recipe-card">
   <%= link_to recipe_path(recipe), class: "recipe-card-link", data: { turbo_frame: "_top" } do %>
@@ -20,19 +24,19 @@
           <%= link_to recipe.category, recipe_filter_path("category" => recipe.category_normalized), class: "recipe-card-category", data: { turbo_frame: "_top" } %>
         <% end %>
       </div>
-      <%= rating_stars(recipe.ratings, class_name: "recipe-rating") %>
+      <%= rating_stars(recipe.ratings) %>
     </header>
 
-    <% if ingredient_names.any? %>
-      <p class="recipe-card-ingredients" data-ingredient-matches-target="summary" data-recipe-ingredients="<%= recipe.recipe_ingredients_data(ingredient_metadata).to_json %>" data-visible-limit="<%= IngredientsHelper::DEFAULT_INGREDIENT_SUMMARY_LIMIT %>"><%= ingredient_name_summary(recipe) %></p>
+    <% if ingredient_data.any? %>
+      <p class="recipe-card-ingredients" data-ingredient-matches-target="summary" data-recipe-ingredients="<%= ingredient_data.map { it.slice(:name, :matchName) }.to_json %>"><%= "#{ingredient_names.first(8).join(", ")}#{ingredient_summary_suffix}" %></p>
     <% end %>
 
     <footer class="recipe-card-footer">
       <%= render "recipe_meta_items", recipe:, tooltip_side: "top" %>
-      <% if readiness %>
-        <span class="recipe-match-readiness" data-ingredient-matches-target="readiness" data-required-ingredient-names="<%= required_names.to_json %>" data-state="<%= readiness.ready ? "ready" : "partial" %>" data-tooltip="<%= readiness.tooltip %>" data-side="top" data-align="end" aria-label="<%= readiness.tooltip %>">
+      <% if required_names.any? %>
+        <span class="recipe-match-readiness" data-ingredient-matches-target="readiness" data-required-ingredient-names="<%= required_names.to_json %>" data-state="<%= matched_ingredient_count == required_names.size ? "ready" : "partial" %>" data-tooltip="<%= readiness_tooltip %>" data-side="top" data-align="end" aria-label="<%= readiness_tooltip %>">
           <%= icon_svg(:basket, class_name: "size-3.5") %>
-          <span data-readiness-label><%= readiness.label %></span>
+          <span data-readiness-label><%= "#{((matched_ingredient_count.to_f / required_names.size) * 100).round}%" %></span>
         </span>
       <% end %>
     </footer>

@@ -1,14 +1,14 @@
 import { Controller } from "@hotwired/stimulus"
 import {
+  ADD_BASKET_INGREDIENT_EVENT,
   normalizeIngredientName,
-  present,
+  filterUrlFor,
   recipeIngredientOptions,
   readBasket,
-  submitFilterForm,
+  REMOVE_BASKET_INGREDIENT_EVENT,
   writeBasket
 } from "lib/recipe_filter_core"
 
-const FIRST_OPTION_INDEX = 0
 const NO_OPTION_INDEX = -1
 const MAX_OPTION_COUNT = 30
 const OPTION_BLUR_DELAY_MS = 120
@@ -27,7 +27,6 @@ export default class extends Controller {
     "imageIdle",
     "imageStatus",
     "imageThinking",
-    "imageTrigger",
     "imageUrl",
     "input",
     "modeText",
@@ -43,20 +42,26 @@ export default class extends Controller {
   }
 
   connect() {
-    this.optionRecords = this.parseOptionRecords()
-    this.optionNames = this.optionRecords.map((option) => option.name)
-    this.optionByKey = new Map(this.optionRecords.map((option) => [normalizeIngredientName(option.name), option]))
-    this.currentIngredients = Array.isArray(this.currentIngredientsValue) ? this.currentIngredientsValue : []
+    const optionRecords = recipeIngredientOptions()
+      .map((option) => ({ name: option.name.toString().trim(), optional: option.optional === true }))
+      .filter((option) => option.name !== "")
+    this.optionNames = optionRecords.map((option) => option.name)
+    this.optionByKey = new Map(optionRecords.map((option) => [normalizeIngredientName(option.name), option]))
+    const currentIngredients = this.currentIngredientsValue
     this.selected = []
     this.initialized = false
     this.activeOptionIndex = NO_OPTION_INDEX
     this.imageLoading = false
+    this.addIngredientFromEvent = this.addIngredientFromEvent.bind(this)
+    this.removeIngredientFromEvent = this.removeIngredientFromEvent.bind(this)
+    window.addEventListener(ADD_BASKET_INGREDIENT_EVENT, this.addIngredientFromEvent)
+    window.addEventListener(REMOVE_BASKET_INGREDIENT_EVENT, this.removeIngredientFromEvent)
 
     const storedBasket = readBasket()
     if (storedBasket.selected.length > 0) this.seedSelected(storedBasket.selected)
-    if (this.currentIngredients.length > 0) this.seedSelected(this.currentIngredients)
+    if (currentIngredients.length > 0) this.seedSelected(currentIngredients)
 
-    this.enabledInputTarget.checked = this.currentIngredients.length > 0 || storedBasket.enabled
+    this.enabledInputTarget.checked = currentIngredients.length > 0 || storedBasket.enabled
     this.sync()
     this.initialized = true
     this.setOpen(false)
@@ -64,6 +69,8 @@ export default class extends Controller {
 
   disconnect() {
     window.clearTimeout(this.timeoutId)
+    window.removeEventListener(ADD_BASKET_INGREDIENT_EVENT, this.addIngredientFromEvent)
+    window.removeEventListener(REMOVE_BASKET_INGREDIENT_EVENT, this.removeIngredientFromEvent)
   }
 
   toggle() {
@@ -116,11 +123,11 @@ export default class extends Controller {
   }
 
   addIngredientFromEvent(event) {
-    this.addIngredient(event.detail?.name || "", { submit: true })
+    this.addIngredient(event.detail.name, { submit: true })
   }
 
   removeIngredientFromEvent(event) {
-    this.removeIngredient(event.detail?.name || "")
+    this.removeIngredient(event.detail.name)
   }
 
   openImageDialog() {
@@ -192,7 +199,7 @@ export default class extends Controller {
     this.setImageDropzoneActive(false)
     if (this.imageLoading) return
 
-    const file = Array.from(event.dataTransfer?.files || []).find((candidate) => candidate.type.startsWith("image/"))
+    const file = Array.from(event.dataTransfer.files).find((candidate) => candidate.type.startsWith("image/"))
     if (!file) {
       this.setImageError("Drop a photo file.")
       return
@@ -210,7 +217,7 @@ export default class extends Controller {
       if (this.imageLoading) return
 
       const url = this.imageUrlTarget.value.trim()
-      if (!present(url)) return
+      if (url === "") return
 
       this.imageFileTarget.value = ""
       this.startImageRead({ url })
@@ -236,7 +243,7 @@ export default class extends Controller {
     const selectedFile = file || this.imageFileTarget.files[0] || null
     const selectedUrl = (url || this.imageUrlTarget.value).trim()
     const hasFile = selectedFile !== null
-    const hasUrl = present(selectedUrl)
+    const hasUrl = selectedUrl !== ""
 
     if (!hasFile && !hasUrl) {
       this.setImageError("Choose a photo or paste an image URL.")
@@ -262,7 +269,7 @@ export default class extends Controller {
         credentials: "same-origin",
         headers: {
           Accept: "application/json",
-          "X-CSRF-Token": this.csrfToken()
+          "X-CSRF-Token": document.querySelector("meta[name='csrf-token']").content
         }
       })
       const payload = await response.json().catch(() => ({}))
@@ -287,38 +294,12 @@ export default class extends Controller {
     }
   }
 
-  parseOptionRecords() {
-    const rawOptions = this.element.dataset.ingredientOptions || JSON.stringify(recipeIngredientOptions())
-
-    try {
-      return JSON.parse(rawOptions).map((option) => {
-        if (typeof option === "string") return { name: option.trim(), optional: false }
-
-        return { name: option.name?.toString().trim() || "", optional: option.optional === true }
-      }).filter((option) => option.name !== "")
-    } catch {
-      return []
-    }
-  }
-
-  optionFor(value) {
-    return this.optionByKey.get(normalizeIngredientName(value))
-  }
-
   canonicalName(value) {
-    return this.optionFor(value)?.name
+    return this.optionByKey.get(normalizeIngredientName(value))?.name
   }
 
   optionalIngredient(value) {
-    return this.optionFor(value)?.optional === true
-  }
-
-  filterableSelected() {
-    return this.selected.filter((name) => !this.optionalIngredient(name))
-  }
-
-  selectedForDisplay() {
-    return [...this.selected].sort((left, right) => Number(this.optionalIngredient(left)) - Number(this.optionalIngredient(right)))
+    return this.optionByKey.get(normalizeIngredientName(value))?.optional === true
   }
 
   selectedKeys() {
@@ -339,9 +320,15 @@ export default class extends Controller {
   }
 
   seedSelected(values) {
+    const selectedKeys = this.selectedKeys()
+
     values.forEach((value) => {
       const name = this.canonicalName(value)
-      if (name && !this.selectedKeys().has(normalizeIngredientName(name))) this.selected.push(name)
+      const key = name ? normalizeIngredientName(name) : ""
+      if (!name || selectedKeys.has(key)) return
+
+      selectedKeys.add(key)
+      this.selected.push(name)
     })
   }
 
@@ -395,7 +382,7 @@ export default class extends Controller {
     }
 
     const matches = this.availableOptions(query)
-    this.activeOptionIndex = matches.length > 0 ? FIRST_OPTION_INDEX : NO_OPTION_INDEX
+    this.activeOptionIndex = matches.length > 0 ? 0 : NO_OPTION_INDEX
 
     if (matches.length === 0) {
       const empty = document.createElement("div")
@@ -451,10 +438,6 @@ export default class extends Controller {
     return this.availableOptions(query)[0] || ""
   }
 
-  csrfToken() {
-    return document.querySelector("meta[name='csrf-token']")?.content || ""
-  }
-
   clearImageFeedback() {
     this.imageErrorTarget.textContent = ""
     this.imageErrorTarget.hidden = true
@@ -493,6 +476,7 @@ export default class extends Controller {
 
   setStatus() {
     const hasSelected = this.selected.length > 0
+    const filterableCount = this.selected.filter((name) => !this.optionalIngredient(name)).length
     const enabled = this.enabledInputTarget.checked
     const state = enabled ? "enabled" : "disabled"
 
@@ -501,8 +485,8 @@ export default class extends Controller {
     this.enabledTextTarget.textContent = enabled ? "On" : "Off"
     this.modeTextTarget.textContent = enabled ? "only matching recipes are displayed." : "you see all recipes."
 
-    if (enabled && this.filterableSelected().length > 0) {
-      this.statusTarget.textContent = `Filtering with ${this.filterableSelected().length} selected`
+    if (enabled && filterableCount > 0) {
+      this.statusTarget.textContent = `Filtering with ${filterableCount} selected`
     } else if (enabled) {
       this.statusTarget.textContent = "On, add matches"
     } else if (hasSelected) {
@@ -517,38 +501,52 @@ export default class extends Controller {
   renderSelected() {
     this.selectedListTarget.innerHTML = ""
 
-    this.selectedForDisplay().forEach((name) => {
-      const row = document.createElement("div")
-      row.className = "recipe-ingredients-row"
-      row.dataset.optional = this.optionalIngredient(name) ? "true" : "false"
+    [...this.selected]
+      .sort((left, right) => Number(this.optionalIngredient(left)) - Number(this.optionalIngredient(right)))
+      .forEach((name) => {
+        const row = document.createElement("div")
+        row.className = "recipe-ingredients-row"
+        row.dataset.optional = this.optionalIngredient(name) ? "true" : "false"
 
-      const label = document.createElement("span")
-      label.textContent = name
+        const label = document.createElement("span")
+        label.textContent = name
 
-      const remove = document.createElement("button")
-      remove.type = "button"
-      remove.className = "recipe-ingredients-remove"
-      remove.setAttribute("aria-label", `Remove ${name}`)
-      remove.addEventListener("click", () => this.removeIngredient(name))
+        const remove = document.createElement("button")
+        remove.type = "button"
+        remove.className = "recipe-ingredients-remove"
+        remove.setAttribute("aria-label", `Remove ${name}`)
+        remove.addEventListener("click", () => this.removeIngredient(name))
 
-      row.append(label, remove)
-      this.selectedListTarget.append(row)
-    })
+        row.append(label, remove)
+        this.selectedListTarget.append(row)
+      })
   }
 
   sync({ submit = false, delay = 0 } = {}) {
     const enabled = this.enabledInputTarget.checked
     const filterableNames = this.selected.filter((name) => !this.optionalIngredient(name))
+    const form = document.querySelector("form[data-controller~='auto-submit']")
+    const container = form?.querySelector("[data-auto-submit-target~='ingredients']")
 
-    this.syncFilterInputs(enabled ? filterableNames : [])
+    if (container) {
+      container.replaceChildren(...(enabled ? filterableNames : []).map((name) => {
+        const input = document.createElement("input")
+        input.type = "hidden"
+        input.name = "ingredients[]"
+        input.value = name
+        return input
+      }))
+    }
     writeBasket({ selected: this.selected, enabled })
     this.renderSelected()
     this.setStatus()
 
-    if (!submit || !this.initialized || !this.currentForm()) return
+    if (!submit || !this.initialized || !form) return
 
     window.clearTimeout(this.timeoutId)
-    this.timeoutId = window.setTimeout(() => submitFilterForm(this.currentForm(), { frame: "recipe-results-frame" }), delay)
+    this.timeoutId = window.setTimeout(() => {
+      window.Turbo.visit(filterUrlFor(form), { frame: "recipe-results-frame" })
+    }, delay)
   }
 
   addIngredient(value, { submit = false } = {}) {
@@ -589,26 +587,5 @@ export default class extends Controller {
     this.selected.splice(index, 1)
     this.renderOptions()
     this.sync({ submit: this.enabledInputTarget.checked, delay: SUBMIT_DELAY_MS })
-  }
-
-  currentForm() {
-    return document.querySelector("form[data-controller~='auto-submit']")
-  }
-
-  currentIngredientsContainer() {
-    return this.currentForm()?.querySelector("[data-auto-submit-target~='ingredients']")
-  }
-
-  syncFilterInputs(names) {
-    const container = this.currentIngredientsContainer()
-    if (!container) return
-
-    container.replaceChildren(...names.map((name) => {
-      const input = document.createElement("input")
-      input.type = "hidden"
-      input.name = "ingredients[]"
-      input.value = name
-      return input
-    }))
   }
 }

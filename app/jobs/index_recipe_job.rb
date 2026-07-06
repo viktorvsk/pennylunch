@@ -1,32 +1,25 @@
 class IndexRecipeJob < ApplicationJob
-  DEFAULT_BATCH_SIZE = 100
-  MAX_BATCH_SIZE = 1_000
+  BATCH_SIZE = 100
 
-  def perform(recipe_ids = "all")
-    recipe_scope(recipe_ids).in_batches(of: recipe_index_batch_size) do |batch|
+  def perform(recipe_ids)
+    (recipe_ids == "all" ? Recipe.all : Recipe.where(id: recipe_ids)).in_batches(of: BATCH_SIZE) do |batch|
       index_recipes(batch.to_a)
     end
   end
 
   private
 
-  def recipe_scope(recipe_ids)
-    recipe_ids == "all" ? Recipe.all : Recipe.where(id: recipe_ids)
-  end
-
-  def recipe_index_batch_size
-    size = SETTINGS.recipe_index_batch_size.to_s.to_i
-    return DEFAULT_BATCH_SIZE if size <= 0
-
-    [ size, MAX_BATCH_SIZE ].min
-  end
-
   def index_recipes(recipes)
-    return if recipes.empty?
     parser_results = IngredientParser.call(recipes.map(&:ingredients))
-    ingredient_lookup = IngredientFilterLookup.call
+    ingredient_lookup = Ingredient.filterable_lookup
     entries = recipes.zip(parser_results).map do |recipe, parser_result|
-      RecipeIndexEntry.from(recipe:, parser_result:, ingredient_lookup:)
+      vector_names = parser_result.ingredient_names.filter_map { ingredient_lookup[it] }.uniq
+      [
+        recipe.id,
+        parser_result.ingredient_names,
+        parser_result.ingredient_parse_data,
+        LocalEmbedding.call(vector_names.join("\n"))
+      ]
     end
 
     Recipe.transaction do

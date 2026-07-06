@@ -1,8 +1,8 @@
 class BootstrapIngredientsJob < ApplicationJob
   CATALOG_PATH = Rails.root.join("config/ingredient_aliases.yml")
 
-  def perform(path = CATALOG_PATH)
-    ingredients = YAML.safe_load_file(path)["ingredients"]
+  def perform
+    ingredients = YAML.safe_load_file(CATALOG_PATH)["ingredients"]
     rows = ingredients.map do |name, attributes|
       {
         name:,

@@ -14,16 +14,24 @@
 class RecipeFilterQuery
   QUICK_TOTAL_TIME_LIMIT = 30
   POPULAR_RATING_THRESHOLD = 4.8
-  BOOLEAN = ActiveModel::Type::Boolean.new
+  TITLE_MATCH_SQL = "title_search_vector @@ websearch_to_tsquery('english', ?)"
+  TITLE_RANK_SQL = "ts_rank_cd(title_search_vector, websearch_to_tsquery('english', ?)) DESC"
 
   class << self
-    def call(relation: Recipe.all, filters:)
+    def call(filters:)
+      relation = Recipe.all
       category = Recipe.normalize_category(filters["category"])
+      query = filters["q"]
+      boolean = ActiveModel::Type::Boolean.new
 
-      relation = TitleSearchQuery.call(relation:, query: filters["q"])
+      if query.present?
+        relation = relation
+        .where(TITLE_MATCH_SQL, query)
+        .order(Arel.sql(Recipe.sanitize_sql_array([ TITLE_RANK_SQL, query ])))
+      end
       relation = relation.where(category_normalized: category) if category.present?
-      relation = relation.where(total_time: 1...QUICK_TOTAL_TIME_LIMIT) if BOOLEAN.cast(filters["quick"])
-      relation = relation.where("ratings > ?", POPULAR_RATING_THRESHOLD) if BOOLEAN.cast(filters["popular"])
+      relation = relation.where(total_time: 1...QUICK_TOTAL_TIME_LIMIT) if boolean.cast(filters["quick"])
+      relation = relation.where("ratings > ?", POPULAR_RATING_THRESHOLD) if boolean.cast(filters["popular"])
       RecipeIngredientFilterQuery.call(relation:, ingredients: filters["ingredients"])
     end
   end

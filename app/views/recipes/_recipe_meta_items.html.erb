@@ -4,7 +4,11 @@
 </span>
 
 <% if recipe.total_time.to_i.positive? %>
-  <span class="recipe-meta-item" data-tooltip="<%= recipe_time_tooltip(recipe) %>" data-side="<%= tooltip_side %>" data-align="center">
+  <% time_tooltip = [] %>
+  <% time_tooltip << "prepare for #{recipe_duration_text(recipe.prep_time)}" if recipe.prep_time.positive? %>
+  <% time_tooltip << "then" if recipe.prep_time.positive? && recipe.cook_time.positive? %>
+  <% time_tooltip << "cook for #{recipe_duration_text(recipe.cook_time)}" if recipe.cook_time.positive? %>
+  <span class="recipe-meta-item" data-tooltip="<%= time_tooltip.join(" ").capitalize %>" data-side="<%= tooltip_side %>" data-align="center">
     <%= icon_svg(:clock, class_name: "size-3.5") %>
     <span><%= recipe_duration_text(recipe.total_time) %></span>
   </span>

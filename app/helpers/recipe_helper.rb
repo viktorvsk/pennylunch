@@ -1,27 +1,15 @@
 module RecipeHelper
-  MAX_RATING_STARS = 5
-  RATING_PRECISION = 2
-
-  def rating_stars(rating, **options)
-    options.assert_valid_keys(:class_name, :side, :align)
-    class_name = options.fetch(:class_name, "recipe-rating")
-    side = options.fetch(:side, "bottom")
-    align = options.fetch(:align, "end")
-    value = number_with_precision(rating, precision: RATING_PRECISION)
+  def rating_stars(rating, side: "bottom")
+    value = number_with_precision(rating, precision: 2)
+    filled_count = rating.to_f.round.clamp(0, 5)
     tag.span(
-      filled_stars(rating),
-      class: class_name,
+      safe_join(5.times.map do |index|
+        tag.span("★", class: index < filled_count ? "text-amber-500" : "text-zinc-300")
+      end),
+      class: "recipe-rating",
       aria: { label: "Rating #{value} out of 5" },
-      data: { tooltip: "Rating: #{value} out of 5", side:, align: }
+      data: { tooltip: "Rating: #{value} out of 5", side:, align: "end" }
     )
-  end
-
-  def recipe_time_tooltip(recipe)
-    result = []
-    result << "prepare for #{recipe_duration_text(recipe.prep_time)}" if recipe.prep_time.positive?
-    result << "then" if recipe.prep_time.positive? && recipe.cook_time.positive?
-    result << "cook for #{recipe_duration_text(recipe.cook_time)}" if recipe.cook_time.positive?
-    result.join(" ").capitalize
   end
 
   def recipe_duration_text(minutes)
@@ -33,27 +21,22 @@ module RecipeHelper
     parts.join(" ")
   end
 
-  def recipe_toolbar_state(filters:, selected_category:)
-    RecipeToolbar.build(filters:, selected_category:, category_labels: recipe_category_labels)
-  end
-
   def recipe_catalog
-    Catalog.fetch
+    Rails.cache.fetch([
+      "recipes/catalog/v1",
+      Ingredient.all.cache_key_with_version,
+      Recipe.all.cache_key_with_version
+    ]) do
+      category_labels = Recipe.category_labels
+      {
+        ingredient_options: Ingredient.order(:name).pluck(:name, :optional).map { |name, optional| { name:, optional: } },
+        category_labels:,
+        category_slugs: category_labels.keys.to_h { |category| [ category, Recipe.category_slug_for(category) ] }
+      }
+    end
   end
 
-  def recipe_catalog_json
-    recipe_catalog.as_json.to_json
-  end
-
-  def recipe_category_labels
-    recipe_catalog.category_labels
-  end
-
-  def recipe_category_from_slug(slug)
-    recipe_catalog.category_from_slug(slug)
-  end
-
-  def recipe_filter_path(filters = {})
+  def recipe_filter_path(filters)
     values = filters.to_h.with_indifferent_access
     category = Recipe.normalize_category(values.delete(:category))
     values.delete(:sort) if values[:sort].blank? || values[:sort] == RecipeSortQuery::DEFAULT_SORT
@@ -64,14 +47,5 @@ module RecipeHelper
     else
       recipes_path(values)
     end
-  end
-
-  private
-
-  def filled_stars(rating)
-    filled_count = rating.to_f.round.clamp(0, MAX_RATING_STARS)
-    safe_join(MAX_RATING_STARS.times.map do |index|
-      tag.span("★", class: index < filled_count ? "text-amber-500" : "text-zinc-300")
-    end)
   end
 end

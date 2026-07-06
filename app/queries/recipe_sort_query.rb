@@ -12,6 +12,13 @@ class RecipeSortQuery
     "rating_asc" => [ { ratings: :asc, id: :asc } ],
     "rating_desc" => [ { ratings: :desc, id: :asc } ]
   }.freeze
+  TOTAL_INGREDIENT_COUNT_SQL = "COUNT(DISTINCT #{SQL.fetch(:required_ingredient_id)})"
+  BEST_MATCH_ORDER_SQL = <<~SQL.squish
+    CASE WHEN recipe_sort_match_stats.matched_ingredients > 0 THEN 0 ELSE 1 END ASC,
+    COALESCE(recipe_sort_match_stats.missing_ingredients, 2147483647) ASC,
+    COALESCE(recipe_sort_match_stats.matched_ingredients, 0) DESC,
+    COALESCE(recipe_sort_match_stats.total_ingredients, 2147483647) ASC
+  SQL
 
   class << self
     def call(relation:, sort:, ingredients:)
@@ -30,12 +37,11 @@ class RecipeSortQuery
       match_stats = ingredient_match_stats_relation(relation, ids).to_sql
       relation
         .joins("LEFT JOIN (#{match_stats}) recipe_sort_match_stats ON recipe_sort_match_stats.recipe_id = recipes.id")
-        .reorder(Arel.sql(best_match_order_sql))
+        .reorder(Arel.sql(BEST_MATCH_ORDER_SQL))
     end
 
     def ingredient_match_stats_relation(relation, ids)
       matched_count_sql = matched_ingredient_count_sql(ids)
-      total_count_sql = total_ingredient_count_sql
 
       relation
         .unscope(:order)
@@ -43,24 +49,11 @@ class RecipeSortQuery
         .joins(SQL.fetch(:catalog_ingredients_join))
         .select(<<~SQL.squish)
           recipes.id AS recipe_id,
-          #{total_count_sql} AS total_ingredients,
+          #{TOTAL_INGREDIENT_COUNT_SQL} AS total_ingredients,
           #{matched_count_sql} AS matched_ingredients,
-          #{total_count_sql} - #{matched_count_sql} AS missing_ingredients
+          #{TOTAL_INGREDIENT_COUNT_SQL} - #{matched_count_sql} AS missing_ingredients
         SQL
         .group("recipes.id")
-    end
-
-    def total_ingredient_count_sql
-      "COUNT(DISTINCT #{SQL.fetch(:required_ingredient_id)})"
-    end
-
-    def best_match_order_sql
-      <<~SQL.squish
-        CASE WHEN recipe_sort_match_stats.matched_ingredients > 0 THEN 0 ELSE 1 END ASC,
-        COALESCE(recipe_sort_match_stats.missing_ingredients, 2147483647) ASC,
-        COALESCE(recipe_sort_match_stats.matched_ingredients, 0) DESC,
-        COALESCE(recipe_sort_match_stats.total_ingredients, 2147483647) ASC
-      SQL
     end
 
     def matched_ingredient_count_sql(ids)

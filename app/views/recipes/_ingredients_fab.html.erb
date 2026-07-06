@@ -1,8 +1,7 @@
-<% fab_filters = (local_assigns[:filters] || {}).to_h.with_indifferent_access %>
-<% fab_ingredient_names = Array(fab_filters["ingredients"]).compact_blank %>
+<% fab_ingredient_names = Array(filters["ingredients"]).compact_blank %>
 <% fab_ingredients_enabled = fab_ingredient_names.any? %>
 
-<section id="recipe-ingredients-fab" class="recipe-ingredients-fab" data-turbo-permanent data-controller="ingredients-fab" data-ingredients-fab-current-ingredients-value="<%= fab_ingredient_names.to_json %>" data-action="keydown->ingredients-fab#escape pointerdown@document->ingredients-fab#closeFromOutside turbo:load@document->ingredients-fab#refreshPageContext pennylunch:add-basket-ingredient@window->ingredients-fab#addIngredientFromEvent pennylunch:remove-basket-ingredient@window->ingredients-fab#removeIngredientFromEvent">
+<section id="recipe-ingredients-fab" class="recipe-ingredients-fab" data-turbo-permanent data-controller="ingredients-fab" data-ingredients-fab-current-ingredients-value="<%= fab_ingredient_names.to_json %>" data-action="keydown->ingredients-fab#escape pointerdown@document->ingredients-fab#closeFromOutside turbo:load@document->ingredients-fab#refreshPageContext">
   <div id="recipe-ingredients-panel" class="recipe-ingredients-panel" data-ingredients-fab-target="panel" hidden>
     <header>
       <div class="recipe-ingredients-panel-header">
@@ -34,7 +33,7 @@
       <div class="recipe-ingredients-field">
         <div class="recipe-ingredients-input-group">
           <input id="recipe-ingredients-input" class="input" type="text" placeholder="Tomato, eggs, parsley..." autocomplete="off" role="combobox" aria-label="Ingredient name" aria-autocomplete="list" aria-expanded="false" aria-controls="recipe-ingredients-options" data-ingredients-fab-target="input" data-action="input->ingredients-fab#search keydown->ingredients-fab#keydown blur->ingredients-fab#blur">
-          <button type="button" class="btn recipe-ingredients-photo-trigger" data-variant="outline" data-ingredients-fab-target="imageTrigger" data-action="click->ingredients-fab#openImageDialog" aria-label="Scan photo or image URL" aria-controls="recipe-ingredients-image-dialog">
+          <button type="button" class="btn recipe-ingredients-photo-trigger" data-variant="outline" data-action="click->ingredients-fab#openImageDialog" aria-label="Scan photo or image URL" aria-controls="recipe-ingredients-image-dialog">
             <span class="recipe-ingredients-photo-icons" aria-hidden="true">
               <%= icon_svg(:sparkles, class_name: "recipe-ingredients-photo-sparkles") %>
               <%= icon_svg(:camera, class_name: "recipe-ingredients-photo-camera") %>

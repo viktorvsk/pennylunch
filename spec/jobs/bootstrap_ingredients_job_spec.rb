@@ -19,7 +19,8 @@ RSpec.describe BootstrapIngredientsJob, type: :job do
             - kosher salt
     YAML
 
-      described_class.perform_now(path)
+      stub_const("#{described_class}::CATALOG_PATH", path)
+      described_class.perform_now
 
       expect(avocado.reload.aliases).to eq([ "avocado", "avocados", "ripe avocado" ])
       expect(Ingredient.find_by!(name: "salt")).to be_optional

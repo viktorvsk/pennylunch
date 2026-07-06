@@ -2,9 +2,9 @@ require "rails_helper"
 require "zlib"
 
 RSpec.describe RecipeImport do
-  subject(:import) { described_class.call(url: "https://example.test/recipes.json.gz", downloader:) }
+  subject(:import) { described_class.call(url:) }
 
-  let(:downloader) { ->(_url) { gzipped(source_records) } }
+  let(:url) { "https://example.test/recipes.json.gz" }
   let(:source_records) do
     [
       {
@@ -32,6 +32,10 @@ RSpec.describe RecipeImport do
     ]
   end
 
+  before do
+    allow(URI).to receive(:open).with(url, "rb") { gzipped(source_records) }
+  end
+
   it "imports recipes and leaves derived indexing fields empty" do
     expect(import).to eq(2)
     expect(Recipe.order(:source_position).map { |recipe| source_hash(recipe) }).to eq(source_records)
@@ -56,10 +60,9 @@ RSpec.describe RecipeImport do
   end
 
   it "rejects a source payload that is not a recipe array" do
-    invalid_downloader = ->(_url) { gzipped("not recipes") }
+    allow(URI).to receive(:open).with(url, "rb") { gzipped("not recipes") }
 
-    expect { described_class.call(url: "https://example.test/recipes.json.gz", downloader: invalid_downloader) }
-      .to raise_error(RecipeImport::InvalidSourceError, /JSON array/)
+    expect { import }.to raise_error(RecipeImport::InvalidSourceError, /JSON array/)
     expect(Recipe.count).to eq(0)
   end
 

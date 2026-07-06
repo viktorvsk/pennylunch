@@ -1,5 +1,5 @@
 <% basket_ingredient_name = ingredient.catalog_name.presence %>
-<% ingredient_name_parts = ingredient.name_parts.presence || [ { name: ingredient.name, catalog_name: ingredient.catalog_name } ] %>
+<% ingredient_name_parts = ingredient.name_parts %>
 <% ingredient_match_names = ingredient.catalog_names.presence&.to_json %>
 
 <div class="recipe-ingredient-row" data-recipe-ingredient-row>
@@ -23,7 +23,8 @@
     <% ingredient_name_parts.each_with_index do |name_part, index| %>
       <%= index == ingredient_name_parts.size - 1 ? " or " : ", " if index.positive? %>
       <% ingredient_name = name_part[:name] %>
-      <%= link_to ingredient_name, ingredient_reference_url(ingredient_name), class: "recipe-ingredient-link", data: { ingredient_matches_target: "name", ingredient_name:, ingredient_match_name: name_part[:catalog_name].presence || ingredient_name, ingredient_match_names: }, target: "_blank", rel: "noopener" %>
+      <% ingredient_reference_url = "https://en.wikipedia.org/wiki/#{ERB::Util.url_encode(ingredient_name.to_s.squish.tr(" ", "_"))}" %>
+      <%= link_to ingredient_name, ingredient_reference_url, class: "recipe-ingredient-link", data: { ingredient_matches_target: "name", ingredient_name:, ingredient_match_name: name_part[:catalog_name].presence || ingredient_name, ingredient_match_names: }, target: "_blank", rel: "noopener" %>
     <% end %>
   </span>
   <% if basket_ingredient_name.present? %>

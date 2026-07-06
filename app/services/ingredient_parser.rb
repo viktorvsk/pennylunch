@@ -16,7 +16,6 @@ class IngredientParser
 
   Result = Data.define(:ingredient_names, :ingredient_parse_data)
   SCRIPT = Rails.root.join("libexec", "parse_ingredients.py").to_s
-  STDERR_PREVIEW_LENGTH = 500
 
   class << self
     def call(ingredient_lists, timeout_seconds: SETTINGS.ingredient_parser_timeout_seconds)
@@ -24,7 +23,8 @@ class IngredientParser
       response = JSON.parse(parser_stdout(JSON.generate(ingredient_lists: normalized_lists), timeout_seconds.to_i))
       parsed_names = response.fetch("ingredient_names")
       parsed_data = response.fetch("ingredient_parse_data")
-      validate_response(parsed_names, parsed_data, normalized_lists.size)
+      raise Error, "ingredient parser returned #{parsed_names.size} name lists for #{normalized_lists.size} inputs" unless parsed_names.size == normalized_lists.size
+      raise Error, "ingredient parser returned #{parsed_data.size} data lists for #{normalized_lists.size} inputs" unless parsed_data.size == normalized_lists.size
 
       parsed_names.zip(parsed_data).map do |names, parse_data|
         Result.new(normalized_names(names), Array(parse_data))
@@ -44,22 +44,13 @@ class IngredientParser
 
       return stdout if status.success?
 
-      raise Error, parser_failure_message(status, stderr)
+      details = stderr.to_s.strip[0, 500]
+      message = "ingredient parser failed with status #{status.exitstatus}"
+      raise Error, details.present? ? "#{message}: #{details}" : message
     rescue Timeout::Error
       raise Error, "ingredient parser timed out after #{timeout_seconds} seconds"
     rescue SystemCallError => error
       raise Error, "ingredient parser could not be started: #{error.message}"
-    end
-
-    def parser_failure_message(status, stderr)
-      details = stderr.to_s.strip[0, STDERR_PREVIEW_LENGTH]
-      message = "ingredient parser failed with status #{status.exitstatus}"
-      details.present? ? "#{message}: #{details}" : message
-    end
-
-    def validate_response(parsed_names, parsed_data, expected_size)
-      raise Error, "ingredient parser returned #{parsed_names.size} name lists for #{expected_size} inputs" unless parsed_names.size == expected_size
-      raise Error, "ingredient parser returned #{parsed_data.size} data lists for #{expected_size} inputs" unless parsed_data.size == expected_size
     end
 
     def normalized_ingredient_lists(ingredient_lists)

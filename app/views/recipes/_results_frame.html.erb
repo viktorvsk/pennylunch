@@ -1,17 +1,17 @@
 <%= turbo_frame_tag "recipe-results-frame", data: { turbo_action: "advance" } do %>
+  <% category_labels = recipe_catalog[:category_labels] %>
+
   <main class="recipe-page">
     <% if selected_category.present? %>
       <section class="recipe-title-section">
-        <h1 class="recipe-page-title"><%= recipe_category_labels.fetch(selected_category) %></h1>
+        <h1 class="recipe-page-title"><%= category_labels.fetch(selected_category) %></h1>
       </section>
     <% end %>
 
     <% if recipes.any? %>
-      <% selected_ingredient_names = Array(filters["ingredients"]).filter_map { it.to_s.squish.presence }.uniq %>
-      <% ingredient_metadata = IngredientCatalogMetadata.call %>
-      <%= render "results_grid", recipes:, next_page_url:, selected_ingredient_names:, ingredient_metadata: %>
+      <%= render "recipes/results_grid", recipes:, filters:, next_page_url: %>
     <% else %>
-      <%= render "empty_results" %>
+      <%= render "recipes/empty_results", category_labels: %>
     <% end %>
   </main>
 <% end %>

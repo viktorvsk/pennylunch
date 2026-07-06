@@ -1,6 +1,6 @@
 <div id="recipe-category-combobox" class="combobox" data-auto-highlight="true" data-auto-submit-on-change="true">
-  <button type="button" class="btn recipe-toolbar-category recipe-toolbar-control" data-state="<%= toolbar.selected_category.present? ? "active" : "inactive" %>" data-variant="outline" data-size="icon" data-tooltip="<%= toolbar.category_tooltip %>" data-side="left" data-align="end" aria-label="Category" aria-haspopup="listbox" aria-expanded="false" aria-controls="recipe-category-listbox">
-    <span class="sr-only" data-value data-placeholder="All categories"><%= toolbar.selected_category_label.presence || "All categories" %></span>
+  <button type="button" class="btn recipe-toolbar-category recipe-toolbar-control" data-state="<%= selected_category_value.present? ? "active" : "inactive" %>" data-variant="outline" data-size="icon" data-tooltip="<%= selected_category_label.present? ? "Category: #{selected_category_label}" : "Category: all categories" %>" data-side="left" data-align="end" aria-label="Category" aria-haspopup="listbox" aria-expanded="false" aria-controls="recipe-category-listbox">
+    <span class="sr-only" data-value data-placeholder="All categories"><%= selected_category_label.presence || "All categories" %></span>
     <%= icon_svg(:category) %>
   </button>
 
@@ -10,11 +10,11 @@
     </div>
     <div role="listbox" id="recipe-category-listbox" class="recipe-toolbar-category-listbox" aria-orientation="vertical" data-empty="No categories found.">
       <div role="option" data-value="" data-label="All categories">All categories</div>
-      <% toolbar.category_options.each do |option| %>
-        <div role="option" data-value="<%= option.value %>" data-label="<%= option.label %>"><%= option.label %></div>
+      <% category_options.each do |value, label| %>
+        <div role="option" data-value="<%= value %>" data-label="<%= label %>"><%= label %></div>
       <% end %>
     </div>
   </div>
 
-  <%= hidden_field_tag :category, toolbar.selected_category %>
+  <%= hidden_field_tag :category, selected_category_value %>
 </div>

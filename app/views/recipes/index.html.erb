@@ -1,4 +1,4 @@
 <% content_for :title, "Recipes" %>
 
-<%= render "index_toolbar", filters: @recipe_index.filters, selected_category: @recipe_index.selected_category %>
-<%= render partial: "results_frame", locals: @recipe_index.results_frame_locals %>
+<%= render "index_toolbar", filters:, selected_category: %>
+<%= render partial: "results_frame", locals: { recipes:, selected_category:, filters:, next_page_url: } %>

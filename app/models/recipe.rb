@@ -1,4 +1,6 @@
-class Recipe < ApplicationRecord
+class Recipe < ActiveRecord::Base
+  SIMILAR_RECIPE_LIMIT = 3
+
   has_many :recipe_ingredients, dependent: :delete_all
   has_many :resolved_ingredients, through: :recipe_ingredients, source: :ingredient
   has_neighbors :ingredients_vector
@@ -22,7 +24,12 @@ class Recipe < ApplicationRecord
       where.not(category_normalized: "")
         .pluck(:category_normalized, :category)
         .group_by(&:first)
-        .transform_values { |pairs| pairs.map(&:second).filter_map { it.to_s.squish.presence }.min_by { [ it == normalize_category(it) ? 1 : 0, it.downcase ] } }
+        .transform_values do |pairs|
+          pairs
+            .map(&:second)
+            .filter_map { it.to_s.squish.presence }
+            .min_by { [ it == normalize_category(it) ? 1 : 0, it.downcase ] }
+        end
         .sort
         .to_h
     end
@@ -45,19 +52,14 @@ class Recipe < ApplicationRecord
     image
   end
 
-  def catalog_ingredients(metadata = IngredientCatalogMetadata.call)
-    ingredient_names.filter_map { |name| metadata[name] }
-  end
+  def similar_recipes
+    return Recipe.none if ingredients_vector.blank?
 
-  def recipe_ingredients_data(metadata = IngredientCatalogMetadata.call)
-    ingredient_names.map { |name| { name:, matchName: metadata[name]&.name } }
-  end
-
-  def parsed_ingredients
-    metadata = IngredientCatalogMetadata.call
-    ingredients.zip(ingredient_parse_data).map do |raw_line, parse_item|
-      ParsedIngredient.from_parser(raw_line, parse_item, metadata)
-    end
+    Recipe
+      .where.not(id:)
+      .where.not(ingredients_vector: nil)
+      .nearest_neighbors(:ingredients_vector, ingredients_vector, distance: "cosine")
+      .limit(SIMILAR_RECIPE_LIMIT)
   end
 
   private

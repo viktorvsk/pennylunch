@@ -1,3 +1,6 @@
+<% selected_ingredient_names = Array(filters["ingredients"]).filter_map { it.to_s.squish.presence }.uniq %>
+<% ingredient_metadata = Ingredient.catalog_metadata %>
+
 <section id="recipe-results" class="recipe-results-grid">
   <%= render partial: "recipes/recipe", collection: recipes, as: :recipe, locals: { selected_ingredient_names:, ingredient_metadata: } %>
 </section>

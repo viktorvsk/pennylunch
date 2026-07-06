@@ -1,10 +1,18 @@
-<% toolbar = recipe_toolbar_state(filters:, selected_category:) %>
+<% sort_options = { "best_match" => "Best Match", "time_asc" => "Fastest First", "time_desc" => "Slowest First", "rating_asc" => "Popular Last", "rating_desc" => "Popular First" } %>
+<% category_options = recipe_catalog[:category_labels] %>
+<% current_sort = sort_options.key?(filters["sort"]) ? filters["sort"] : RecipeSortQuery::DEFAULT_SORT %>
+<% selected_category_value = selected_category.to_s %>
+<% selected_category_label = category_options[selected_category_value] %>
+<% boolean = ActiveModel::Type::Boolean.new %>
+<% quick_active = boolean.cast(filters["quick"]) %>
+<% popular_active = boolean.cast(filters["popular"]) %>
+
 <header class="recipe-toolbar">
   <div class="recipe-toolbar-inner">
     <%= render "toolbar_brand" %>
 
-    <%= form_with url: recipes_path, method: :get, local: true, html: { data: { controller: "auto-submit", action: "submit->auto-submit#submit input->auto-submit#input change->auto-submit#change", auto_submit_filter_root_value: recipes_path } }, class: "recipe-toolbar-form" do |form| %>
-      <%= hidden_field_tag :sort, toolbar.current_sort %>
+    <%= form_with url: recipes_path, method: :get, local: true, html: { data: { controller: "auto-submit", action: "submit->auto-submit#submit input->auto-submit#input change->auto-submit#change" } }, class: "recipe-toolbar-form" do |form| %>
+      <%= hidden_field_tag :sort, current_sort %>
       <span data-auto-submit-target="ingredients">
         <% Array(filters["ingredients"]).each do |name| %>
           <%= hidden_field_tag "ingredients[]", name %>
@@ -16,10 +24,10 @@
         <%= form.search_field :q, value: filters["q"], class: "input", placeholder: "Search recipes", autocomplete: "off", data: { auto_submit_delay: 350 } %>
       </div>
 
-      <%= render "toolbar_filter_toggle", name: :quick, active: toolbar.quick_active, aria_label: "Quick recipes", icon: :quick, tooltip: "Quick: #{toolbar.quick_active ? "on" : "off"}. Shows recipes under 30 minutes." %>
-      <%= render "toolbar_filter_toggle", name: :popular, active: toolbar.popular_active, aria_label: "Popular recipes", icon: :popular, tooltip: "Popular: #{toolbar.popular_active ? "on" : "off"}. Shows recipes rated above 4.8." %>
-      <%= render "toolbar_category_combobox", toolbar: %>
-      <%= render "toolbar_sort_menu", toolbar:, filters: %>
+      <%= render "toolbar_filter_toggle", name: :quick, active: quick_active, aria_label: "Quick recipes", icon: :quick, tooltip: "Quick: #{quick_active ? "on" : "off"}. Shows recipes under 30 minutes." %>
+      <%= render "toolbar_filter_toggle", name: :popular, active: popular_active, aria_label: "Popular recipes", icon: :popular, tooltip: "Popular: #{popular_active ? "on" : "off"}. Shows recipes rated above 4.8." %>
+      <%= render "toolbar_category_combobox", category_options:, selected_category_value:, selected_category_label: %>
+      <%= render "toolbar_sort_menu", sort_options:, current_sort:, filters: %>
     <% end %>
 
     <%= render "toolbar_admin_link" %>

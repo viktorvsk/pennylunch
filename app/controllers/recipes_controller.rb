@@ -1,20 +1,39 @@
 class RecipesController < ApplicationController
-  helper_method :selected_category
-
-  FILTER_KEYS = %i[q category quick popular sort page].freeze
+  MAX_COOKIE_INGREDIENTS = 100
   PER_PAGE = 24
 
   def index
-    @recipe_index = build_recipe_index
+    category = selected_category
+    filters = params.permit(:q, :category, :quick, :popular, :sort, :page, ingredients: []).to_h
+    unless filters.key?("ingredients")
+      payload = JSON.parse(cookies["pennylunch.ingredients"].to_s) rescue nil
+      filters["ingredients"] = Array(payload["selected"]).map(&:squish).compact_blank.first(MAX_COOKIE_INGREDIENTS) if payload.is_a?(Hash) && payload["enabled"] == true
+    end
+    filters["category"] = category
+    current_page = [ filters["page"].to_i, 1 ].max
+    recipes = RecipeSortQuery
+      .call(relation: RecipeFilterQuery.call(filters:), sort: filters["sort"], ingredients: filters["ingredients"])
+      .offset((current_page - 1) * PER_PAGE)
+      .limit(PER_PAGE + 1)
+      .to_a
+    next_page_url = helpers.recipe_filter_path(filters.merge("page" => current_page + 1)) if recipes.size > PER_PAGE
+    page = {
+      recipes: recipes.first(PER_PAGE),
+      selected_category: category,
+      filters:,
+      next_page_url:
+    }
+    @ingredients_fab_filters = filters.slice("ingredients")
 
     if turbo_frame_request?
-      render partial: "recipes/results_frame", locals: @recipe_index.results_frame_locals
+      render partial: "recipes/results_frame", locals: page
+    else
+      render :index, locals: page
     end
   end
 
   def show
     @recipe = Recipe.find(Recipe.id_from_param(params[:id]))
-    @similar_recipes = SimilarRecipesQuery.call(recipe: @recipe)
   end
 
   private
@@ -23,38 +42,6 @@ class RecipesController < ApplicationController
     slug = params[:category_slug] || params[:category]
     return if slug.blank?
 
-    helpers.recipe_category_from_slug(slug) || raise(ActiveRecord::RecordNotFound)
-  end
-
-  def build_recipe_index
-    filters = recipe_filters
-    current_page = [ filters["page"].to_i, 1 ].max
-    page_records = recipe_page_records(filters, current_page)
-
-    RecipeIndexPage.new(
-      filters:,
-      recipes: page_records.first(PER_PAGE),
-      selected_category:,
-      next_page_url: next_page_url(filters, current_page, page_records)
-    )
-  end
-
-  def recipe_filters
-    filters = params.permit(*FILTER_KEYS, ingredients: []).to_h
-    filters["ingredients"] = ingredients_basket unless filters.key?("ingredients")
-    filters["category"] = selected_category
-    filters
-  end
-
-  def recipe_page_records(filters, current_page)
-    relation = RecipeFilterQuery.call(filters:)
-    RecipeSortQuery.call(relation:, sort: filters["sort"], ingredients: filters["ingredients"])
-      .offset((current_page - 1) * PER_PAGE).limit(PER_PAGE + 1).to_a
-  end
-
-  def next_page_url(filters, current_page, page_records)
-    return unless page_records.size > PER_PAGE
-
-    helpers.recipe_filter_path(filters.merge("page" => current_page + 1))
+    helpers.recipe_catalog[:category_slugs].key(slug.to_s) || raise(ActiveRecord::RecordNotFound)
   end
 end

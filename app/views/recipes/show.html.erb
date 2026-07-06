@@ -1,9 +1,11 @@
 <% content_for :title, @recipe.title %>
 
+<% similar_recipes = @recipe.similar_recipes.to_a %>
+
 <%= render "show_toolbar" %>
 
 <main class="recipe-page">
   <%= render "show_title", recipe: @recipe %>
   <%= render "show_detail", recipe: @recipe %>
-  <%= render "similar_recipes", similar_recipes: @similar_recipes %>
+  <%= render "similar_recipes", similar_recipes: %>
 </main>

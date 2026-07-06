@@ -40,6 +40,7 @@ See `env.example` for a comprehensive list of ENV variables.
 ## Rails.cache usage
 
 - `search_strategy`: stores the active ingredient-search strategy set from Avo. `vector` enables vector search; any missing or non-`vector` value uses overlap search.
+- `ingredients/catalog_names/v1`: stores ordered canonical Ingredient names used for image ingredient detection. Ingredient changes delete this key.
 - `ingredients/catalog_metadata/v3`: stores the canonical Ingredient and alias lookup used to display parsed ingredients and resolve parser output. Ingredient changes delete this key.
 - `ingredients/filterable_lookup_map`: stores the non-optional Ingredient and alias lookup used by recipe indexing. Ingredient changes delete this key.
 - `["recipes/catalog/v1", Ingredient.all.cache_key_with_version, Recipe.all.cache_key_with_version]`: stores the recipe UI catalog payload for ingredient options and category labels/slugs. The key changes automatically when Ingredients or Recipes change.

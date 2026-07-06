@@ -1,7 +1,5 @@
 module IconsHelper
-  DEFAULT_ICON_SIZE = "size-4"
-
-  BASKET = [
+  basket_icon = [
     '<path d="M2 11h20"></path>',
     '<path d="m5 11 4-7"></path>',
     '<path d="m15 4 4 7"></path>',
@@ -12,8 +10,8 @@ module IconsHelper
   ].join.html_safe
 
   ICONS = {
-    basket: BASKET,
-    ingredients: BASKET,
+    basket: basket_icon,
+    ingredients: basket_icon,
     camera: [
       '<path d="M14.5 4 16 6h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l1.5-2h5Z"></path>',
       '<circle cx="12" cy="13" r="3"></circle>'
@@ -61,7 +59,7 @@ module IconsHelper
     ].join.html_safe
   }.freeze
 
-  def icon_svg(name, class_name: DEFAULT_ICON_SIZE)
+  def icon_svg(name, class_name: "size-4")
     tag.svg(
       ICONS.fetch(name),
       class: class_name,

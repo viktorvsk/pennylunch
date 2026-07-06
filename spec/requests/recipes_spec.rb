@@ -14,6 +14,25 @@ RSpec.describe "Recipes", type: :request do
     expect(response.body).to include("Sort: Best Match")
   end
 
+  it "renders the shared recipe catalog for frontend filters" do
+    create(:ingredient, name: "pasta")
+    create(:ingredient, name: "salt", optional: true)
+    create(:recipe, title: "Catalog Pasta", category: "Pasta")
+
+    get recipes_path
+
+    catalog = Nokogiri::HTML(response.body).at_css("script#recipe-catalog[data-recipe-catalog]")
+    payload = JSON.parse(catalog.text)
+
+    expect(catalog["type"]).to eq("application/json")
+    expect(payload.keys).to contain_exactly("ingredientOptions", "categorySlugs")
+    expect(payload.fetch("ingredientOptions")).to include(
+      { "name" => "pasta", "optional" => false },
+      { "name" => "salt", "optional" => true }
+    )
+    expect(payload.fetch("categorySlugs")).to include("pasta" => "pasta")
+  end
+
   it "suggests one existing category from an empty filtered result" do
     create(:recipe, title: "Tomato Pasta", category: "Pasta", category_normalized: "pasta")
     create(:recipe, title: "Chicken Soup", category: "Soup", category_normalized: "soup")
@@ -123,6 +142,10 @@ RSpec.describe "Recipes", type: :request do
     expect(page_text).to include("100%")
     expect(page_text).to include("67%")
     expect(response.body).to include("Sort: Best Match")
+    ingredient_payload = Nokogiri::HTML(response.body).css("[data-recipe-ingredients]").flat_map do |node|
+      JSON.parse(node["data-recipe-ingredients"])
+    end
+    expect(ingredient_payload.flat_map(&:keys).uniq).to match_array([ "matchName", "name" ])
   end
 
   it "uses enabled cookie ingredients for the first index render" do
@@ -149,7 +172,9 @@ RSpec.describe "Recipes", type: :request do
     garlic = create(:recipe, title: "Cookie Param Garlic", ingredient_names: [ "garlic" ])
     sync_recipe_ingredients
 
-    get recipes_path, params: { ingredients: [ "garlic" ] }, headers: { "Cookie" => ingredient_basket_cookie(enabled: true, selected: [ "pasta" ]) }
+    get recipes_path,
+      params: { ingredients: [ "garlic" ] },
+      headers: { "Cookie" => ingredient_basket_cookie(enabled: true, selected: [ "pasta" ]) }
 
     expect(response).to have_http_status(:ok)
     expect(page_text).to include(garlic.title)
@@ -288,6 +313,6 @@ RSpec.describe "Recipes", type: :request do
   end
 
   def ingredient_basket_cookie(payload)
-    "#{ApplicationController::INGREDIENT_BASKET_COOKIE}=#{CGI.escape(payload.to_json)}"
+    "pennylunch.ingredients=#{CGI.escape(payload.to_json)}"
   end
 end

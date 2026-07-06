@@ -7,7 +7,7 @@
       <div class="recipe-meta">
         <%= render "recipe_meta_items", recipe:, tooltip_side: "top" %>
       </div>
-      <%= rating_stars(recipe.ratings, class_name: "recipe-rating", side: "top") %>
+      <%= rating_stars(recipe.ratings, side: "top") %>
     </footer>
   </article>
 
@@ -16,7 +16,9 @@
       <h2>Ingredients</h2>
     </header>
     <div class="recipe-ingredient-list">
-      <% main_ingredients, pantry_ingredients = recipe_ingredient_groups(recipe) %>
+      <% ingredient_metadata = Ingredient.catalog_metadata %>
+      <% parsed_ingredients = recipe.ingredients.zip(recipe.ingredient_parse_data).map { |raw_line, parse_item| ParsedIngredient.from_parser(raw_line, parse_item, ingredient_metadata) } %>
+      <% pantry_ingredients, main_ingredients = parsed_ingredients.partition(&:optional) %>
       <% if pantry_ingredients.any? %>
         <% if main_ingredients.any? %>
           <section class="recipe-ingredient-group">
