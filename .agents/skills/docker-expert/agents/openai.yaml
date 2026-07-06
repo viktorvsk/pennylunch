@@ -1,4 +1,0 @@
-interface:
-  display_name: "Docker Expert"
-  short_description: "Rails-aware Docker and Compose guidance"
-  default_prompt: "Use $docker-expert to review or refactor Rails Docker and Compose configuration."

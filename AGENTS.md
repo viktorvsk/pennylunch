@@ -25,10 +25,9 @@ CRITICAL: our goal is a very simplified version which contains limited amount of
   - The main way to run the application is via `docker compose up --build --pull always` in production.
   - For development we use `docker compose up db` + `bin/dev` - to start dependencies in docker and rails on host
 
-# Documentation
-  - Documentation is located at `docs`, always first check `docs/INDEX.md` for better navigation.
-  - Keep `docs/INDEX.md` updated when adding, moving, or deleting docs.
-  - CRITICAL: **ALWAYS** keep documentation up-to-date with the code.
+# Project context
+  - `README.md` is the canonical project summary.
+  - Keep `README.md` aligned with product, setup, configuration, and operations changes.
 
 # TDD
   - Start with the narrowest failing test that proves the contract. For bugs, reproduce before patching when practical.
@@ -37,7 +36,7 @@ CRITICAL: our goal is a very simplified version which contains limited amount of
   - See $rails-agent-skills for more details
 
 # Agent operating loop
-  - Ground first: inspect the repo, load the relevant skill, read nearby code/docs/tests, and resolve discoverable facts before asking the user.
+  - Ground first: inspect the repo, load the relevant skill, read nearby code, tests, and README context, and resolve discoverable facts before asking the user.
   - Planning on steroids: before implementation, proactively surface edge cases, business-rule contradictions, rollout hazards, parity gaps, missing requirements, data-shape/API concerns, and unclear success criteria. Ask as many high-impact questions as needed when the answer cannot be discovered locally.
   - Do not ask questions that inspection can answer. Do ask when product intent, accepted tradeoffs, partial parity, migration semantics, or user-visible behavior is ambiguous.
   - When the user asks to implement and ambiguity is low, make a reasonable assumption and proceed; record important assumptions in the final response.
@@ -46,14 +45,14 @@ CRITICAL: our goal is a very simplified version which contains limited amount of
 
 ## Basic
   - Scout rule: when touching an area, leave nearby code slightly better; fix relevant pre-existing issues instead of using "pre-existing" as an excuse.
-  - Perfection default: aim for the best-in-class solution with no known trade-offs; if a trade-off is intentionally accepted, document it in `.agents/tradeoffs/` immediately with context, rejected alternatives, impact, verification, and retirement condition.
+  - Perfection default: aim for the best-in-class solution with no known trade-offs; if a trade-off is intentionally accepted, make it explicit and keep README context aligned when it affects product, setup, configuration, or operations.
   - Run `git status --short` first and preserve unrelated user changes.
   - Use `rg` and nearby files as evidence. Keep diffs surgical.
 
 ## Project-specific
   - Git is read-only by default: inspect freely, but do not commit, push, checkout, reset, rebase, merge, tag, stash, or mutate git state unless the user explicitly asks.
   - Single-phase default: implement complete refactors in one phase; avoid legacy paths, staged compatibility, fallbacks, and partial migrations unless the user explicitly asks.
-  - Actualize relevant docs and skills whenever code reality changes.
+  - Actualize relevant README context and skills whenever code reality changes.
   - CRITICAL: Do not add code comments. Keep existing comments. Its ok if comments will be added due to something external like code generation.
   - Add/update `env.example` for new environment variables: there should be **NO** ENV variables calls in the code that are not listed in `env.example`.
 

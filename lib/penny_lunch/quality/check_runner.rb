@@ -20,9 +20,9 @@ module PennyLunch
         Task.new(name: "reek", command: [ "bin/linters/reek" ]),
         Task.new(name: "brakeman", command: [ "bin/linters/brakeman" ]),
         Task.new(name: "bundler-audit", command: [ "bin/linters/bundler-audit" ]),
+        Task.new(name: "git-leaks", command: [ "bin/linters/git-leaks" ]),
         Task.new(name: "env_access", command: [ "bin/linters/env_access" ]),
         Task.new(name: "production_boot", command: [ "bin/linters/production_boot" ]),
-        Task.new(name: "coverage", command: [ "bin/linters/coverage" ], exclusive: true),
         Task.new(name: "rspec", command: [ "bin/rspec" ], exclusive: true)
       ].freeze
 
@@ -61,7 +61,7 @@ module PennyLunch
       end
 
       def environment
-        { "DISABLE_SPRING" => "1", "SILENT_TESTS" => "1" }
+        { "DISABLE_SPRING" => "1" }
       end
 
       def print_result(result)

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Basecoat UI"
-  short_description: "Rails, Turbo, and Basecoat UI discipline"
-  default_prompt: "Use $basecoat-ui to design and build a Rails/Turbo view with polished Basecoat components."

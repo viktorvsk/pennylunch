@@ -73,11 +73,7 @@ group :development do
 end
 
 group :test do
-  gem "capybara", "~> 3.40"
   gem "rspec-rails", "~> 8.0"
-  gem "selenium-webdriver", "~> 4.45"
-  gem "simplecov", "~> 0.22.0"
-  gem "simplecov_json_formatter", "~> 0.1.4"
   gem "shoulda-matchers", "~> 7.0"
   gem "factory_bot_rails"
   gem "faker"

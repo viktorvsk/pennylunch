@@ -26,7 +26,6 @@ module PennyLunch
           "lib/**/*.{rb,rake,erb}"
         ].freeze,
         skipped_path_parts: [
-          "/coverage/",
           "/log/",
           "/spec/",
           "/storage/",

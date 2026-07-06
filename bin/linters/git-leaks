@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  printf "gitleaks executable is required. Install Gitleaks 8.30.1 or newer.\n" >&2
+  exit 127
+fi
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+gitleaks git --redact --no-banner --no-color .
+
+mkdir -p /tmp/pennylane
+scan_root=$(mktemp -d /tmp/pennylane/gitleaks.XXXXXX)
+trap 'rm -rf "$scan_root"' EXIT
+
+while IFS= read -r -d '' path; do
+  if [ -f "$path" ]; then
+    mkdir -p "$scan_root/$(dirname "$path")"
+    cp -p "$path" "$scan_root/$path"
+  fi
+done < <(git ls-files -z --cached --others --exclude-standard)
+
+(
+  cd "$scan_root"
+  gitleaks dir --redact --no-banner --no-color .
+)
