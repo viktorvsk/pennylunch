@@ -51,11 +51,6 @@
   width: 2.25rem;
 }
 
-.recipe-toolbar-brand-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .recipe-toolbar-form {
   align-items: center;
   display: flex;

@@ -1,9 +1,5 @@
 Avo.configure do |config|
-  config.root_path = "/avo"
   config.app_name = "PennyLunch"
-  config.authorization_client = nil
-  config.click_row_to_view_record = true
-  config.resource_parent_controller = "Avo::ResourcesController"
 
   config.authenticate_with do
     expected_name = SETTINGS.avo_username.to_s

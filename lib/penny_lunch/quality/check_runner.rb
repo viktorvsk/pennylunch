@@ -55,26 +55,19 @@ module PennyLunch
 
       def run_task(task)
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        stdout, stderr, status = Open3.capture3(environment, *task.command, chdir: root.to_s)
+        stdout, stderr, status = Open3.capture3({ "DISABLE_SPRING" => "1" }, *task.command, chdir: root.to_s)
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
         Result.new(task: task, output: [ stdout, stderr ].join, status: status, elapsed: elapsed)
       end
 
-      def environment
-        { "DISABLE_SPRING" => "1" }
-      end
-
       def print_result(result)
+        elapsed = format("%.2fs", result.elapsed)
         if result.success?
-          output.puts "SUCCESS: #{result.task.name} (#{format_elapsed(result.elapsed)})"
+          output.puts "SUCCESS: #{result.task.name} (#{elapsed})"
         else
-          output.puts "FAILED: #{result.task.name} (#{format_elapsed(result.elapsed)})"
+          output.puts "FAILED: #{result.task.name} (#{elapsed})"
           output.puts result.output
         end
-      end
-
-      def format_elapsed(elapsed)
-        format("%.2fs", elapsed)
       end
     end
   end

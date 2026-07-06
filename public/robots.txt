@@ -4,4 +4,4 @@ Disallow: /avo
 Disallow: /up
 Disallow: /ingredient_image
 
-Sitemap: http://127.0.0.1:3000/sitemap.xml
+Sitemap: https://pennylunch.viktorvsk.com/sitemap.xml

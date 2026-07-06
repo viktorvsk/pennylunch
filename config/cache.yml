@@ -1,0 +1,5 @@
+production:
+  database: cache
+  store_options:
+    max_size: <%= 256.megabytes %>
+    namespace: production
