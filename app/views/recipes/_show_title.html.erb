@@ -3,5 +3,4 @@
   <% if recipe.category_normalized.present? %>
     <%= link_to recipe.category, recipe_filter_path("category" => recipe.category_normalized), class: "recipe-card-category" %>
   <% end %>
-  <%= link_to "Back to all recipes", recipes_path, class: "recipe-ingredient-link" %>
 </section>
