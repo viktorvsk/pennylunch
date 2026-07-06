@@ -1,4 +1,5 @@
 require "base64"
+require "marcel"
 require "ssrf_filter"
 require "uri"
 
@@ -27,6 +28,8 @@ class ImageReader
       "image/webp" => "image/webp",
       "image/gif" => "image/gif"
     }.freeze
+    GENERIC_CONTENT_TYPES = [ "", "application/octet-stream", "binary/octet-stream" ].freeze
+    RemoteImage = Data.define(:url, :content_type, :body)
 
     class << self
       def build(file:, url:)
@@ -41,15 +44,16 @@ class ImageReader
       private
 
       def uploaded(file)
-        new(url: data_url(content_type(file.content_type, file.original_filename), read_limited(file)))
+        body = read_limited(file)
+        new(url: data_url(content_type(file.content_type, file.original_filename, body), body))
       end
 
       def remote(url)
         raise InvalidImageError, "Image URL must not include credentials." if URI.parse(url).userinfo.present?
 
-        response = fetch_remote_image(url)
-        content_type(response["Content-Type"], File.basename(URI(response.uri.to_s).path))
-        new(url: response.uri.to_s)
+        image = fetch_remote_image(url)
+        content_type(image.content_type, File.basename(URI(image.url).path), image.body)
+        new(url: image.url)
       rescue URI::InvalidURIError
         raise InvalidImageError, "Image URL is not valid."
       end
@@ -67,19 +71,30 @@ class ImageReader
         body
       end
 
-      def content_type(value, filename = nil)
-        value = value.to_s.split(";").first.to_s.squish.downcase
-        value = Rack::Mime.mime_type(File.extname(filename.to_s), nil).to_s if value.blank? && filename.present?
-        ALLOWED_CONTENT_TYPES.fetch(value) { raise InvalidImageError, "Image must be a JPEG, PNG, WebP, or GIF." }
+      def content_type(value, filename = nil, body = nil)
+        sniffed_type = normalized_content_type(Marcel::MimeType.for(body)) if body&.bytesize&.positive?
+        return ALLOWED_CONTENT_TYPES.fetch(sniffed_type) if ALLOWED_CONTENT_TYPES.key?(sniffed_type)
+        raise InvalidImageError, "Image must be a JPEG, PNG, WebP, or GIF." if sniffed_type.present? && GENERIC_CONTENT_TYPES.exclude?(sniffed_type)
+
+        declared_type = normalized_content_type(value)
+        return ALLOWED_CONTENT_TYPES.fetch(declared_type) if ALLOWED_CONTENT_TYPES.key?(declared_type)
+
+        extension_type = normalized_content_type(Rack::Mime.mime_type(File.extname(filename.to_s), nil)) if filename.present? && GENERIC_CONTENT_TYPES.include?(declared_type)
+        ALLOWED_CONTENT_TYPES.fetch(extension_type) { raise InvalidImageError, "Image must be a JPEG, PNG, WebP, or GIF." }
       end
 
       def fetch_remote_image(url)
-        SsrfFilter.get(
+        body = nil
+        response = SsrfFilter.get(
           url,
           **FETCH_OPTIONS
         ) do |response|
-          read_success_body(response) if response.is_a?(Net::HTTPSuccess)
+          body = read_success_body(response) if response.is_a?(Net::HTTPSuccess)
         end
+
+        raise RemoteImageError, "Image URL returned HTTP #{response.code}." unless response.is_a?(Net::HTTPSuccess)
+
+        RemoteImage.new(url: response.uri.to_s, content_type: response["Content-Type"], body:)
       rescue SsrfFilter::InvalidUriScheme
         raise InvalidImageError, "Image URL must use HTTP or HTTPS."
       rescue SsrfFilter::PrivateIPAddress
@@ -99,10 +114,20 @@ class ImageReader
         raise InvalidImageError, SIZE_ERROR_MESSAGE if content_length > MAX_IMAGE_BYTES
 
         bytes_read = 0
+        body = +"".b
         response.read_body do |chunk|
           bytes_read += chunk.bytesize
           raise InvalidImageError, SIZE_ERROR_MESSAGE if bytes_read > MAX_IMAGE_BYTES
+
+          body << chunk
         end
+        raise InvalidImageError, "Image cannot be empty." if body.bytesize.zero?
+
+        body
+      end
+
+      def normalized_content_type(value)
+        value.to_s.split(";").first.to_s.squish.downcase
       end
     end
   end
