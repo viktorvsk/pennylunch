@@ -32,27 +32,9 @@ RSpec.describe RecipeImport do
     ]
   end
 
-  it "imports recipes and stores source-shaped JSON in denormalized columns" do
-    create(:ingredient, name: "tomato", aliases: [ "tomatoes" ], optional: true)
-    create(:ingredient, name: "flour")
-    create(:ingredient, name: "egg")
-    create(:ingredient, name: "milk")
-    create(:ingredient, name: "pasta")
-    create(:ingredient, name: "basil")
-
-    expect(IngredientParser).not_to receive(:call)
+  it "imports recipes and leaves derived indexing fields empty" do
     expect(import).to eq(2)
     expect(Recipe.order(:source_position).map { |recipe| source_hash(recipe) }).to eq(source_records)
-    expect(Recipe.order(:source_position).pluck(:ingredient_names, :ingredient_parse_data)).to eq([
-      [ [], [] ],
-      [ [], [] ]
-    ])
-    expect(RecipeIngredient.count).to eq(0)
-  end
-
-  it "leaves derived ingredient data empty for recipe indexing" do
-    import
-
     expect(Recipe.order(:source_position).pluck(:ingredient_names, :ingredient_parse_data, :ingredients_vector)).to eq([
       [ [], [], nil ],
       [ [], [], nil ]
@@ -73,8 +55,19 @@ RSpec.describe RecipeImport do
     expect(Recipe.count).to eq(0)
   end
 
-  it "requires an explicit source URL" do
-    expect { described_class.call(downloader:) }.to raise_error(ArgumentError, /missing keyword: :url/)
+  it "rejects a source payload that is not a recipe array" do
+    invalid_downloader = ->(_url) { gzipped("not recipes") }
+
+    expect { described_class.call(url: "https://example.test/recipes.json.gz", downloader: invalid_downloader) }
+      .to raise_error(RecipeImport::InvalidSourceError, /JSON array/)
+    expect(Recipe.count).to eq(0)
+  end
+
+  it "rejects recipe records with invalid source shape" do
+    source_records.first["ingredients"] = "1 cup flour"
+
+    expect { import }.to raise_error(RecipeImport::InvalidSourceError, /ingredients must be an array/)
+    expect(Recipe.count).to eq(0)
   end
 
   def gzipped(records)

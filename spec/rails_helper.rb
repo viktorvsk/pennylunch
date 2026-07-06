@@ -22,6 +22,7 @@ RSpec.configure do |config|
   config.include FactoryBot::Syntax::Methods
   config.include ActiveJob::TestHelper
   config.before do
+    Rails.cache.clear
     clear_enqueued_jobs
     clear_performed_jobs
   end
